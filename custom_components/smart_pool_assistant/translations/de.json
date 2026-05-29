@@ -1,1 +1,10 @@
-
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Smart Pool Assistant",
+        "description": "Pool konfigurieren"
+      }
+    }
+  }
+}
