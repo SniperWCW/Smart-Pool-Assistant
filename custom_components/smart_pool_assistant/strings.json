@@ -1,0 +1,10 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Smart Pool Assistant",
+        "description": "Pool- und Whirlpoolwerte konfigurieren"
+      }
+    }
+  }
+}
