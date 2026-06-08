@@ -20,7 +20,7 @@ class PoolChemistryCard extends HTMLElement {
             <span><b>Chlor:</b> ${chlor ? chlor.state : '-'} ${chlor?.attributes.unit_of_measurement || 'mg/l'}</span>
           </div>
           <div class="pool-row">
-            <ha-icon icon="mdi:ph"></ha-icon>
+            <ha-icon icon="mdi:test-tube"></ha-icon>
             <span><b>pH-Wert:</b> ${ph ? ph.state : '-'}</span>
           </div>
           <div class="pool-status" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--divider-color);">
@@ -48,3 +48,5 @@ class PoolChemistryCard extends HTMLElement {
 }
 
 customElements.define('pool-chemistry-card', PoolChemistryCard);
+
+console.info("%c SMART-POOL-ASSISTANT %c 0.1.1 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");

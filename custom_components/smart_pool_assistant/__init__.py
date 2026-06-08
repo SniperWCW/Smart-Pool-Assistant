@@ -22,18 +22,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    # Registriert den Pfad für die statische Datei
-    url_path = "/smart_pool_assistant/pool-chemistry-card.js"
-    file_path = hass.config.path("custom_components/smart_pool_assistant/frontend/pool-chemistry-card.js")
-    
-    await hass.http.async_register_static_paths([
-        StaticPathConfig(url_path, file_path, False)
-    ])
+    # Statische Pfade und Frontend-Ressourcen nur einmalig registrieren
+    if not hass.data[DOMAIN].get("static_path_registered"):
+        url_path = "/smart_pool_assistant/pool-chemistry-card.js"
+        file_path = hass.config.path("custom_components/smart_pool_assistant/frontend/pool-chemistry-card.js")
+        
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(url_path, file_path, False)
+        ])
 
-    # Sagt dem Frontend, dass es die JS-Datei laden soll
-    if "frontend" in hass.config.components:
-        from homeassistant.components.frontend import add_extra_js_url
-        add_extra_js_url(hass, url_path)
+        # Sagt dem Frontend, dass es die JS-Datei laden soll
+        if "frontend" in hass.config.components:
+            from homeassistant.components.frontend import add_extra_js_url
+            add_extra_js_url(hass, f"{url_path}?v=0.1.1")
+        
+        hass.data[DOMAIN]["static_path_registered"] = True
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
