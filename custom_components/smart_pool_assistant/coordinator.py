@@ -11,7 +11,7 @@ from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
-    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME
+    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,26 +56,39 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     async def async_log_maintenance(self, m_type: str, amount: float):
         """Log maintenance action and send notifications."""
-        ts = dt_util.now().strftime("%d.%m. %H:%M")
-        self.maintenance_history[m_type] = {"amount": amount, "time": ts}
+        now = dt_util.now()
+        ts = now.strftime("%d.%m. %H:%M")
+        label = "Chlor" if m_type == "chlor" else "PH-Plus" if m_type == "ph_plus" else "PH-Minus"
+        unit = "g" if m_type != "ph_minus" else "ml"
+        
+        # Update history
+        self.maintenance_history[m_type] = {"amount": amount, "time": ts, "raw_ts": now.isoformat()}
+        self.maintenance_history["last_action"] = f"{amount}{unit} {label} am {ts}"
         await self._store.async_save(self.maintenance_history)
         
-        # Sofort-Benachrichtigung
+        msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
+        
+        # Persistent Notification
+        if self.entry.data.get(CONF_PERSISTENT_NOTIFICATION):
+            await self.hass.services.async_call("persistent_notification", "create", {
+                "title": "Smart Pool Assistant",
+                "message": msg,
+                "notification_id": f"{DOMAIN}_maintenance"
+            })
+
+        # Notify Service
         service = self.entry.data.get(CONF_NOTIFY_SERVICE)
         if service:
             domain, service_name = service.split(".")
-            label = "Chlor" if m_type == "chlor" else "PH-Plus" if m_type == "ph_plus" else "PH-Minus"
-            unit = "g" if m_type != "ph_minus" else "ml"
-            
             await self.hass.services.async_call(domain, service_name, {
                 "title": "Smart Pool Assistant",
-                "message": f"Pool-Pflege: {amount}{unit} {label} zugegeben."
+                "message": msg
             })
 
-            # Follow-up Timer
-            delay = self.entry.data.get(CONF_FOLLOW_UP_TIME, 0)
-            if delay > 0:
-                async_call_later(self.hass, delay * 60, self._send_follow_up)
+        # Follow-up Timer
+        delay = self.entry.data.get(CONF_FOLLOW_UP_TIME, 0)
+        if delay > 0:
+            async_call_later(self.hass, delay * 60, self._send_follow_up)
         
         await self.async_request_refresh()
 

@@ -11,6 +11,10 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 - **Benachrichtigungssystem**: Sofortige Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung nach einer definierten Zeit.
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
 
+*   **NEU V0.0.1.5:** Re-Konfiguration möglich! Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
+*   **NEU V0.0.1.5:** Unterstützung für `persistent_notification` (konfigurierbar).
+*   **Frontend:** Neuer Bereich "Letzte Aktivitäten" zeigt die letzte Dosierung direkt auf der Karte an.
+
 ## Installation
 
 ### Über HACS (Empfohlen)

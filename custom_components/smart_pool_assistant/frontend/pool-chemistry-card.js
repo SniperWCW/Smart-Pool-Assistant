@@ -44,6 +44,10 @@ class PoolChemistryCard extends HTMLElement {
                 </div>
               </div>
             </div>
+            <div id="maintenance-section" class="measurements-section" style="margin-top: 12px; display: none;">
+              <div class="section-title">🕒 Letzte Aktivitäten:</div>
+              <div id="maintenance-info" class="m-grid"></div>
+            </div>
             <div class="measurements-section">
               <div class="section-title">📅 Aktuelle Messwerte:</div>
               <div id="measurements-grid" class="m-grid"></div>
@@ -119,6 +123,14 @@ class PoolChemistryCard extends HTMLElement {
     const phPlusHist = hist.ph_plus ? `Zuletzt PH+: ${hist.ph_plus.amount}g (${hist.ph_plus.time})` : '';
     const phMinusHist = hist.ph_minus ? `Zuletzt PH-: ${hist.ph_minus.amount}ml (${hist.ph_minus.time})` : '';
     this.querySelector('#ph-hist').innerHTML = `${phPlusHist}${phPlusHist && phMinusHist ? ' | ' : ''}${phMinusHist}`;
+
+    const maintenanceSection = this.querySelector('#maintenance-section');
+    if (hist.last_action) {
+      maintenanceSection.style.display = 'block';
+      this.querySelector('#maintenance-info').innerHTML = `<div class="m-item">✅ ${hist.last_action}</div>`;
+    } else {
+      maintenanceSection.style.display = 'none';
+    }
 
     this.querySelector('#measurements-grid').innerHTML = `
       <div class="m-item"><b>Chlor:</b> ${attr.chlor_ist} mg/l <small>(Ziel: ${attr.chlor_target})</small></div>

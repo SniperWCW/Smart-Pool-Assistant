@@ -15,6 +15,7 @@
           "ph_down_dosage": "Dosierung PH-Minus (ml / 10m³ für -0,2 pH)",
           "ph_up_dosage": "Dosierung PH-Plus (g / 10m³ für +0,1 pH)",
           "notify_service": "Benachrichtigungs-Dienst (z.B. notify.mobile_app_iphone)",
+          "persistent_notification": "Persistente Benachrichtigung in HA anzeigen?",
           "follow_up_time": "Erinnerung nach X Minuten (0 zum Deaktivieren)"
         }
       }
