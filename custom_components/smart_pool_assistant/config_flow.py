@@ -52,14 +52,18 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         })
 
 class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        # Kombiniere Daten und Optionen für die Standardwerte
+        current_config = {**self.config_entry.data, **self.config_entry.options}
+
         return self.async_show_form(
             step_id="init",
-            data_schema=self.hass.config_entries.flow_handlers[DOMAIN]._get_schema(self.config_entry.data)
+            data_schema=SmartPoolAssistantConfigFlow()._get_schema(current_config)
         )

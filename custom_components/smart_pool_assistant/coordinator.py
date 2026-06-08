@@ -32,6 +32,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self._store = Store(hass, _STORAGE_VERSION, f"{_STORAGE_KEY}_{entry.entry_id}")
         self.maintenance_history = {}
 
+    @property
+    def config(self):
+        """Return combined config from data and options."""
+        return {**self.entry.data, **self.entry.options}
+
     async def async_load_history(self):
         """Load maintenance history from storage."""
         stored = await self._store.async_load()
@@ -40,10 +45,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     def async_setup_event_listeners(self):
         """Set up listeners for entity state changes."""
+        conf = self.config
         entities = [
-            self.entry.data[CONF_CHLOR_SENSOR],
-            self.entry.data[CONF_PH_SENSOR],
-            self.entry.data[CONF_TEMP_SENSOR]
+            conf[CONF_CHLOR_SENSOR],
+            conf[CONF_PH_SENSOR],
+            conf[CONF_TEMP_SENSOR]
         ]
         return async_track_state_change_event(
             self.hass, entities, self._handle_state_change
@@ -66,10 +72,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self.maintenance_history["last_action"] = f"{amount}{unit} {label} am {ts}"
         await self._store.async_save(self.maintenance_history)
         
+        conf = self.config
         msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
         
         # Persistent Notification
-        if self.entry.data.get(CONF_PERSISTENT_NOTIFICATION):
+        if conf.get(CONF_PERSISTENT_NOTIFICATION):
             await self.hass.services.async_call("persistent_notification", "create", {
                 "title": "Smart Pool Assistant",
                 "message": msg,
@@ -77,7 +84,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             })
 
         # Notify Service
-        service = self.entry.data.get(CONF_NOTIFY_SERVICE)
+        service = conf.get(CONF_NOTIFY_SERVICE)
         if service:
             domain, service_name = service.split(".")
             await self.hass.services.async_call(domain, service_name, {
@@ -86,7 +93,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             })
 
         # Follow-up Timer
-        delay = self.entry.data.get(CONF_FOLLOW_UP_TIME, 0)
+        delay = conf.get(CONF_FOLLOW_UP_TIME, 0)
         if delay > 0:
             async_call_later(self.hass, delay * 60, self._send_follow_up)
         
@@ -111,10 +118,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except ValueError:
                 return None
 
+        conf = self.config
         # Sensordaten abrufen
-        chlor_eid = self.entry.data[CONF_CHLOR_SENSOR]
-        ph_eid = self.entry.data[CONF_PH_SENSOR]
-        temp_eid = self.entry.data[CONF_TEMP_SENSOR]
+        chlor_eid = conf[CONF_CHLOR_SENSOR]
+        ph_eid = conf[CONF_PH_SENSOR]
+        temp_eid = conf[CONF_TEMP_SENSOR]
 
         c_ist = get_state_float(chlor_eid)
         ph_ist = get_state_float(ph_eid)
@@ -138,10 +146,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             }
 
         # Konfiguration laden
-        volumen = self.entry.data[CONF_POOL_VOLUME]
-        c_ziel = self.entry.data[CONF_CHLOR_TARGET]
-        ph_ziel = self.entry.data[CONF_PH_TARGET]
-        wirkstoff = self.entry.data[CONF_CHLOR_CONTENT]
+        volumen = conf[CONF_POOL_VOLUME]
+        c_ziel = conf[CONF_CHLOR_TARGET]
+        ph_ziel = conf[CONF_PH_TARGET]
+        wirkstoff = conf[CONF_CHLOR_CONTENT]
         
         # Dummy für Nutzungstag (Könnte später ein Switch in der Integration sein)
         usage_factor = 1.0 
@@ -173,11 +181,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         
         if ph_diff < 0: # pH zu hoch -> senken
             # Berechnung: ml = Differenz * (Dosierung / 10m3 / 0.2 pH-Schritt) * Poolvolumen
-            factor = self.entry.data[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
+            factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
             ph_senker_ml = round(ph_diff_abs * factor * volumen, 1)
         elif ph_diff > 0: # pH zu niedrig -> erhöhen
             # Berechnung: g = Differenz * (Dosierung / 10m3 / 0.1 pH-Schritt) * Poolvolumen
-            factor = self.entry.data[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
+            factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
 
         return {

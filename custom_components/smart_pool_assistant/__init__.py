@@ -21,6 +21,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Listener für automatische Updates bei Sensoränderungen registrieren
     entry.async_on_unload(coordinator.async_setup_event_listeners())
 
+    # Update-Listener für Konfigurationsänderungen
+    entry.async_on_unload(entry.add_update_listener(update_listener))
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -58,6 +61,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_register(DOMAIN, "log_maintenance", log_maintenance_service)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
