@@ -1,0 +1,9 @@
+{
+  "name": "Smart Pool Assistant",
+  "country": "DE",
+  "homeassistant": "2025.1.0",
+  "render_readme": true,
+  "domains": [
+    "smart_pool_assistant"
+  ]
+}

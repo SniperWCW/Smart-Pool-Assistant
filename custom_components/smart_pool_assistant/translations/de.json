@@ -3,7 +3,18 @@
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
-        "description": "Pool konfigurieren"
+        "description": "Pool konfigurieren",
+        "data": {
+          "chlor_sensor": "Chlor Sensor (mg/l)",
+          "ph_sensor": "pH-Wert Sensor",
+          "temp_sensor": "Temperatur Sensor",
+          "pool_volume": "Poolvolumen (m³)",
+          "chlor_target": "Ziel Chlorwert",
+          "ph_target": "Ziel pH-Wert",
+          "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56)",
+          "ph_down_factor": "Faktor pH-Senker (%)",
+          "ph_up_factor": "Faktor pH-Heber (%)"
+        }
       }
     }
   }
