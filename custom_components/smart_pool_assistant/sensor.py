@@ -60,9 +60,19 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return entity specific state attributes."""
+        data = self.coordinator.data
         return {
-            "last_calculation": self.coordinator.data.get("last_calculation"),
-            "last_measurement": self.coordinator.data.get("last_measurement"),
+            "last_calculation": data.get("last_calculation"),
+            "last_measurement": data.get("last_measurement"),
+            "chlor_ist": data.get("chlor_ist"),
+            "ph_ist": data.get("ph_ist"),
+            "temp_ist": data.get("temp_ist"),
+            "chlor_target": data.get("chlor_target"),
+            "ph_target": data.get("ph_target"),
+            "chlor_dose": data.get("chlor_dose"),
+            "chlor_pre": data.get("chlor_pre"),
+            "ph_senker_total": data.get("ph_senker_total"),
+            "ph_erhoeher_total": data.get("ph_erhoeher_total"),
         }
 
     @property

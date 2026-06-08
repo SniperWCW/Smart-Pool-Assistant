@@ -11,7 +11,7 @@ from homeassistant.helpers import selector
 from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
-    CONF_CHLOR_CONTENT, CONF_PH_DOWN_FACTOR, CONF_PH_UP_FACTOR
+    CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE
 )
 
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -34,7 +34,7 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_CHLOR_TARGET, default=1.5): vol.Coerce(float),
                 vol.Required(CONF_PH_TARGET, default=7.2): vol.Coerce(float),
                 vol.Required(CONF_CHLOR_CONTENT, default=0.56): vol.Coerce(float),
-                vol.Required(CONF_PH_DOWN_FACTOR, default=100.0): vol.Coerce(float),
-                vol.Required(CONF_PH_UP_FACTOR, default=100.0): vol.Coerce(float),
+                vol.Required(CONF_PH_DOWN_DOSAGE, default=200.0): vol.Coerce(float),
+                vol.Required(CONF_PH_UP_DOSAGE, default=100.0): vol.Coerce(float),
             })
         )

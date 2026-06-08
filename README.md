@@ -31,7 +31,8 @@ Du wirst nach folgenden Informationen gefragt:
 - **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
 - **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
 - **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
-- **Dosierfaktoren**: Anpassungswerte für deine spezifischen pH-Regulierer.
+- **Dosierung pH-Senker**: Die Menge an pH-Senker (in ml), die benötigt wird, um den pH-Wert in 10 m³ Wasser um 0,2 Einheiten zu senken (z.B. 200 für 200ml/10m³/0.2pH).
+- **Dosierung pH-Heber**: Die Menge an pH-Heber (in g), die benötigt wird, um den pH-Wert in 10 m³ Wasser um 0,1 Einheiten zu heben (z.B. 100 für 100g/10m³/0.1pH).
 
 ## Die Berechnungslogik
 
@@ -42,7 +43,7 @@ Die Integration nutzt einen dynamischen **Shock-Faktor**:
 Zusätzlich wird eine **Mindestdosis** sichergestellt, damit die Desinfektion wirksam bleibt.
 
 ### pH-Wert
-Basierend auf der Differenz zum Zielwert und dem Poolvolumen wird die Menge an pH-Senker oder pH-Heber ermittelt. Die Faktoren (Standard 100%) erlauben es, die Berechnung an die Konzentration deines spezifischen Mittels anzupassen.
+Basierend auf der Differenz zum Zielwert, dem Poolvolumen und den von dir angegebenen Dosierangaben des Herstellers (z.B. "200 ml / 10 m³ für -0,2 pH") wird die exakte Menge an pH-Senker oder pH-Heber ermittelt. Dies gewährleistet eine präzise Anpassung an dein spezifisches Produkt.
 
 ## Frontend: Pool Chemistry Card
 

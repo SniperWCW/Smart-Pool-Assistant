@@ -8,7 +8,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
-    CONF_CHLOR_CONTENT, CONF_PH_DOWN_FACTOR, CONF_PH_UP_FACTOR
+    CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -112,9 +112,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         ph_erhoeher_g = 0.0
         
         if ph_diff < 0: # pH zu hoch -> senken
-            ph_senker_ml = round((ph_diff_abs * 10 * volumen) * (self.entry.data[CONF_PH_DOWN_FACTOR] / 100), 1)
+            # Berechnung: ml = Differenz * (Dosierung / 10m3 / 0.2 pH-Schritt) * Poolvolumen
+            factor = self.entry.data[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
+            ph_senker_ml = round(ph_diff_abs * factor * volumen, 1)
         elif ph_diff > 0: # pH zu niedrig -> erhöhen
-            ph_erhoeher_g = round((ph_diff_abs * 10 * volumen) * (self.entry.data[CONF_PH_UP_FACTOR] / 100), 1)
+            # Berechnung: g = Differenz * (Dosierung / 10m3 / 0.1 pH-Schritt) * Poolvolumen
+            factor = self.entry.data[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
+            ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
 
         return {
             "chlor_ist": c_ist,
@@ -127,6 +131,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_diff": ph_diff,
             "is_shock": c_ist < 0.5,
             "is_error": False,
-            "last_calculation": dt_util.now().strftime("%H:%M:%S"),
-            "last_measurement": last_measure.strftime("%H:%M:%S") if last_measure else "Unbekannt"
+            "last_calculation": dt_util.now().strftime("%d.%m. um %H:%M"),
+            "last_measurement": last_measure.strftime("%d.%m. um %H:%M") if last_measure else "Unbekannt",
+            "chlor_target": c_ziel,
+            "ph_target": ph_ziel
         }
