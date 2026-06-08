@@ -1,6 +1,9 @@
+import logging
 from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
@@ -8,32 +11,71 @@ from .const import (
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_FACTOR, CONF_PH_UP_FACTOR
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class SmartPoolCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
         super().__init__(
             hass,
-            logger=None,
+            _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(minutes=5),
         )
 
         self.entry = entry
 
+    def async_setup_event_listeners(self):
+        """Set up listeners for entity state changes."""
+        entities = [
+            self.entry.data[CONF_CHLOR_SENSOR],
+            self.entry.data[CONF_PH_SENSOR],
+            self.entry.data[CONF_TEMP_SENSOR]
+        ]
+        return async_track_state_change_event(
+            self.hass, entities, self._handle_state_change
+        )
+
+    async def _handle_state_change(self, event):
+        """Handle state changes of source entities."""
+        _LOGGER.debug("Source entity changed, triggering recalculation")
+        await self.async_request_refresh()
+
     async def _async_update_data(self):
         def get_state_float(entity_id):
             state = self.hass.states.get(entity_id)
             if state is None or state.state in ("unknown", "unavailable"):
-                return 0.0
+                return None
             try:
                 return float(state.state)
             except ValueError:
-                return 0.0
+                return None
 
         # Sensordaten abrufen
-        c_ist = get_state_float(self.entry.data[CONF_CHLOR_SENSOR])
-        ph_ist = get_state_float(self.entry.data[CONF_PH_SENSOR])
-        temp_ist = get_state_float(self.entry.data[CONF_TEMP_SENSOR])
+        chlor_eid = self.entry.data[CONF_CHLOR_SENSOR]
+        ph_eid = self.entry.data[CONF_PH_SENSOR]
+        temp_eid = self.entry.data[CONF_TEMP_SENSOR]
+
+        c_ist = get_state_float(chlor_eid)
+        ph_ist = get_state_float(ph_eid)
+        temp_ist = get_state_float(temp_eid)
+
+        # Zeitstempel der Messwerte ermitteln (jüngstes Update der Quell-Sensoren)
+        last_measure = None
+        for eid in [chlor_eid, ph_eid, temp_eid]:
+            state = self.hass.states.get(eid)
+            if state and state.state not in ("unknown", "unavailable"):
+                if last_measure is None or state.last_updated > last_measure:
+                    last_measure = state.last_updated
+
+        # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
+        if c_ist is None or ph_ist is None:
+            return {
+                "chlor_dose": 0,
+                "ph_senker_total": 0,
+                "ph_erhoeher_total": 0,
+                "is_error": True
+            }
 
         # Konfiguration laden
         volumen = self.entry.data[CONF_POOL_VOLUME]
@@ -83,5 +125,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_senker_total": ph_senker_ml,
             "ph_erhoeher_total": ph_erhoeher_g,
             "ph_diff": ph_diff,
-            "is_shock": c_ist < 0.5
+            "is_shock": c_ist < 0.5,
+            "is_error": False,
+            "last_calculation": dt_util.now().strftime("%H:%M:%S"),
+            "last_measurement": last_measure.strftime("%H:%M:%S") if last_measure else "Unbekannt"
         }

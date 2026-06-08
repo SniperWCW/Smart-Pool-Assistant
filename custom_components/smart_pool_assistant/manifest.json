@@ -6,7 +6,7 @@
   "issue_tracker": "https://github.com/SniperWCW/smart_pool_assistant/issues",
   "dependencies": [],
   "codeowners": [
-    "@yourname"
+    "@SniperWCW"
   ],
   "requirements": [],
   "config_flow": true,

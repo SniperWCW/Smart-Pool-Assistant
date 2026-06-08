@@ -58,6 +58,14 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
         self._attr_icon = "mdi:alert-circle-outline"
 
     @property
+    def extra_state_attributes(self):
+        """Return entity specific state attributes."""
+        return {
+            "last_calculation": self.coordinator.data.get("last_calculation"),
+            "last_measurement": self.coordinator.data.get("last_measurement"),
+        }
+
+    @property
     def native_value(self):
         """Return the recommendation text."""
         if self.coordinator.data.get("is_shock"):
