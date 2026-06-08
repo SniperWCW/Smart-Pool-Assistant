@@ -5,9 +5,11 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 ## Funktionen
 
 - **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren bei niedrigen Werten und berechnet die Menge basierend auf dem Wirkstoffanteil deines Granulats.
-- **pH-Regulierung**: Berechnet die benötigte Menge an pH-Senker (ml) oder pH-Heber (g).
+- **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
-- **Integrierte Frontend-Karte**: Eine spezialisierte Lovelace-Karte zur übersichtlichen Darstellung der Werte.
+- **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
+- **Benachrichtigungssystem**: Sofortige Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung nach einer definierten Zeit.
+- **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
 
 ## Installation
 
@@ -31,8 +33,10 @@ Du wirst nach folgenden Informationen gefragt:
 - **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
 - **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
 - **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
-- **Dosierung pH-Senker**: Die Menge an pH-Senker (in ml), die benötigt wird, um den pH-Wert in 10 m³ Wasser um 0,2 Einheiten zu senken (z.B. 200 für 200ml/10m³/0.2pH).
-- **Dosierung pH-Heber**: Die Menge an pH-Heber (in g), die benötigt wird, um den pH-Wert in 10 m³ Wasser um 0,1 Einheiten zu heben (z.B. 100 für 100g/10m³/0.1pH).
+- **Dosierung PH-Minus**: Menge in ml, um 10 m³ Wasser um 0,2 Einheiten zu senken (z.B. 200 ml).
+- **Dosierung PH-Plus**: Menge in g, um 10 m³ Wasser um 0,1 Einheiten zu heben (z.B. 100 g).
+- **Benachrichtigungs-Dienst**: Der zu verwendende Dienst (z.B. `notify.mobile_app_iphone`).
+- **Erinnerung**: Zeitspanne in Minuten, nach der eine Aufforderung zur Nachmessung gesendet wird.
 
 ## Die Berechnungslogik
 
@@ -43,7 +47,7 @@ Die Integration nutzt einen dynamischen **Shock-Faktor**:
 Zusätzlich wird eine **Mindestdosis** sichergestellt, damit die Desinfektion wirksam bleibt.
 
 ### pH-Wert
-Basierend auf der Differenz zum Zielwert, dem Poolvolumen und den von dir angegebenen Dosierangaben des Herstellers (z.B. "200 ml / 10 m³ für -0,2 pH") wird die exakte Menge an pH-Senker oder pH-Heber ermittelt. Dies gewährleistet eine präzise Anpassung an dein spezifisches Produkt.
+Basierend auf der Differenz zum Zielwert, dem Poolvolumen und den Herstellerangaben wird die exakte Menge an **PH-Plus** oder **PH-Minus** ermittelt. Dies gewährleistet eine präzise Anpassung an dein spezifisches Produkt.
 
 ## Frontend: Pool Chemistry Card
 
@@ -61,6 +65,6 @@ recommendation_entity: sensor.pool_empfehlung
 Die Integration stellt folgende Sensoren bereit:
 - `sensor.pool_chlor_nachdosierung`: Gesamtmenge Chlor in Gramm.
 - `sensor.pool_chlor_vor_baden`: Empfohlene Menge direkt vor dem Baden.
-- `sensor.pool_ph_senker`: Benötigte Menge pH-Senker in ml.
-- `sensor.pool_ph_erhoher`: Benötigte Menge pH-Heber in g.
+- `sensor.pool_ph_minus`: Benötigte Menge PH-Minus in ml.
+- `sensor.pool_ph_plus`: Benötigte Menge PH-Plus in g.
 - `sensor.pool_empfehlung`: Textuelle Zusammenfassung der nächsten Schritte.
