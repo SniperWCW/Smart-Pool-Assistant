@@ -3,16 +3,21 @@ from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
-    CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE
+    CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
+    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME
 )
 
 _LOGGER = logging.getLogger(__name__)
 
+_STORAGE_VERSION = 1
+_STORAGE_KEY = f"{DOMAIN}_maintenance"
 
 class SmartPoolCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
@@ -24,6 +29,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         )
 
         self.entry = entry
+        self._store = Store(hass, _STORAGE_VERSION, f"{_STORAGE_KEY}_{entry.entry_id}")
+        self.maintenance_history = {}
+
+    async def async_load_history(self):
+        """Load maintenance history from storage."""
+        stored = await self._store.async_load()
+        if stored:
+            self.maintenance_history = stored
 
     def async_setup_event_listeners(self):
         """Set up listeners for entity state changes."""
@@ -40,6 +53,40 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         """Handle state changes of source entities."""
         _LOGGER.debug("Source entity changed, triggering recalculation")
         await self.async_request_refresh()
+
+    async def async_log_maintenance(self, m_type: str, amount: float):
+        """Log maintenance action and send notifications."""
+        ts = dt_util.now().strftime("%d.%m. %H:%M")
+        self.maintenance_history[m_type] = {"amount": amount, "time": ts}
+        await self._store.async_save(self.maintenance_history)
+        
+        # Sofort-Benachrichtigung
+        service = self.entry.data.get(CONF_NOTIFY_SERVICE)
+        if service:
+            domain, service_name = service.split(".")
+            label = "Chlor" if m_type == "chlor" else "PH-Plus" if m_type == "ph_plus" else "PH-Minus"
+            unit = "g" if m_type != "ph_minus" else "ml"
+            
+            await self.hass.services.async_call(domain, service_name, {
+                "title": "Smart Pool Assistant",
+                "message": f"Pool-Pflege: {amount}{unit} {label} zugegeben."
+            })
+
+            # Follow-up Timer
+            delay = self.entry.data.get(CONF_FOLLOW_UP_TIME, 0)
+            if delay > 0:
+                async_call_later(self.hass, delay * 60, self._send_follow_up)
+        
+        await self.async_request_refresh()
+
+    async def _send_follow_up(self, _):
+        service = self.entry.data.get(CONF_NOTIFY_SERVICE)
+        if service:
+            domain, service_name = service.split(".")
+            await self.hass.services.async_call(domain, service_name, {
+                "title": "Smart Pool Assistant",
+                "message": "Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!"
+            })
 
     async def _async_update_data(self):
         def get_state_float(entity_id):
@@ -134,5 +181,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "last_calculation": dt_util.now().strftime("%d.%m. um %H:%M"),
             "last_measurement": last_measure.strftime("%d.%m. um %H:%M") if last_measure else "Unbekannt",
             "chlor_target": c_ziel,
-            "ph_target": ph_ziel
+            "ph_target": ph_ziel,
+            "history": self.maintenance_history
         }

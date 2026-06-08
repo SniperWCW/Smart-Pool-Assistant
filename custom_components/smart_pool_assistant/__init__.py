@@ -5,6 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
@@ -14,6 +15,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Pool Assistant from a config entry."""
     coordinator = SmartPoolCoordinator(hass, entry)
+    await coordinator.async_load_history()
     await coordinator.async_config_entry_first_refresh()
     
     # Listener für automatische Updates bei Sensoränderungen registrieren
@@ -41,6 +43,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Falls der Pfad bereits existiert (z.B. durch manuelles Neuladen)
             hass.data[DOMAIN]["static_path_registered"] = True
 
+    async def log_maintenance_service(call):
+        entity_id = call.data.get("entity_id")
+        reg = er.async_get(hass)
+        entity_entry = reg.async_get(entity_id)
+        if entity_entry:
+            coord = hass.data[DOMAIN].get(entity_entry.config_entry_id)
+            if coord:
+                await coord.async_log_maintenance(
+                    call.data.get("type"),
+                    call.data.get("amount")
+                )
+
+    hass.services.async_register(DOMAIN, "log_maintenance", log_maintenance_service)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

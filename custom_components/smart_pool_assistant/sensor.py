@@ -24,8 +24,8 @@ async def async_setup_entry(
     sensors = [
         PoolAssistantSensor(coordinator, "Chlor Nachdosierung", "chlor_dose", "g", "mdi:pill"),
         PoolAssistantSensor(coordinator, "Chlor Vor Baden", "chlor_pre", "g", "mdi:pill"),
-        PoolAssistantSensor(coordinator, "pH Senker", "ph_senker_total", "ml", "mdi:arrow-down-bold"),
-        PoolAssistantSensor(coordinator, "pH Erhöher", "ph_erhoeher_total", "g", "mdi:arrow-up-bold"),
+        PoolAssistantSensor(coordinator, "PH-Minus", "ph_senker_total", "ml", "mdi:arrow-down-bold"),
+        PoolAssistantSensor(coordinator, "PH-Plus", "ph_erhoeher_total", "g", "mdi:arrow-up-bold"),
         PoolAssistantStatusSensor(coordinator),
     ]
     async_add_entities(sensors)
@@ -73,6 +73,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_pre": data.get("chlor_pre"),
             "ph_senker_total": data.get("ph_senker_total"),
             "ph_erhoeher_total": data.get("ph_erhoeher_total"),
+            "history": data.get("history"),
         }
 
     @property

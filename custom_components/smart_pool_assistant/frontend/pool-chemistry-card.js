@@ -10,6 +10,7 @@ class PoolChemistryCard extends HTMLElement {
     if (!rec) return;
 
     const attr = rec.attributes;
+    const hist = attr.history || {};
     const isShock = attr.chlor_ist < 0.5;
     
     // Dynamische Texte für Chlor
@@ -20,10 +21,28 @@ class PoolChemistryCard extends HTMLElement {
     // Dynamische Texte für pH
     let phText = "pH-Wert ist optimal.";
     if (attr.ph_senker_total > 0) {
-      phText = `📉 pH senken: ca. <b>${attr.ph_senker_total}ml</b> pH-Senker hinzufügen.`;
+      phText = `📉 PH-Minus: ca. <b>${attr.ph_senker_total}ml</b> hinzufügen.`;
     } else if (attr.ph_erhoeher_total > 0) {
-      phText = `📈 pH erhöhen: ca. <b>${attr.ph_erhoeher_total}g</b> pH-Heber hinzufügen.`;
+      phText = `📈 PH-Plus: ca. <b>${attr.ph_erhoeher_total}g</b> hinzufügen.`;
     }
+
+    const renderHistory = (type, unit) => {
+      const item = hist[type];
+      return item ? `<div class="hist-text">Zuletzt: ${item.amount}${unit} (${item.time})</div>` : '';
+    };
+
+    const handleAdd = (type) => {
+      const input = this.querySelector(`#input-${type}`);
+      const val = parseFloat(input.value);
+      if (val > 0) {
+        hass.callService("smart_pool_assistant", "log_maintenance", {
+          entity_id: this.config.recommendation_entity,
+          type: type,
+          amount: val
+        });
+        input.value = "";
+      }
+    };
 
     this.innerHTML = `
       <ha-card header="💧 Smart Pool Assistant">
@@ -35,11 +54,24 @@ class PoolChemistryCard extends HTMLElement {
           <div class="recommendation-section">
             <div class="rec-row">
               <ha-icon icon="mdi:pill"></ha-icon>
-              <span>${chlorText}</span>
+              <div class="rec-content">
+                <span>${chlorText}</span>
+                ${renderHistory('chlor', 'g')}
+                <div class="log-input"><input type="number" id="input-chlor" placeholder="Menge in g"><button @click="${() => handleAdd('chlor')}">OK</button></div>
+              </div>
             </div>
             <div class="rec-row">
               <ha-icon icon="mdi:test-tube"></ha-icon>
-              <span>${phText}</span>
+              <div class="rec-content">
+                <span>${phText}</span>
+                ${renderHistory('ph_plus', 'g')}
+                ${renderHistory('ph_minus', 'ml')}
+                <div class="log-input">
+                  <input type="number" id="input-ph_plus" placeholder="+ g">
+                  <input type="number" id="input-ph_minus" placeholder="- ml">
+                  <button id="btn-ph">OK</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -62,8 +94,14 @@ class PoolChemistryCard extends HTMLElement {
           .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
           
           .recommendation-section { margin-bottom: 16px; line-height: 1.4; }
-          .rec-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+          .rec-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+          .rec-content { flex: 1; }
           ha-icon { color: var(--primary-color); }
+          .hist-text { font-size: 0.8em; opacity: 0.7; font-style: italic; }
+          .log-input { margin-top: 4px; display: flex; gap: 4px; }
+          .log-input input { width: 60px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.8em; padding: 2px; }
+          .log-input button { cursor: pointer; background: var(--primary-color); color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 0.8em; }
+          .log-input button:hover { opacity: 0.8; }
 
           .measurements-section { background: var(--secondary-background-color); padding: 12px; border-radius: 8px; }
           .section-title { font-size: 0.9em; font-weight: bold; margin-bottom: 8px; opacity: 0.8; }
@@ -74,6 +112,15 @@ class PoolChemistryCard extends HTMLElement {
         </style>
       </ha-card>
     `;
+
+    // Event Listeners für die Buttons binden
+    this.querySelector('#input-chlor + button').onclick = () => handleAdd('chlor');
+    this.querySelector('#btn-ph').onclick = () => {
+      const plus = this.querySelector('#input-ph_plus');
+      const minus = this.querySelector('#input-ph_minus');
+      if (plus.value) handleAdd('ph_plus');
+      if (minus.value) handleAdd('ph_minus');
+    };
   }
 
   getCardSize() {
