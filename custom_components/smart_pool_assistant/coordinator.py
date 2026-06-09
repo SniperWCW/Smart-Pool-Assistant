@@ -57,8 +57,24 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     async def _handle_state_change(self, event):
         """Handle state changes of source entities."""
-        _LOGGER.debug("Source entity changed, triggering recalculation")
-        await self.async_request_refresh()
+        new_state = event.data.get("new_state")
+        old_state = event.data.get("old_state")
+
+        if new_state is None or new_state.state in ("unknown", "unavailable"):
+            return
+            
+        # Nur bei tatsächlicher Wertänderung (nicht beim Wiederverbinden nach Neustart)
+        # den Zeitstempel der Messung in der Historie aktualisieren
+        is_real_change = (
+            old_state is not None 
+            and old_state.state not in ("unknown", "unavailable") 
+            and new_state.state != old_state.state
+        )
+
+        if is_real_change:
+            _LOGGER.debug("Source entity value changed, updating measurement timestamp")
+            self.maintenance_history["last_measurement_raw"] = dt_util.now().isoformat()
+            await self.async_request_refresh()
 
     async def async_log_maintenance(self, m_type: str, amount: float):
         """Log maintenance action and send notifications."""
@@ -128,13 +144,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         ph_ist = get_state_float(ph_eid)
         temp_ist = get_state_float(temp_eid)
 
-        # Zeitstempel der Messwerte ermitteln (jüngstes Update der Quell-Sensoren)
-        last_measure = None
-        for eid in [chlor_eid, ph_eid, temp_eid]:
-            state = self.hass.states.get(eid)
-            if state and state.state not in ("unknown", "unavailable"):
-                if last_measure is None or state.last_updated > last_measure:
-                    last_measure = state.last_updated
+        # Zeitstempel aus der Historie laden oder initial setzen
+        last_meas_raw = self.maintenance_history.get("last_measurement_raw")
+        if not last_meas_raw:
+            last_meas_raw = dt_util.now().isoformat()
+            self.maintenance_history["last_measurement_raw"] = last_meas_raw
+
+        last_calc_raw = self.maintenance_history.get("last_calc_raw")
+        if not last_calc_raw:
+            last_calc_raw = dt_util.now().isoformat()
+            self.maintenance_history["last_calc_raw"] = last_calc_raw
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None or ph_ist is None:
@@ -142,7 +161,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "chlor_dose": 0,
                 "ph_senker_total": 0,
                 "ph_erhoeher_total": 0,
-                "is_error": True
+                "is_error": True,
+                "last_calculation": dt_util.parse_datetime(last_calc_raw).strftime("%d.%m. um %H:%M"),
+                "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m. um %H:%M"),
+                "history": self.maintenance_history
             }
 
         # Konfiguration laden
@@ -188,6 +210,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
 
+        # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren
+        last_calc_raw = dt_util.now().isoformat()
+        self.maintenance_history["last_calc_raw"] = last_calc_raw
+
+        await self._store.async_save(self.maintenance_history)
+
         return {
             "chlor_ist": c_ist,
             "ph_ist": ph_ist,
@@ -199,8 +227,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_diff": ph_diff,
             "is_shock": c_ist < 0.5,
             "is_error": False,
-            "last_calculation": dt_util.now().strftime("%d.%m. um %H:%M"),
-            "last_measurement": last_measure.strftime("%d.%m. um %H:%M") if last_measure else "Unbekannt",
+            "last_calculation": dt_util.parse_datetime(last_calc_raw).strftime("%d.%m. um %H:%M"),
+            "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m. um %H:%M"),
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
             "history": self.maintenance_history

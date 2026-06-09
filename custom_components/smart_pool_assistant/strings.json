@@ -3,7 +3,41 @@
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
-        "description": "Pool- und Whirlpoolwerte konfigurieren"
+        "description": "Konfiguriere die Sensoren und Zielwerte für deinen Pool oder Whirlpool.",
+        "data": {
+          "chlor_sensor": "Chlor-Sensor (mg/l)",
+          "ph_sensor": "pH-Wert-Sensor",
+          "temp_sensor": "Temperatur-Sensor (°C)",
+          "pool_volume": "Poolvolumen (m³)",
+          "chlor_target": "Chlor Zielwert (mg/l)",
+          "ph_target": "pH Zielwert",
+          "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
+          "ph_down_dosage": "PH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
+          "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "notify_service": "Benachrichtigungs-Dienst",
+          "persistent_notification": "Benachrichtigung in HA anzeigen",
+          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "chlor_sensor": "Chlor-Sensor (mg/l)",
+          "ph_sensor": "pH-Wert-Sensor",
+          "temp_sensor": "Temperatur-Sensor (°C)",
+          "pool_volume": "Poolvolumen (m³)",
+          "chlor_target": "Chlor Zielwert (mg/l)",
+          "ph_target": "pH Zielwert",
+          "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
+          "ph_down_dosage": "PH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
+          "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "notify_service": "Benachrichtigungs-Dienst",
+          "persistent_notification": "Benachrichtigung in HA anzeigen",
+          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)"
+        }
       }
     }
   }
