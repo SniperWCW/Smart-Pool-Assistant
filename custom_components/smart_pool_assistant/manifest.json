@@ -7,8 +7,8 @@
   "codeowners": [
     "@SniperWCW"
   ],
-  "dependencies": ["bluetooth"],
-  "requirements": ["bleak"],
+  "dependencies": [],
+  "requirements": [],
   "config_flow": true,
   "iot_class": "local_polling",
   "integration_type": "service"

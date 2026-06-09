@@ -2,27 +2,12 @@
   "config": {
     "step": {
       "user": {
-        "title": "Smart Pool Assistant",
-        "description": "Bitte wählen Sie aus, wie Sie Ihre Messdaten erfassen möchten.",
+        "title": "Smart Pool Assistant Konfiguration",
+        "description": "Bitte geben Sie die Sensoren und Pool-Parameter ein.",
         "data": {
-          "data_source": "Datenquelle auswählen"
-        }
-      },
-      "source_config": {
-        "title": "Hardware & API Setup",
-        "description": "Konfigurieren Sie die Hardware- oder API-Details für die gewählte Quelle.",
-        "data": {
-          "api_key": "PoolLab Cloud API Key",
-          "ble_address": "PoolLab Bluetooth Gerät",
           "chlor_sensor": "Chlor Sensor (mg/l)",
           "ph_sensor": "pH-Wert Sensor",
-          "temp_sensor": "Temperatur Sensor"
-        }
-      },
-      "pool_config": {
-        "title": "Pool & Benachrichtigung",
-        "description": "Legen Sie Ihre Pool-Parameter und Benachrichtigungs-Einstellungen fest.",
-        "data": {
+          "temp_sensor": "Temperatur Sensor (optional)",
           "pool_volume": "Poolvolumen (m³)",
           "chlor_target": "Ziel Chlorwert (mg/l)",
           "ph_target": "Ziel pH-Wert",
@@ -41,8 +26,6 @@
       "init": {
         "title": "Smart Pool Assistant Einstellungen",
         "data": {
-          "api_key": "PoolLab Cloud API Key",
-          "ble_address": "PoolLab Bluetooth MAC Adresse",
           "chlor_sensor": "Chlor Sensor (mg/l)",
           "ph_sensor": "pH-Wert Sensor",
           "temp_sensor": "Temperatur Sensor",

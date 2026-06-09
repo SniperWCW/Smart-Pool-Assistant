@@ -18,7 +18,6 @@ class PoolChemistryCard extends HTMLElement {
       this.innerHTML = `
         <ha-card header="💧 Smart Pool Assistant">
           <div class="card-content">
-            <div id="source-badge" class="source-badge"></div>
             <div id="status-box"></div>
             <div class="recommendation-section">
               <div class="rec-row">
@@ -106,9 +105,6 @@ class PoolChemistryCard extends HTMLElement {
       };
     }
 
-    // Aktualisiere nur die dynamischen Inhalte
-    const sourceBadge = this.querySelector('#source-badge');
-    sourceBadge.textContent = `Quelle: ${attr.source || 'Unbekannt'}`;
 
     const statusBox = this.querySelector('#status-box');
     statusBox.className = `status-box ${isShock ? 'warning' : 'ok'}`;

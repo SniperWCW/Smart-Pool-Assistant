@@ -8,7 +8,6 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g) basierend auf deinen Herstellerangaben.
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Flexible Datenquellen**: Unterstützt Bluetooth (PoolLab), PoolLab Cloud API und manuelle Home Assistant Sensoren, mit intelligenter Priorisierung.
-- **Transparente Datenquelle**: Die Frontend-Karte zeigt an, ob die Daten von Bluetooth, der Cloud API oder manuellen Sensoren stammen.
 - **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
 - **Benachrichtigungssystem**: Sofortige Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung nach einer definierten Zeit.
 - **Persistente Messzeiten**: Der Zeitstempel der letzten Messung bleibt auch nach einem Home Assistant Neustart erhalten.
@@ -35,14 +34,10 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 
 Gehe zu **Einstellungen > Geräte & Dienste > Integration hinzufügen** und suche nach **Smart Pool Assistant**.
 
-Der Konfigurationsprozess ist nun mehrstufig:
+Der Konfigurationsprozess ist nun einfach und direkt:
 
-1.  **Datenquelle auswählen**: Wähle, ob du Bluetooth (PoolLab), die PoolLab Cloud API oder manuelle Home Assistant Sensoren verwenden möchtest.
-2.  **Hardware & API Setup**:
-    *   **Bluetooth**: Wenn ausgewählt, werden verfügbare PoolLab-Geräte automatisch gescannt und zur Auswahl angeboten.
-    *   **Cloud API**: Gib deinen PoolLab Cloud API Key ein.
-    *   **Manuelle Sensoren**: Wähle deine Home Assistant Entitäten für Chlor, pH und Temperatur.
-3.  **Pool & Benachrichtigung**:
+1.  **Sensoren & Pool**:
+    *   **Sensoren**: Wähle deine Home Assistant Entitäten für Chlor, pH und Temperatur.
     *   **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
     *   **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
     *   **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).

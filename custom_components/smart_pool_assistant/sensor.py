@@ -44,8 +44,15 @@ class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.data is not None and self.coordinator.last_update_success
+
+    @property
     def native_value(self):
         """Return the state of the sensor."""
+        if self.coordinator.data is None:
+            return None
         return self.coordinator.data.get(self._key)
 
 class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
@@ -60,6 +67,8 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return entity specific state attributes."""
+        if self.coordinator.data is None:
+            return {}
         data = self.coordinator.data
         return {
             "last_calculation": data.get("last_calculation"),
@@ -73,12 +82,19 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_pre": data.get("chlor_pre"),
             "ph_senker_total": data.get("ph_senker_total"),
             "ph_erhoeher_total": data.get("ph_erhoeher_total"),
-            "history": data.get("history"),
+            "history": data.get("maintenance_history"),
         }
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.data is not None and self.coordinator.last_update_success
 
     @property
     def native_value(self):
         """Return the recommendation text."""
+        if self.coordinator.data is None:
+            return "Initialisierung..."
         if self.coordinator.data.get("is_shock"):
             return "Stoßchlorung empfohlen"
         return "Werte im Zielbereich"
