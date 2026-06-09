@@ -1,18 +1,23 @@
 import logging
+import asyncio
 from datetime import timedelta
 
+from bleak import BleakClient
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
-    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
+    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
+    CONF_BLE_ADDRESS, POOL_LAB_WRITE_CHAR, POOL_LAB_NOTIFY_CHAR, CONF_API_KEY
 )
+from .poollab_ble_parser import PoolLabBLEParser, PARAM_PH, PARAM_CHLORINE_FREE, PARAM_WATER_TEMP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +35,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         self.entry = entry
         self._store = Store(hass, _STORAGE_VERSION, f"{_STORAGE_KEY}_{entry.entry_id}")
+        self._parser = PoolLabBLEParser()
         self.maintenance_history = {}
 
     @property
@@ -46,11 +52,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     def async_setup_event_listeners(self):
         """Set up listeners for entity state changes."""
         conf = self.config
-        entities = [
-            conf[CONF_CHLOR_SENSOR],
-            conf[CONF_PH_SENSOR],
-            conf[CONF_TEMP_SENSOR]
-        ]
+        entities = []
+        for key in [CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR]:
+            if entity_id := conf.get(key):
+                entities.append(entity_id)
+
+        if not entities:
+            return None
+
         return async_track_state_change_event(
             self.hass, entities, self._handle_state_change
         )
@@ -58,6 +67,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     async def _handle_state_change(self, event):
         """Handle state changes of source entities."""
         _LOGGER.debug("Source entity changed, triggering recalculation")
+        
+        # Zeitstempel der tatsächlichen Änderung im persistenten Speicher festhalten
+        new_state = event.data.get("new_state")
+        if new_state and new_state.state not in ("unknown", "unavailable"):
+            self.maintenance_history["last_sensor_update_raw"] = new_state.last_updated.isoformat()
+            await self._store.async_save(self.maintenance_history)
+            
         await self.async_request_refresh()
 
     async def async_log_maintenance(self, m_type: str, amount: float):
@@ -108,8 +124,104 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "message": "Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!"
             })
 
+    async def _fetch_api_data(self):
+        """Fetch data from PoolLab Cloud GraphQL API."""
+        api_key = self.config.get(CONF_API_KEY)
+        if not api_key:
+            return None
+
+        url = "https://backend.labcom.cloud/graphql"
+        query = """
+        {
+          get_export_data {
+            measurements {
+              parameter
+              value
+              timestamp
+            }
+          }
+        }
+        """
+        try:
+            session = async_get_clientsession(self.hass)
+            headers = {"Authorization-Token": api_key}
+            async with session.post(url, json={"query": query}, headers=headers, timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    measurements = data.get("data", {}).get("get_export_data", {}).get("measurements", [])
+                    # Mappe Cloud Namen auf unsere internen IDs
+                    mapping = {"pH": PARAM_PH, "Free Chlorine": PARAM_CHLORINE_FREE, "Water Temperature": PARAM_WATER_TEMP}
+                    results = {}
+                    for m in measurements:
+                        p_id = mapping.get(m["parameter"])
+                        if p_id:
+                            # Nur den aktuellsten Wert behalten
+                            if p_id not in results or m["timestamp"] > results[p_id]["ts"]:
+                                results[p_id] = {"val": float(m["value"]), "ts": m["timestamp"]}
+                    return {k: v["val"] for k, v in results.items()}
+        except Exception as err:
+            _LOGGER.error("Fehler beim Abruf der PoolLab API: %s", err)
+        return None
+
+    async def _fetch_ble_data(self):
+        """Fetch data directly from PoolLab via BLE."""
+        address = self.config.get(CONF_BLE_ADDRESS)
+        if not address or address == "":
+            return None
+        
+        _LOGGER.debug("Versuche Verbindung zu PoolLab unter %s", address)
+        try:
+            async with BleakClient(address, timeout=10.0) as client:
+                if not client.is_connected:
+                    return None
+
+                received_data = bytearray()
+                def callback(sender, data):
+                    received_data.extend(data)
+
+                await client.start_notify(POOL_LAB_NOTIFY_CHAR, callback)
+                
+                # Befehl 0x10 (Get Measurements) senden
+                # Paket: [STX] [LEN_L] [LEN_H] [CMD] [CRC_L] [CRC_H] [ETX]
+                # Für 0x10 ohne Daten: 0x02 0x01 0x00 0x10 0x13 0x00 0x03 (Summe 0x13)
+                request = bytes([0x02, 0x01, 0x00, 0x10, 0x13, 0x00, 0x03])
+                await client.write_gatt_char(POOL_LAB_WRITE_CHAR, request)
+                
+                await asyncio.sleep(2.0) # Warten auf Antwort
+                await client.stop_notify(POOL_LAB_NOTIFY_CHAR)
+                
+                measurements = self._parser.parse_response_packet(bytes(received_data))
+                if measurements:
+                    # Sortieren nach Zeitstempel, um die aktuellsten Werte zu erhalten
+                    measurements.sort(key=lambda x: x.timestamp, reverse=True)
+                    return measurements
+        except Exception as err:
+            _LOGGER.debug("PoolLab BLE Verbindung fehlgeschlagen (Gerät vermutlich offline): %s", err)
+        return None
+
     async def _async_update_data(self):
+        source = "Manuelle Entitäten"
+        # BLE Daten abrufen (falls Gerät erreichbar)
+        measurements = await self._fetch_ble_data()
+        ble_vals = {}
+        if measurements:
+            source = "Bluetooth (PoolLab)"
+            for m in measurements:
+                if m.parameter_id not in ble_vals: # Nur den neuesten Wert pro Parameter nehmen
+                    ble_vals[m.parameter_id] = m.value
+        
+        # Wenn kein BLE, dann Cloud API versuchen
+        api_vals = {}
+        if not ble_vals:
+            api_vals = await self._fetch_api_data()
+            if api_vals:
+                source = "Cloud API (PoolLab)"
+        
+        # Kombinierte Werte (Priorität: BLE > API > Sensor)
+        pool_data = ble_vals or api_vals or {}
+
         def get_state_float(entity_id):
+            if not entity_id: return None
             state = self.hass.states.get(entity_id)
             if state is None or state.state in ("unknown", "unavailable"):
                 return None
@@ -120,21 +232,26 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         conf = self.config
         # Sensordaten abrufen
-        chlor_eid = conf[CONF_CHLOR_SENSOR]
-        ph_eid = conf[CONF_PH_SENSOR]
-        temp_eid = conf[CONF_TEMP_SENSOR]
+        chlor_eid = conf.get(CONF_CHLOR_SENSOR)
+        ph_eid = conf.get(CONF_PH_SENSOR)
+        temp_eid = conf.get(CONF_TEMP_SENSOR)
 
-        c_ist = get_state_float(chlor_eid)
-        ph_ist = get_state_float(ph_eid)
-        temp_ist = get_state_float(temp_eid)
+        # Werte priorisieren: Erst BLE, dann HA-Sensoren
+        c_ist = pool_data.get(PARAM_CHLORINE_FREE) or get_state_float(chlor_eid)
+        ph_ist = pool_data.get(PARAM_PH) or get_state_float(ph_eid)
+        temp_ist = pool_data.get(PARAM_WATER_TEMP) or get_state_float(temp_eid)
 
-        # Zeitstempel der Messwerte ermitteln (jüngstes Update der Quell-Sensoren)
-        last_measure = None
-        for eid in [chlor_eid, ph_eid, temp_eid]:
-            state = self.hass.states.get(eid)
-            if state and state.state not in ("unknown", "unavailable"):
-                if last_measure is None or state.last_updated > last_measure:
-                    last_measure = state.last_updated
+        # Zeitstempel aktualisieren, falls wir neue BLE Daten haben
+        if measurements or api_vals:
+            self.maintenance_history["last_sensor_update_raw"] = dt_util.now().isoformat()
+            await self._store.async_save(self.maintenance_history)
+
+        # Zeitstempel der Messwerte aus dem Speicher laden (für Persistenz über Neustarts)
+        stored_ts = self.maintenance_history.get("last_sensor_update_raw")
+        last_measure = dt_util.parse_datetime(stored_ts) if stored_ts else None
+        
+        if last_measure:
+            last_measure = dt_util.as_local(last_measure)
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None or ph_ist is None:
@@ -146,10 +263,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             }
 
         # Konfiguration laden
-        volumen = conf[CONF_POOL_VOLUME]
-        c_ziel = conf[CONF_CHLOR_TARGET]
-        ph_ziel = conf[CONF_PH_TARGET]
-        wirkstoff = conf[CONF_CHLOR_CONTENT]
+        volumen = conf.get(CONF_POOL_VOLUME, 1.0)
+        c_ziel = conf.get(CONF_CHLOR_TARGET, 1.5)
+        ph_ziel = conf.get(CONF_PH_TARGET, 7.2)
+        wirkstoff = conf.get(CONF_CHLOR_CONTENT, 0.56)
         
         # Dummy für Nutzungstag (Könnte später ein Switch in der Integration sein)
         usage_factor = 1.0 
@@ -181,11 +298,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         
         if ph_diff < 0: # pH zu hoch -> senken
             # Berechnung: ml = Differenz * (Dosierung / 10m3 / 0.2 pH-Schritt) * Poolvolumen
-            factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
+            factor = conf.get(CONF_PH_DOWN_DOSAGE, 200.0) / 10.0 / 0.2
             ph_senker_ml = round(ph_diff_abs * factor * volumen, 1)
         elif ph_diff > 0: # pH zu niedrig -> erhöhen
             # Berechnung: g = Differenz * (Dosierung / 10m3 / 0.1 pH-Schritt) * Poolvolumen
-            factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
+            factor = conf.get(CONF_PH_UP_DOSAGE, 100.0) / 10.0 / 0.1
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
 
         return {
@@ -203,5 +320,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "last_measurement": last_measure.strftime("%d.%m. um %H:%M") if last_measure else "Unbekannt",
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
-            "history": self.maintenance_history
+            "history": self.maintenance_history,
+            "source": source
         }

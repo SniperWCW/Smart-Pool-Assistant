@@ -12,3 +12,8 @@ CONF_PH_UP_DOSAGE = "ph_up_dosage"     # g pro 10m3 für 0.1 pH
 CONF_NOTIFY_SERVICE = "notify_service"
 CONF_PERSISTENT_NOTIFICATION = "persistent_notification"
 CONF_FOLLOW_UP_TIME = "follow_up_time"
+
+CONF_API_KEY = "api_key"
+CONF_BLE_ADDRESS = "ble_address"
+POOL_LAB_WRITE_CHAR = "0000ff01-0000-1000-8000-00805f9b34fb"
+POOL_LAB_NOTIFY_CHAR = "0000ff02-0000-1000-8000-00805f9b34fb"
