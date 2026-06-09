@@ -1,6 +1,6 @@
 # Smart Pool Assistant 💧
 
-Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei hilft, die Wasserqualität deines Pools oder Whirlpools perfekt im Griff zu behalten. Basierend auf deinen aktuellen Messwerten für Chlor und pH-Wert berechnet die Integration präzise Dosierempfehlungen.
+Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration, die dich bei der Wasserpflege deines Pools oder Whirlpools unterstützt. Basierend auf aktuellen Messwerten liefert sie präzise Dosierempfehlungen und verwaltet die Wartungshistorie.
 
 ## Funktionen
 
@@ -8,8 +8,9 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
-- **Benachrichtigungssystem**: Sofortige Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung nach einer definierten Zeit.
+- **Benachrichtigungssystem**: Auswahl des Dienstes via Dropdown, Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung.
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
+- **Persistente Zeitstempel**: Zeitstempel für Messungen und Berechnungen bleiben auch nach einem Neustart von Home Assistant erhalten.
 
 *   **NEU V0.0.1.5:** Re-Konfiguration möglich! Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
 *   **NEU V0.0.1.5:** Unterstützung für `persistent_notification` (konfigurierbar).
