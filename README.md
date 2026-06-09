@@ -5,17 +5,15 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 ## Funktionen
 
 - **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren bei niedrigen Werten und berechnet die Menge basierend auf dem Wirkstoffanteil deines Granulats.
-- **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g) basierend auf deinen Herstellerangaben.
+- **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
-- **Flexible Datenquellen**: Unterstützt Bluetooth (PoolLab), PoolLab Cloud API und manuelle Home Assistant Sensoren, mit intelligenter Priorisierung.
 - **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
 - **Benachrichtigungssystem**: Sofortige Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung nach einer definierten Zeit.
-- **Persistente Messzeiten**: Der Zeitstempel der letzten Messung bleibt auch nach einem Home Assistant Neustart erhalten.
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
 
-* **Re-Konfiguration** Re-Konfiguration möglich! Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
-* **Persistent Notification:** Unterstützung für `persistent_notification` (konfigurierbar).
-* **Frontend:** Neuer Bereich "Letzte Aktivitäten" zeigt die letzte Dosierung direkt auf der Karte an.
+*   **NEU V0.0.1.5:** Re-Konfiguration möglich! Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
+*   **NEU V0.0.1.5:** Unterstützung für `persistent_notification` (konfigurierbar).
+*   **Frontend:** Neuer Bereich "Letzte Aktivitäten" zeigt die letzte Dosierung direkt auf der Karte an.
 
 ## Installation
 
@@ -34,18 +32,15 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration, die dir dabei 
 
 Gehe zu **Einstellungen > Geräte & Dienste > Integration hinzufügen** und suche nach **Smart Pool Assistant**.
 
-Der Konfigurationsprozess ist nun einfach und direkt:
-
-1.  **Sensoren & Pool**:
-    *   **Sensoren**: Wähle deine Home Assistant Entitäten für Chlor, pH und Temperatur.
-    *   **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
-    *   **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
-    *   **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
-    *   **Dosierung PH-Minus**: Menge in ml, um 10 m³ Wasser um 0,2 Einheiten zu senken (z.B. 200 ml).
-    *   **Dosierung PH-Plus**: Menge in g, um 10 m³ Wasser um 0,1 Einheiten zu heben (z.B. 100 g).
-    *   **Benachrichtigungs-Dienst**: Wähle aus deinen vorhandenen Home Assistant `notify`-Diensten.
-    *   **Persistente Benachrichtigung**: Optionale Anzeige einer Benachrichtigung in der Home Assistant Sidebar.
-    *   **Erinnerung**: Zeitspanne in Minuten, nach der eine Aufforderung zur Nachmessung gesendet wird.
+Du wirst nach folgenden Informationen gefragt:
+- **Sensoren**: Entitäten für Chlor (mg/l), pH-Wert und Temperatur.
+- **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
+- **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
+- **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
+- **Dosierung PH-Minus**: Menge in ml, um 10 m³ Wasser um 0,2 Einheiten zu senken (z.B. 200 ml).
+- **Dosierung PH-Plus**: Menge in g, um 10 m³ Wasser um 0,1 Einheiten zu heben (z.B. 100 g).
+- **Benachrichtigungs-Dienst**: Der zu verwendende Dienst (z.B. `notify.mobile_app_iphone`).
+- **Erinnerung**: Zeitspanne in Minuten, nach der eine Aufforderung zur Nachmessung gesendet wird.
 
 ## Die Berechnungslogik
 

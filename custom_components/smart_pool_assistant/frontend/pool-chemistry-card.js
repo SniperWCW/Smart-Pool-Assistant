@@ -55,7 +55,6 @@ class PoolChemistryCard extends HTMLElement {
             <div id="footer-info" class="footer"></div>
           </div>
           <style>
-            .source-badge { font-size: 0.75em; text-align: right; opacity: 0.6; margin-bottom: 4px; font-style: italic; }
             .status-box { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center; font-size: 1.1em; }
             .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
             .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
@@ -105,7 +104,7 @@ class PoolChemistryCard extends HTMLElement {
       };
     }
 
-
+    // Aktualisiere nur die dynamischen Inhalte
     const statusBox = this.querySelector('#status-box');
     statusBox.className = `status-box ${isShock ? 'warning' : 'ok'}`;
     statusBox.textContent = isShock ? '⚠️ Stoßchlorung empfohlen' : '✅ Wasserqualität in Ordnung';
