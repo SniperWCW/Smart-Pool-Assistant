@@ -4,11 +4,13 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 
 ## Hauptfunktionen
 
-- **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren und eine **Temperatur-Korrektur** für warme Tage.
+- **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren, eine **Temperatur-Korrektur** sowie den **Abdeckungs-Status** und die **Badelast** (Nutzungsmodus).
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
-- **Benachrichtigungssystem**: Auswahl des Dienstes via Dropdown, Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung.
+- **Benachrichtigungssystem**: 
+  - Auswahl des Dienstes via Dropdown.
+  - Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung (Follow-up).
 - **Filter-Wartung**: Verfolge Reinigungs- und Wechselintervalle des Filters.
   - **Ampellogik**: Visuelle Anzeige (grün, gelb, rot) der Fälligkeit.
   - **Benachrichtigungen**: Automatische Meldungen bei Erreichen der Schwellenwerte.
@@ -54,13 +56,23 @@ Du wirst nach folgenden Informationen gefragt:
 ## Die Berechnungslogik
 
 ### Chlor
-Die Integration nutzt einen dynamischen **Shock-Faktor**:
+Die Chlormenge wird durch eine Kombination verschiedener Faktoren ermittelt:
+
+1. **Dynamischer Shock-Faktor**:
 - Bei Chlor < 0.1 mg/l: 3.0x Menge
 - Bei Chlor < 0.6 mg/l: 1.8x Menge
 
-**NEU: Temperatur-Korrekturfaktor:**
+2. **Temperatur-Korrektur**:
 - Ab 28°C Wassertemperatur: +20% Chlorbedarf.
 - Ab 32°C Wassertemperatur: +50% Chlorbedarf.
+
+3. **Umgebungs-Faktor (Abdeckung)**:
+- **Abgedeckt**: Reduziert den Bedarf um 20% (geringerer UV-Verlust).
+- **Offen**: Erhöht den Bedarf um 20% (hohe UV-Zehrung).
+
+4. **Badelast (Nutzungsmodus)**:
+- **Normal**: +3g Chlor-Zuschlag.
+- **Party**: +8g Chlor-Zuschlag.
 
 Zusätzlich wird eine **Mindestdosis** sichergestellt, damit die Desinfektion wirksam bleibt.
 
@@ -73,8 +85,6 @@ Die Integration registriert automatisch eine Custom Card. Du kannst sie manuell 
 
 ```yaml
 type: custom:pool-chemistry-card
-chlor_entity: sensor.pool_chlor_nachdosierung
-ph_entity: sensor.pool_ph_senker
 recommendation_entity: sensor.pool_empfehlung
 ```
 
