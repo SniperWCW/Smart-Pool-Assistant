@@ -1,7 +1,7 @@
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "documentation": "https://github.com/SniperWCW/smart_pool_assistant",
   "issue_tracker": "https://github.com/SniperWCW/smart_pool_assistant/issues",
   "dependencies": [],
