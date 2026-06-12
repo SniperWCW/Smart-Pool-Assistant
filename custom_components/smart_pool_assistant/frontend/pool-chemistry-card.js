@@ -63,6 +63,19 @@ class PoolChemistryCard extends HTMLElement {
               <div class="section-title">📅 Aktuelle Messwerte:</div>
               <div id="measurements-grid" class="m-grid"></div>
             </div>
+            <div class="measurements-section" style="margin-top: 12px;">
+              <div class="section-title">⚙️ Filter Wartung:</div>
+              <div id="filter-maintenance-grid" class="m-grid">
+                <div class="m-item">
+                  <b>Reinigung:</b> <span id="filter-clean-days">--</span> Tage her <small>(Empf. alle <span id="filter-clean-interval">--</span> Tage)</small>
+                  <button id="btn-filter-clean" class="small-btn">Gereinigt</button>
+                </div>
+                <div class="m-item">
+                  <b>Wechsel:</b> <span id="filter-replace-days">--</span> Tage her <small>(Empf. alle <span id="filter-replace-interval">--</span> Tage)</small>
+                  <button id="btn-filter-replace" class="small-btn">Gewechselt</button>
+                </div>
+              </div>
+            </div>
             <div id="footer-info" class="footer"></div>
           </div>
           <style>
@@ -102,6 +115,10 @@ class PoolChemistryCard extends HTMLElement {
             .m-grid { display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 1em; }
             .m-item small { opacity: 0.6; margin-left: 6px; }
             .footer { margin-top: 14px; font-size: 0.8em; color: var(--secondary-text-color); text-align: center; }
+            .status-ok { color: var(--success-color, #4CAF50); }
+            .status-warning { color: var(--warning-color, #FF9800); }
+            .status-critical { color: var(--error-color, #F44336); }
+            .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; margin-left: 8px; }
           </style>
         </ha-card>
       `;
@@ -111,8 +128,10 @@ class PoolChemistryCard extends HTMLElement {
       this.querySelector('#btn-chlor').onclick = () => this._handleAdd('chlor');
       this.querySelector('#btn-ph').onclick = () => {
         if (this.querySelector('#input-ph_plus').value) this._handleAdd('ph_plus');
-        if (this.querySelector('#input-ph_minus').value) this._handleAdd('ph_minus');
+        else if (this.querySelector('#input-ph_minus').value) this._handleAdd('ph_minus'); // Use else if to prevent both from firing
       };
+      this.querySelector('#btn-filter-clean').onclick = () => this._handleAdd('filter_clean');
+      this.querySelector('#btn-filter-replace').onclick = () => this._handleAdd('filter_replace');
     }
 
     // Aktualisiere nur die dynamischen Inhalte
@@ -151,18 +170,40 @@ class PoolChemistryCard extends HTMLElement {
     const c_target = formatNum(attr.chlor_target);
     const ph_target = formatNum(attr.ph_target);
 
+    // Helper to get colored text for filter status
+    const getColoredDays = (days, status) => {
+      let className = '';
+      if (status === 'ok') className = 'status-ok';
+      else if (status === 'warning') className = 'status-warning';
+      else if (status === 'critical') className = 'status-critical';
+      return `<span class="${className}">${days !== null ? days : '--'}</span>`;
+    };
+
     this.querySelector('#measurements-grid').innerHTML = `
       <div class="m-item"><b>Chlor:</b> ${c_ist} mg/l <small>(Ziel: ${c_target})</small></div>
       <div class="m-item"><b>pH-Wert:</b> ${ph_ist} <small>(Ziel: ${ph_target})</small></div>
       <div class="m-item">🌡️ <b>Temperatur:</b> ${t_ist}°C</div>
     `;
 
+    // Filter Maintenance Display
+    const daysSinceClean = attr.days_since_filter_clean;
+    const cleanStatus = attr.filter_clean_status;
+    const cleanInterval = attr.filter_clean_interval;
+    const daysSinceReplace = attr.days_since_filter_replace;
+    const replaceStatus = attr.filter_replace_status;
+    const replaceInterval = attr.filter_replace_interval;
+
+    this.querySelector('#filter-clean-days').innerHTML = getColoredDays(daysSinceClean, cleanStatus);
+    this.querySelector('#filter-clean-interval').textContent = cleanInterval !== null ? cleanInterval : '--';
+    this.querySelector('#filter-replace-days').innerHTML = getColoredDays(daysSinceReplace, replaceStatus);
+    this.querySelector('#filter-replace-interval').textContent = replaceInterval !== null ? replaceInterval : '--';
+
     this.querySelector('#footer-info').textContent = `Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}`;
   }
 
   _handleAdd(type) {
-    const input = this.querySelector(`#input-${type}`);
-    const val = parseFloat(input.value);
+    const input = this.querySelector(`#input-${type}`); // This will be null for filter actions
+    const val = input ? parseFloat(input.value) : 0; // Default to 0 for filter actions
     if (val > 0 && this._hass) {
       this._hass.callService("smart_pool_assistant", "log_maintenance", {
         entity_id: this.config.recommendation_entity,
@@ -170,6 +211,13 @@ class PoolChemistryCard extends HTMLElement {
         amount: val
       });
       input.value = "";
+    } else if (type === 'filter_clean' || type === 'filter_replace') {
+       this._hass.callService("smart_pool_assistant", "log_maintenance", {
+        entity_id: this.config.recommendation_entity,
+        type: type,
+        amount: 0 // No amount for filter actions
+      });
+      // No input field to clear for filter actions
     }
   }
 

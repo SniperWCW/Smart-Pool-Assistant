@@ -12,3 +12,11 @@ CONF_PH_UP_DOSAGE = "ph_up_dosage"     # g pro 10m3 für 0.1 pH
 CONF_NOTIFY_SERVICE = "notify_service"
 CONF_PERSISTENT_NOTIFICATION = "persistent_notification"
 CONF_FOLLOW_UP_TIME = "follow_up_time"
+
+# Filter Maintenance
+CONF_FILTER_CLEAN_INTERVAL = "filter_clean_interval" # Days
+CONF_FILTER_REPLACE_INTERVAL = "filter_replace_interval" # Days
+CONF_FILTER_CLEAN_YELLOW_THRESHOLD = "filter_clean_yellow_threshold" # Days before interval
+CONF_FILTER_CLEAN_RED_THRESHOLD = "filter_clean_red_threshold" # Days before interval
+CONF_FILTER_REPLACE_YELLOW_THRESHOLD = "filter_replace_yellow_threshold" # Days before interval
+CONF_FILTER_REPLACE_RED_THRESHOLD = "filter_replace_red_threshold" # Days before interval

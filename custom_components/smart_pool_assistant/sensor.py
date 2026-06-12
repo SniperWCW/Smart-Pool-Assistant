@@ -30,6 +30,8 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "pH Istwert", "ph_ist", None, "mdi:ph"),
         PoolAssistantSensor(coordinator, "Temperatur Istwert", "temp_ist", "°C", "mdi:thermometer"),
         PoolAssistantSensor(coordinator, "Datenquelle", "data_source", None, "mdi:database-import"),
+        PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "days_since_filter_clean", "Tage", "mdi:filter-outline"),
+        PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
         PoolAssistantStatusSensor(coordinator),
     ]
     async_add_entities(sensors)
@@ -77,6 +79,12 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "ph_target": data.get("ph_target"),
             "chlor_dose": data.get("chlor_dose"),
             "chlor_pre": data.get("chlor_pre"),
+            "days_since_filter_clean": data.get("days_since_filter_clean"),
+            "filter_clean_status": data.get("filter_clean_status"),
+            "filter_clean_interval": data.get("filter_clean_interval"),
+            "days_since_filter_replace": data.get("days_since_filter_replace"),
+            "filter_replace_status": data.get("filter_replace_status"),
+            "filter_replace_interval": data.get("filter_replace_interval"),
             "ph_senker_total": data.get("ph_senker_total"),
             "ph_erhoeher_total": data.get("ph_erhoeher_total"),
             "history": data.get("history"),

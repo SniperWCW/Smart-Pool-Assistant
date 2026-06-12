@@ -14,8 +14,10 @@ from .const import (
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
+    , CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
+    CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
+    CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD
 )
-
 CONF_API_KEY = "api_key"
 
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -89,12 +91,31 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_FOLLOW_UP_TIME, default=defaults.get(CONF_FOLLOW_UP_TIME, 60)): selector.NumberSelector(
                 selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1)
             ),
+            vol.Required(CONF_FILTER_CLEAN_INTERVAL, default=defaults.get(CONF_FILTER_CLEAN_INTERVAL, 30)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=1)
+            ),
+            vol.Required(CONF_FILTER_REPLACE_INTERVAL, default=defaults.get(CONF_FILTER_REPLACE_INTERVAL, 180)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=1)
+            ),
+            vol.Required(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, default=defaults.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 7)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
+            ),
+            vol.Required(CONF_FILTER_CLEAN_RED_THRESHOLD, default=defaults.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
+            ),
+            vol.Required(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, default=defaults.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
+            ),
+            vol.Required(CONF_FILTER_REPLACE_RED_THRESHOLD, default=defaults.get(CONF_FILTER_REPLACE_RED_THRESHOLD, 0)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
+            ),
         })
 
 class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry
+        self._notify_services: list[str] = [] # Initialize _notify_services
 
     async def async_step_init(self, user_input=None):
         errors = {}

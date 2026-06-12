@@ -12,7 +12,10 @@ from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
-    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
+    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
+    CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
+    CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
+    CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD
 )
 
 CONF_API_KEY = "api_key"
@@ -93,17 +96,30 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     async def async_log_maintenance(self, m_type: str, amount: float):
         """Log maintenance action and send notifications."""
         now = dt_util.now()
-        ts = now.strftime("%d.%m. %H:%M")
-        label = "Chlor" if m_type == "chlor" else "PH-Plus" if m_type == "ph_plus" else "PH-Minus"
-        unit = "g" if m_type != "ph_minus" else "ml"
+        ts_formatted = now.strftime("%d.%m. %H:%M")
+        
+        label = ""
+        unit = ""
+        if m_type == "chlor": label, unit = "Chlor", "g"
+        elif m_type == "ph_plus": label, unit = "PH-Plus", "g"
+        elif m_type == "ph_minus": label, unit = "PH-Minus", "ml"
+        elif m_type == "filter_clean": label, unit = "Filter gereinigt", ""
+        elif m_type == "filter_replace": label, unit = "Filter gewechselt", ""
         
         # Update history
-        self.maintenance_history[m_type] = {"amount": amount, "time": ts, "raw_ts": now.isoformat()}
-        self.maintenance_history["last_action"] = f"{amount}{unit} {label} am {ts}"
+        self.maintenance_history[m_type] = {"amount": amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+        
+        action_text = f"{amount}{unit} {label}" if amount else label
+        self.maintenance_history["last_action"] = f"{action_text} am {ts_formatted}"
+
         await self._store.async_save(self.maintenance_history)
         
         conf = self.config
-        msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
+        # Wording für Wartung vs. Chemie anpassen
+        if m_type in ("filter_clean", "filter_replace"):
+            msg = f"Pool-Wartung: {label} durchgeführt."
+        else:
+            msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
         
         # Persistent Notification
         if conf.get(CONF_PERSISTENT_NOTIFICATION):
@@ -129,15 +145,91 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         
         await self.async_request_refresh()
 
-    async def _send_follow_up(self, _):
+    async def _send_notification(self, message: str, notification_id: str):
+        """Helper to send notifications."""
         conf = self.config
+        if conf.get(CONF_PERSISTENT_NOTIFICATION):
+            await self.hass.services.async_call("persistent_notification", "create", {
+                "title": "Smart Pool Assistant",
+                "message": message,
+                "notification_id": f"{DOMAIN}_{notification_id}"
+            })
         service = conf.get(CONF_NOTIFY_SERVICE)
         if service:
             domain, service_name = service.split(".")
             await self.hass.services.async_call(domain, service_name, {
                 "title": "Smart Pool Assistant",
-                "message": "Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!"
+                "message": message
             })
+
+    async def _send_follow_up(self, _):
+        conf = self.config
+        service = conf.get(CONF_NOTIFY_SERVICE)
+        if service:
+            domain, service_name = service.split(".")
+            await self._send_notification("Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!", "follow_up")
+
+    def _get_days_since_last_action(self, action_key: str) -> int | None:
+        """Calculate days since last action."""
+        last_action_data = self.maintenance_history.get(action_key)
+        if last_action_data and last_action_data.get("raw_ts"):
+            last_ts = dt_util.parse_datetime(last_action_data["raw_ts"])
+            if last_ts:
+                return (dt_util.now() - last_ts).days
+        return None
+
+    async def _check_filter_notifications(self, conf: dict):
+        """Check and send notifications for filter maintenance."""
+        now = dt_util.now()
+        
+        # Filter Clean
+        days_since_clean = self._get_days_since_last_action("filter_clean")
+        if days_since_clean is not None:
+            clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 30)
+            clean_yellow = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 7)
+            clean_red = conf.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)
+
+            # Yellow notification
+            if days_since_clean > 0 and (clean_interval - clean_yellow) <= days_since_clean < clean_interval:
+                last_notified = self.maintenance_history.get("last_notified_clean_yellow")
+                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1: # Notify once a day
+                    await self._send_notification(f"Filterreinigung bald fällig! Vor {days_since_clean} Tagen gereinigt. Empfohlen alle {clean_interval} Tage.", "filter_clean_yellow")
+                    self.maintenance_history["last_notified_clean_yellow"] = now.isoformat()
+            
+            # Red notification for cleaning
+            # Rot löst aus, wenn das Intervall plus die rote Schwelle (Überfälligkeit) erreicht ist
+            if days_since_clean >= (clean_interval + clean_red):
+                last_notified = self.maintenance_history.get("last_notified_clean_red")
+                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
+                    await self._send_notification(f"Filterreinigung ÜBERFÄLLIG! Vor {days_since_clean} Tagen gereinigt. Empfohlen alle {clean_interval} Tage.", "filter_clean_red")
+                    self.maintenance_history["last_notified_clean_red"] = now.isoformat()
+
+        # Filter Replace
+        days_since_replace = self._get_days_since_last_action("filter_replace")
+        if days_since_replace is not None:
+            replace_interval = conf.get(CONF_FILTER_REPLACE_INTERVAL, 180)
+            replace_yellow = conf.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)
+            replace_red = conf.get(CONF_FILTER_REPLACE_RED_THRESHOLD, 0)
+
+            # Yellow notification for replacement
+            if days_since_replace > 0 and (replace_interval - replace_yellow) <= days_since_replace < replace_interval:
+                last_notified = self.maintenance_history.get("last_notified_replace_yellow")
+                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
+                    await self._send_notification(
+                        f"Filterwechsel bald fällig! Vor {days_since_replace} Tagen gewechselt. Empfohlen alle {replace_interval} Tage.",
+                        "filter_replace_yellow"
+                    )
+                    self.maintenance_history["last_notified_replace_yellow"] = now.isoformat()
+
+            # Red notification for replacement
+            if days_since_replace >= (replace_interval + replace_red):
+                last_notified = self.maintenance_history.get("last_notified_replace_red")
+                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
+                    await self._send_notification(
+                        f"Filterwechsel ÜBERFÄLLIG! Vor {days_since_replace} Tagen gewechselt. Empfohlen alle {replace_interval} Tage.",
+                        "filter_replace_red"
+                    )
+                    self.maintenance_history["last_notified_replace_red"] = now.isoformat()
 
     async def _async_update_data(self):
         def get_state_info(entity_id: str):
@@ -152,16 +244,26 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except ValueError:
                 return None, None
 
+        def get_filter_status(days_since: int | None, interval: int, yellow_threshold: int, red_threshold: int) -> str:
+            """Determine filter status based on days since last action and thresholds."""
+            if days_since is None:
+                return "unknown"
+            
+            days_until_due = interval - days_since
+            if days_until_due <= red_threshold:
+                return "critical"
+            if days_until_due <= yellow_threshold:
+                return "warning"
+            
+            return "ok"
+
         # 1. Bestehende Daten aus der Historie laden (Basis für die Anzeige)
         last_meas_raw = self.maintenance_history.get("last_measurement_raw")
-        if not last_meas_raw:
-            last_meas_raw = dt_util.now().isoformat()
-            self.maintenance_history["last_measurement_raw"] = last_meas_raw
-
         last_calc_raw = self.maintenance_history.get("last_calc_raw")
+        
+        # Falls noch nie berechnet wurde, initialisieren wir mit jetzt (nur für die Anzeige)
         if not last_calc_raw:
             last_calc_raw = dt_util.now().isoformat()
-            self.maintenance_history["last_calc_raw"] = last_calc_raw
 
         conf = self.config
         api_key = conf.get(CONF_API_KEY)
@@ -259,16 +361,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
             return {
-                "chlor_ist": None,
-                "ph_ist": None,
-                "temp_ist": None,
+                "chlor_ist": c_ist,
+                "ph_ist": ph_ist,
+                "temp_ist": temp_ist,
                 "chlor_dose": 0,
                 "ph_senker_total": 0,
                 "ph_erhoeher_total": 0,
                 "data_source": data_source,
                 "is_error": True,
                 "last_calculation": dt_util.parse_datetime(last_calc_raw).strftime("%d.%m.%Y %H:%M Uhr"),
-                "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr"),
+                "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
                 "history": self.maintenance_history
             }
 
@@ -287,6 +389,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Chlor Berechnung
         c_diff = max(c_ziel - c_ist, 0)
         
+        # Temperatur-Korrekturfaktor für Chlor (höhere Zehrung bei warmem Wasser)
+        temp_factor = 1.0
+        if temp_ist is not None:
+            if temp_ist > 32:
+                temp_factor = 1.5
+            elif temp_ist > 28:
+                temp_factor = 1.2
+
         # Stoßchlorung Faktor
         shock_factor = 1.0
         if c_ist < 0.1: shock_factor = 3.0
@@ -299,7 +409,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if c_ist < 0.3: min_dose = 6.0
         elif c_ist < 0.8: min_dose = 3.0
 
-        raw_chlor = (c_diff * volumen / wirkstoff) * shock_factor * usage_factor
+        raw_chlor = (c_diff * volumen / wirkstoff) * shock_factor * usage_factor * temp_factor
         s_g = round(min(max(raw_chlor, min_dose), 25.0), 1)
         
         # pH Berechnung
@@ -317,6 +427,30 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             # Berechnung: g = Differenz * (Dosierung / 10m3 / 0.1 pH-Schritt) * Poolvolumen
             factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
+
+        # Filter Wartung
+        days_since_filter_clean = self._get_days_since_last_action("filter_clean")
+        days_since_filter_replace = self._get_days_since_last_action("filter_replace")
+
+        filter_clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 30)
+        filter_replace_interval = conf.get(CONF_FILTER_REPLACE_INTERVAL, 180)
+        
+        filter_clean_yellow_threshold = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 7)
+        filter_clean_red_threshold = conf.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)
+        filter_replace_yellow_threshold = conf.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)
+        filter_replace_red_threshold = conf.get(CONF_FILTER_REPLACE_RED_THRESHOLD, 0)
+
+        filter_clean_status = get_filter_status(
+            days_since_filter_clean, filter_clean_interval, 
+            filter_clean_yellow_threshold, filter_clean_red_threshold
+        )
+        filter_replace_status = get_filter_status(
+            days_since_filter_replace, filter_replace_interval, 
+            filter_replace_yellow_threshold, filter_replace_red_threshold
+        )
+
+        # Check and send filter notifications
+        await self._check_filter_notifications(conf)
 
         # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren
         new_calc_ts = dt_util.now().isoformat()
@@ -337,8 +471,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "is_shock": c_ist < 0.5,
             "is_error": False,
             "last_calculation": dt_util.parse_datetime(new_calc_ts).strftime("%d.%m.%Y %H:%M Uhr"),
-            "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr"),
+            "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
-            "history": self.maintenance_history
+            "history": self.maintenance_history,
+            "days_since_filter_clean": days_since_filter_clean,
+            "filter_clean_status": filter_clean_status,
+            "filter_clean_interval": filter_clean_interval,
+            "days_since_filter_replace": days_since_filter_replace,
+            "filter_replace_status": filter_replace_status,
+            "filter_replace_interval": filter_replace_interval,
         }

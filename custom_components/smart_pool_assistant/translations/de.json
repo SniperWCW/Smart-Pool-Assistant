@@ -1,22 +1,62 @@
 {
   "config": {
+    "error": {
+      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor."
+    },
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
-        "description": "Pool konfigurieren",
+        "description": "Konfiguriere die Sensoren und Zielwerte für deinen Pool oder Whirlpool.",
         "data": {
-          "chlor_sensor": "Chlor Sensor (mg/l)",
-          "ph_sensor": "pH-Wert Sensor",
-          "temp_sensor": "Temperatur Sensor",
+          "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
+          "chlor_sensor": "Chlor-Sensor (mg/l)",
+          "ph_sensor": "pH-Wert-Sensor",
+          "temp_sensor": "Temperatur-Sensor (°C)",
           "pool_volume": "Poolvolumen (m³)",
-          "chlor_target": "Ziel Chlorwert",
-          "ph_target": "Ziel pH-Wert",
-          "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56)",
-          "ph_down_dosage": "Dosierung PH-Minus (ml / 10m³ für -0,2 pH)",
-          "ph_up_dosage": "Dosierung PH-Plus (g / 10m³ für +0,1 pH)",
-          "notify_service": "Benachrichtigungs-Dienst (z.B. notify.mobile_app_iphone)",
-          "persistent_notification": "Persistente Benachrichtigung in HA anzeigen?",
-          "follow_up_time": "Erinnerung nach X Minuten (0 zum Deaktivieren)"
+          "chlor_target": "Chlor Zielwert (mg/l)",
+          "ph_target": "pH Zielwert",
+          "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
+          "ph_down_dosage": "PH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
+          "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "notify_service": "Benachrichtigungs-Dienst",
+          "persistent_notification": "Benachrichtigung in HA anzeigen",
+          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)",
+          "filter_clean_interval": "Filter Reinigungsintervall (Tage)",
+          "filter_replace_interval": "Filter Wechselintervall (Tage)",
+          "filter_clean_yellow_threshold": "Filter Reinigung: Gelb-Schwelle (Tage vor Fälligkeit)",
+          "filter_clean_red_threshold": "Filter Reinigung: Rot-Schwelle (Tage vor Fälligkeit)",
+          "filter_replace_yellow_threshold": "Filter Wechsel: Gelb-Schwelle (Tage vor Fälligkeit)",
+          "filter_replace_red_threshold": "Filter Wechsel: Rot-Schwelle (Tage vor Fälligkeit)"
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor."
+    },
+    "step": {
+      "init": {
+        "data": {
+          "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
+          "chlor_sensor": "Chlor-Sensor (mg/l)",
+          "ph_sensor": "pH-Wert-Sensor",
+          "temp_sensor": "Temperatur-Sensor (°C)",
+          "pool_volume": "Poolvolumen (m³)",
+          "chlor_target": "Chlor Zielwert (mg/l)",
+          "ph_target": "pH Zielwert",
+          "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
+          "ph_down_dosage": "PH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
+          "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "notify_service": "Benachrichtigungs-Dienst",
+          "persistent_notification": "Benachrichtigung in HA anzeigen",
+          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)",
+          "filter_clean_interval": "Filter Reinigungsintervall (Tage)",
+          "filter_replace_interval": "Filter Wechselintervall (Tage)",
+          "filter_clean_yellow_threshold": "Filter Reinigung: Gelb-Schwelle (Tage vor Fälligkeit)",
+          "filter_clean_red_threshold": "Filter Reinigung: Rot-Schwelle (Tage vor Fälligkeit)",
+          "filter_replace_yellow_threshold": "Filter Wechsel: Gelb-Schwelle (Tage vor Fälligkeit)",
+          "filter_replace_red_threshold": "Filter Wechsel: Rot-Schwelle (Tage vor Fälligkeit)"
         }
       }
     }

@@ -2,18 +2,21 @@
 
 Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration, die dich bei der Wasserpflege deines Pools oder Whirlpools unterstützt. Basierend auf aktuellen Messwerten liefert sie präzise Dosierempfehlungen und verwaltet die Wartungshistorie.
 
-## Funktionen
+## Hauptfunktionen
 
-- **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren bei niedrigen Werten und berechnet die Menge basierend auf dem Wirkstoffanteil deines Granulats.
+- **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren und eine **Temperatur-Korrektur** für warme Tage.
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
 - **Benachrichtigungssystem**: Auswahl des Dienstes via Dropdown, Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung.
+- **Filter-Wartung**: Verfolge Reinigungs- und Wechselintervalle des Filters.
+  - **Ampellogik**: Visuelle Anzeige (grün, gelb, rot) der Fälligkeit.
+  - **Benachrichtigungen**: Automatische Meldungen bei Erreichen der Schwellenwerte.
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
-- **Persistente Zeitstempel**: Zeitstempel für Messungen und Berechnungen bleiben auch nach einem Neustart von Home Assistant erhalten.
+- **Maximale Datensicherheit**: Nutzt die Home Assistant Storage-API. Alle Zeitstempel und Historien bleiben nach einem Neustart oder Update erhalten.
 - **Re-Konfiguration möglich!** Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
 - **Unterstützung für `persistent_notification` (konfigurierbar).**
-- **Frontend:** Neuer Bereich "Letzte Aktivitäten" zeigt die letzte Dosierung direkt auf der Karte an.
+- **Letzte Aktivitäten**: Zeigt die letzte durchgeführte Aktion (z.B. "Chlor zugegeben" oder "Filter gereinigt") direkt auf der Karte an.
 
 ## Installation
 
@@ -42,12 +45,23 @@ Du wirst nach folgenden Informationen gefragt:
 - **Benachrichtigungs-Dienst**: Der zu verwendende Dienst (z.B. `notify.mobile_app_iphone`).
 - **Erinnerung**: Zeitspanne in Minuten, nach der eine Aufforderung zur Nachmessung gesendet wird.
 
+### Filter-Wartung Einstellungen
+- **Reinigungsintervall**: Wie oft der Filter gereinigt werden soll (Standard: 30 Tage).
+- **Wechselintervall**: Wie oft der Filter ersetzt werden soll (Standard: 180 Tage).
+- **Gelb-Schwelle**: Tage **vor** Ablauf des Intervalls, ab denen die Warnung (Gelb) erscheint.
+- **Rot-Schwelle**: Tage **nach** Ablauf des Intervalls (Überfälligkeit), ab denen der Status auf Kritisch (Rot) springt.
+
 ## Die Berechnungslogik
 
 ### Chlor
 Die Integration nutzt einen dynamischen **Shock-Faktor**:
-- Bei Chlor < 0.1 mg/l wird die 3-fache Menge empfohlen.
-- Bei Chlor < 0.6 mg/l wird die 1.8-fache Menge empfohlen.
+- Bei Chlor < 0.1 mg/l: 3.0x Menge
+- Bei Chlor < 0.6 mg/l: 1.8x Menge
+
+**NEU: Temperatur-Korrekturfaktor:**
+- Ab 28°C Wassertemperatur: +20% Chlorbedarf.
+- Ab 32°C Wassertemperatur: +50% Chlorbedarf.
+
 Zusätzlich wird eine **Mindestdosis** sichergestellt, damit die Desinfektion wirksam bleibt.
 
 ### pH-Wert
@@ -72,3 +86,5 @@ Die Integration stellt folgende Sensoren bereit:
 - `sensor.pool_ph_minus`: Benötigte Menge PH-Minus in ml.
 - `sensor.pool_ph_plus`: Benötigte Menge PH-Plus in g.
 - `sensor.pool_empfehlung`: Textuelle Zusammenfassung der nächsten Schritte.
+- `sensor.pool_filter_reinigung_fällig`: Tage seit letzter Filterreinigung.
+- `sensor.pool_filter_wechsel_fällig`: Tage seit letztem Filterwechsel.
