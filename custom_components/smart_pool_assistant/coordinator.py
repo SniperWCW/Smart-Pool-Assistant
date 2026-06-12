@@ -36,6 +36,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self._store = Store(hass, _STORAGE_VERSION, f"{_STORAGE_KEY}_{entry.entry_id}")
         self.maintenance_history = {}
+        # Standardwerte für neue Logik initialisieren
+        self.pool_covered = True
+        self.usage_mode = "none" # none, normal, party
 
     @property
     def config(self):
@@ -47,6 +50,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         stored = await self._store.async_load()
         if stored:
             self.maintenance_history = stored
+            self.pool_covered = stored.get("pool_covered", True)
+            self.usage_mode = stored.get("usage_mode", "none")
 
     def async_setup_event_listeners(self):
         """Set up listeners for entity state changes."""
@@ -100,48 +105,57 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         
         label = ""
         unit = ""
+        msg = None
+
         if m_type == "chlor": label, unit = "Chlor", "g"
         elif m_type == "ph_plus": label, unit = "PH-Plus", "g"
         elif m_type == "ph_minus": label, unit = "PH-Minus", "ml"
         elif m_type == "filter_clean": label, unit = "Filter gereinigt", ""
         elif m_type == "filter_replace": label, unit = "Filter gewechselt", ""
+        elif m_type == "set_covered":
+            self.pool_covered = amount > 0
+            self.maintenance_history["pool_covered"] = self.pool_covered
+        elif m_type == "set_usage":
+            modes = ["none", "normal", "party"]
+            self.usage_mode = modes[int(amount)] if int(amount) < len(modes) else "none"
+            self.maintenance_history["usage_mode"] = self.usage_mode
         
-        # Update history
-        self.maintenance_history[m_type] = {"amount": amount, "time": ts_formatted, "raw_ts": now.isoformat()}
-        
-        action_text = f"{amount}{unit} {label}" if amount else label
-        self.maintenance_history["last_action"] = f"{action_text} am {ts_formatted}"
+        # Update history for chemicals and filter
+        if m_type in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"):
+            self.maintenance_history[m_type] = {"amount": amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+            action_text = f"{amount}{unit} {label}" if amount else label
+            self.maintenance_history["last_action"] = f"{action_text} am {ts_formatted}"
+            # Wording für Wartung vs. Chemie anpassen
+            if m_type in ("filter_clean", "filter_replace"):
+                msg = f"Pool-Wartung: {label} durchgeführt."
+            else:
+                msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
 
         await self._store.async_save(self.maintenance_history)
         
         conf = self.config
-        # Wording für Wartung vs. Chemie anpassen
-        if m_type in ("filter_clean", "filter_replace"):
-            msg = f"Pool-Wartung: {label} durchgeführt."
-        else:
-            msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
-        
-        # Persistent Notification
-        if conf.get(CONF_PERSISTENT_NOTIFICATION):
-            await self.hass.services.async_call("persistent_notification", "create", {
-                "title": "Smart Pool Assistant",
-                "message": msg,
-                "notification_id": f"{DOMAIN}_maintenance"
-            })
+        # Send Notification (Persistent & Service)
+        if msg:
+            if conf.get(CONF_PERSISTENT_NOTIFICATION):
+                await self.hass.services.async_call("persistent_notification", "create", {
+                    "title": "Smart Pool Assistant",
+                    "message": msg,
+                    "notification_id": f"{DOMAIN}_maintenance"
+                })
 
-        # Notify Service
-        service = conf.get(CONF_NOTIFY_SERVICE)
-        if service:
-            domain, service_name = service.split(".")
-            await self.hass.services.async_call(domain, service_name, {
-                "title": "Smart Pool Assistant",
-                "message": msg
-            })
+            service = conf.get(CONF_NOTIFY_SERVICE)
+            if service:
+                domain, service_name = service.split(".")
+                await self.hass.services.async_call(domain, service_name, {
+                    "title": "Smart Pool Assistant",
+                    "message": msg
+                })
 
-        # Follow-up Timer
-        delay = conf.get(CONF_FOLLOW_UP_TIME, 0)
-        if delay > 0:
-            async_call_later(self.hass, delay * 60, self._send_follow_up)
+        # Follow-up Timer (only for chemicals)
+        if m_type in ("chlor", "ph_plus", "ph_minus"):
+            delay = conf.get(CONF_FOLLOW_UP_TIME, 0)
+            if delay > 0:
+                async_call_later(self.hass, delay * 60, self._send_follow_up)
         
         await self.async_request_refresh()
 
@@ -371,6 +385,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "is_error": True,
                 "last_calculation": dt_util.parse_datetime(last_calc_raw).strftime("%d.%m.%Y %H:%M Uhr"),
                 "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+                "pool_covered": self.pool_covered,
+                "usage_mode": self.usage_mode,
                 "history": self.maintenance_history
             }
 
@@ -383,8 +399,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if wirkstoff <= 0:
             wirkstoff = 0.56 # Schutz vor Division durch Null
         
-        # Dummy für Nutzungstag (Könnte später ein Switch in der Integration sein)
-        usage_factor = 1.0 
+        # Nutzungs- und Abdeckungsfaktoren
+        # Wenn offen, erhöhen wir die Grundzehrung (UV-Verlust)
+        env_factor = 0.8 if self.pool_covered else 1.2
+        
+        # Badelast-Zuschlag in Gramm (Absolutwerte)
+        bather_load_extra = 0.0
+        if self.usage_mode == "normal": bather_load_extra = 3.0
+        elif self.usage_mode == "party": bather_load_extra = 8.0
 
         # Chlor Berechnung
         c_diff = max(c_ziel - c_ist, 0)
@@ -409,7 +431,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if c_ist < 0.3: min_dose = 6.0
         elif c_ist < 0.8: min_dose = 3.0
 
-        raw_chlor = (c_diff * volumen / wirkstoff) * shock_factor * usage_factor * temp_factor
+        raw_chlor = ((c_diff * volumen / wirkstoff) * shock_factor * env_factor * temp_factor) + bather_load_extra
         s_g = round(min(max(raw_chlor, min_dose), 25.0), 1)
         
         # pH Berechnung
@@ -476,6 +498,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_target": ph_ziel,
             "history": self.maintenance_history,
             "days_since_filter_clean": days_since_filter_clean,
+            "pool_covered": self.pool_covered,
+            "usage_mode": self.usage_mode,
             "filter_clean_status": filter_clean_status,
             "filter_clean_interval": filter_clean_interval,
             "days_since_filter_replace": days_since_filter_replace,
