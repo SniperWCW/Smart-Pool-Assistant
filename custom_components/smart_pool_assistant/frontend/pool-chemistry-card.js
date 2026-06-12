@@ -3,6 +3,23 @@ class PoolChemistryCard extends HTMLElement {
     this.config = config;
   }
 
+  static getConfigElement() {
+    return document.createElement("pool-chemistry-card-editor");
+  }
+
+  static getStubConfig() {
+    return {
+      recommendation_entity: "sensor.pool_empfehlung"
+    };
+  }
+
+  static getLayoutOptions() {
+    return {
+      grid_columns: 2,
+      grid_rows: "auto",
+    };
+  }
+
   set hass(hass) {
     this._hass = hass;
     if (!this.config || !hass) return;
@@ -83,13 +100,15 @@ class PoolChemistryCard extends HTMLElement {
             .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
             .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
             .recommendation-section { margin-bottom: 16px; line-height: 1.5; }
-            .rec-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+            .rec-row { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+            @media (max-width: 350px) { .rec-row { flex-direction: column; } }
             .rec-content { flex: 1; }
             ha-icon { color: var(--primary-color); --mdc-icon-size: 28px; margin-top: 2px; }
             .hist-text { font-size: 0.85em; opacity: 0.7; font-style: italic; margin-top: 2px; min-height: 1.2em; }
-            .log-input { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+            .log-input { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
             .log-input input { 
-              width: 100px; 
+              flex: 1 1 80px;
+              min-width: 0;
               height: 38px; 
               border-radius: 6px; 
               border: 1px solid var(--divider-color); 
@@ -97,6 +116,7 @@ class PoolChemistryCard extends HTMLElement {
               color: var(--primary-text-color); 
               font-size: 1em; 
               padding: 0 8px;
+              box-sizing: border-box;
             }
             .log-input button { 
               height: 38px; 
@@ -108,17 +128,19 @@ class PoolChemistryCard extends HTMLElement {
               padding: 0 16px; 
               font-size: 1em; 
               font-weight: bold;
+              flex-shrink: 0;
             }
             .log-input button:hover { opacity: 0.8; }
             .measurements-section { background: var(--secondary-background-color); padding: 12px; border-radius: 8px; }
             .section-title { font-size: 0.9em; font-weight: bold; margin-bottom: 8px; opacity: 0.8; }
-            .m-grid { display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 1em; }
-            .m-item small { opacity: 0.6; margin-left: 6px; }
+            .m-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; font-size: 1em; }
+            .m-item { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+            .m-item small { opacity: 0.6; }
             .footer { margin-top: 14px; font-size: 0.8em; color: var(--secondary-text-color); text-align: center; }
             .status-ok { color: var(--success-color, #4CAF50); }
             .status-warning { color: var(--warning-color, #FF9800); }
             .status-critical { color: var(--error-color, #F44336); }
-            .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; margin-left: 8px; }
+            .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; flex-shrink: 0; }
           </style>
         </ha-card>
       `;
@@ -226,7 +248,30 @@ class PoolChemistryCard extends HTMLElement {
   }
 }
 
+class PoolChemistryCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this.render();
+  }
+
+  render() {
+    if (!this.innerHTML) {
+      this.innerHTML = `
+        <div class="card-config" style="padding: 8px;">
+          <p>Die Konfiguration dieser Karte erfolgt aktuell primär über YAML.</p>
+          <p>Nutze die Tabs oben, um <b>Sichtbarkeit</b> und <b>Layout</b> (Breite/Spalten) anzupassen.</p>
+        </div>
+      `;
+    }
+  }
+}
+
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
-    console.info("%c SMART-POOL-ASSISTANT %c 0.1.0 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
+    console.info("%c SMART-POOL-ASSISTANT %c 0.2.0 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
