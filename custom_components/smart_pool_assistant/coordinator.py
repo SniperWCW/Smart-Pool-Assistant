@@ -126,8 +126,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             action_text = f"{amount}{unit} {label}" if amount else label
             self.maintenance_history["last_action"] = f"{action_text} am {ts_formatted}"
             # Wording für Wartung vs. Chemie anpassen
-            if m_type in ("filter_clean", "filter_replace"):
-                msg = f"Pool-Wartung: {label} durchgeführt."
+            if m_type == "filter_clean":
+                msg = "Pool-Wartung: Der Filter wurde erfolgreich gereinigt."
+            elif m_type == "filter_replace":
+                msg = "Pool-Wartung: Der Filter wurde erfolgreich gewechselt."
             else:
                 msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
 
