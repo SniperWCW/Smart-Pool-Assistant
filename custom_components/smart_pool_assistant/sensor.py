@@ -30,6 +30,8 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "pH Istwert", "ph_ist", "pH", "mdi:ph"),
         PoolAssistantSensor(coordinator, "Temperatur Istwert", "temp_ist", "°C", "mdi:thermometer"),
         PoolAssistantSensor(coordinator, "Datenquelle", "data_source", None, "mdi:database-import"),
+        PoolAssistantSensor(coordinator, "Abdeckung Status", "pool_covered", None, "mdi:pool"),
+        PoolAssistantSensor(coordinator, "Nutzungsmodus", "usage_mode", None, "mdi:account-group"),
         PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "days_since_filter_clean", "Tage", "mdi:filter-outline"),
         PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
         PoolAssistantStatusSensor(coordinator),
@@ -91,6 +93,13 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "is_shock": data.get("is_shock"),
             "pool_covered": data.get("pool_covered"),
             "usage_mode": data.get("usage_mode"),
+            "chlor_breakdown_base": data.get("chlor_breakdown_base"),
+            "chlor_breakdown_shock_adj": data.get("chlor_breakdown_shock_adj"),
+            "chlor_breakdown_temp_adj": data.get("chlor_breakdown_temp_adj"),
+            "chlor_breakdown_env_adj": data.get("chlor_breakdown_env_adj"),
+            "chlor_breakdown_bather_adj": data.get("chlor_breakdown_bather_adj"),
+            "chlor_breakdown_sum_raw": data.get("chlor_breakdown_sum_raw"),
+            "chlor_breakdown_min_dose_applied": data.get("chlor_breakdown_min_dose_applied"),
             "data_source": data.get("data_source"),
         }
 
