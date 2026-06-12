@@ -26,6 +26,10 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "Chlor Vor Baden", "chlor_pre", "g", "mdi:pill"),
         PoolAssistantSensor(coordinator, "PH-Minus", "ph_senker_total", "ml", "mdi:arrow-down-bold"),
         PoolAssistantSensor(coordinator, "PH-Plus", "ph_erhoeher_total", "g", "mdi:arrow-up-bold"),
+        PoolAssistantSensor(coordinator, "Chlor Istwert", "chlor_ist", "mg/l", "mdi:water-percent"),
+        PoolAssistantSensor(coordinator, "pH Istwert", "ph_ist", None, "mdi:ph"),
+        PoolAssistantSensor(coordinator, "Temperatur Istwert", "temp_ist", "°C", "mdi:thermometer"),
+        PoolAssistantSensor(coordinator, "Datenquelle", "data_source", None, "mdi:database-import"),
         PoolAssistantStatusSensor(coordinator),
     ]
     async_add_entities(sensors)
@@ -41,7 +45,9 @@ class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_icon = icon
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{key}"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        # Nur bei numerischen Messwerten eine State Class setzen
+        if unit is not None:
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self):
@@ -74,6 +80,8 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "ph_senker_total": data.get("ph_senker_total"),
             "ph_erhoeher_total": data.get("ph_erhoeher_total"),
             "history": data.get("history"),
+            "is_shock": data.get("is_shock"),
+            "data_source": data.get("data_source"),
         }
 
     @property

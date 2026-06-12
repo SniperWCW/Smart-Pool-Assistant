@@ -1,6 +1,7 @@
 """The Smart Pool Assistant integration."""
 from __future__ import annotations
 
+import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
@@ -11,21 +12,43 @@ from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
+_LOGGER = logging.getLogger(__name__)
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Smart Pool Assistant component."""
+    return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Pool Assistant from a config entry."""
     coordinator = SmartPoolCoordinator(hass, entry)
-    await coordinator.async_load_history()
-    await coordinator.async_config_entry_first_refresh()
-    
-    # Listener für automatische Updates bei Sensoränderungen registrieren
-    entry.async_on_unload(coordinator.async_setup_event_listeners())
 
     # Update-Listener für Konfigurationsänderungen
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    # Dienste registrieren (bevor der erste Refresh evtl. fehlschlägt)
+    async def log_maintenance_service(call):
+        entity_id = call.data.get("entity_id")
+        reg = er.async_get(hass)
+        entity_entry = reg.async_get(entity_id)
+        if entity_entry:
+            coord = hass.data[DOMAIN].get(entity_entry.config_entry_id)
+            if coord:
+                await coord.async_log_maintenance(
+                    call.data.get("type"),
+                    call.data.get("amount")
+                )
+
+    hass.services.async_register(DOMAIN, "log_maintenance", log_maintenance_service)
+
+    # Initialen Datenabruf starten
+    await coordinator.async_load_history()
+    await coordinator.async_config_entry_first_refresh()
+    
+    # Listener für automatische Updates bei Sensoränderungen registrieren
+    entry.async_on_unload(coordinator.async_setup_event_listeners())
 
     # Statische Pfade und Frontend-Ressourcen global in hass.data tracken
     if "static_path_registered" not in hass.data[DOMAIN]:
@@ -46,19 +69,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Falls der Pfad bereits existiert (z.B. durch manuelles Neuladen)
             hass.data[DOMAIN]["static_path_registered"] = True
 
-    async def log_maintenance_service(call):
-        entity_id = call.data.get("entity_id")
-        reg = er.async_get(hass)
-        entity_entry = reg.async_get(entity_id)
-        if entity_entry:
-            coord = hass.data[DOMAIN].get(entity_entry.config_entry_id)
-            if coord:
-                await coord.async_log_maintenance(
-                    call.data.get("type"),
-                    call.data.get("amount")
-                )
-
-    hass.services.async_register(DOMAIN, "log_maintenance", log_maintenance_service)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

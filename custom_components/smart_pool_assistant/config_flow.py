@@ -16,6 +16,8 @@ from .const import (
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
 )
 
+CONF_API_KEY = "api_key"
+
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Pool Assistant."""
 
@@ -24,12 +26,20 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle the initial step."""
+        errors = {}
         if user_input is not None:
-            return self.async_create_entry(title="Smart Pool Assistant", data=user_input)
+            api_key = user_input.get(CONF_API_KEY)
+            chlor_sensor = user_input.get(CONF_CHLOR_SENSOR)
+            ph_sensor = user_input.get(CONF_PH_SENSOR)
+
+            if not api_key and (not chlor_sensor or not ph_sensor):
+                errors["base"] = "missing_data_source"
+            else:
+                return self.async_create_entry(title="Smart Pool Assistant", data=user_input)
 
         services = self.hass.services.async_services().get("notify", {})
         self._notify_services = [f"notify.{s}" for s in sorted(services.keys())]
-        return self.async_show_form(step_id="user", data_schema=self._get_schema(notify_services=self._notify_services))
+        return self.async_show_form(step_id="user", data_schema=self._get_schema(user_input or {}, notify_services=self._notify_services), errors=errors)
 
     @staticmethod
     @callback
@@ -52,9 +62,10 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             notify_selector = selector.TextSelector()
 
         return vol.Schema({
-            vol.Required(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
-            vol.Required(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
-            vol.Required(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
+            vol.Optional(CONF_API_KEY, default=defaults.get(CONF_API_KEY, "")): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
+            vol.Optional(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
+            vol.Optional(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
+            vol.Optional(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
             vol.Required(CONF_POOL_VOLUME, default=defaults.get(CONF_POOL_VOLUME, 0.96)): selector.NumberSelector(
                 selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="m³", step="any")
             ),
@@ -86,11 +97,21 @@ class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
         self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
+        errors = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            api_key = user_input.get(CONF_API_KEY)
+            chlor_sensor = user_input.get(CONF_CHLOR_SENSOR)
+            ph_sensor = user_input.get(CONF_PH_SENSOR)
+
+            if not api_key and (not chlor_sensor or not ph_sensor):
+                errors["base"] = "missing_data_source"
+            else:
+                return self.async_create_entry(title="", data=user_input)
 
         # Kombiniere Daten und Optionen für die Standardwerte
         current_config = {**self.config_entry.data, **self.config_entry.options}
+        if user_input:
+            current_config.update(user_input)
 
         services = self.hass.services.async_services().get("notify", {})
         notify_list = [f"notify.{s}" for s in sorted(services.keys())]
@@ -100,5 +121,6 @@ class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=config_flow._get_schema(current_config, notify_services=notify_list)
+            data_schema=config_flow._get_schema(current_config, notify_services=notify_list),
+            errors=errors
         )

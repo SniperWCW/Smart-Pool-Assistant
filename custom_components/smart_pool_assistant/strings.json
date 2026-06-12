@@ -5,6 +5,7 @@
         "title": "Smart Pool Assistant",
         "description": "Konfiguriere die Sensoren und Zielwerte für deinen Pool oder Whirlpool.",
         "data": {
+          "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
           "ph_sensor": "pH-Wert-Sensor",
           "temp_sensor": "Temperatur-Sensor (°C)",
@@ -25,6 +26,7 @@
     "step": {
       "init": {
         "data": {
+          "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
           "ph_sensor": "pH-Wert-Sensor",
           "temp_sensor": "Temperatur-Sensor (°C)",

@@ -4,14 +4,25 @@ class PoolChemistryCard extends HTMLElement {
   }
 
   set hass(hass) {
+    this._hass = hass;
     if (!this.config || !hass) return;
 
     const rec = hass.states[this.config.recommendation_entity];
-    if (!rec) return;
+    if (!rec) {
+      this.innerHTML = `
+        <ha-card>
+          <div style="padding: 16px; color: var(--error-color); text-align: center;">
+            Entität <b>${this.config.recommendation_entity}</b> nicht gefunden.<br>
+            Bitte prüfe die Dashboard-Konfiguration!
+          </div>
+        </ha-card>
+      `;
+      return;
+    }
 
     const attr = rec.attributes;
     const hist = attr.history || {};
-    const isShock = attr.chlor_ist < 0.5;
+    const isShock = attr.is_shock === true;
 
     // Erstelle das Skelett der Karte nur einmal
     if (!this.content) {
@@ -97,10 +108,10 @@ class PoolChemistryCard extends HTMLElement {
       this.content = this.querySelector('.card-content');
 
       // Event Listener binden
-      this.querySelector('#btn-chlor').onclick = () => this._handleAdd(hass, 'chlor');
+      this.querySelector('#btn-chlor').onclick = () => this._handleAdd('chlor');
       this.querySelector('#btn-ph').onclick = () => {
-        if (this.querySelector('#input-ph_plus').value) this._handleAdd(hass, 'ph_plus');
-        if (this.querySelector('#input-ph_minus').value) this._handleAdd(hass, 'ph_minus');
+        if (this.querySelector('#input-ph_plus').value) this._handleAdd('ph_plus');
+        if (this.querySelector('#input-ph_minus').value) this._handleAdd('ph_minus');
       };
     }
 
@@ -110,18 +121,18 @@ class PoolChemistryCard extends HTMLElement {
     statusBox.textContent = isShock ? '⚠️ Stoßchlorung empfohlen' : '✅ Wasserqualität in Ordnung';
 
     this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0 
-      ? `Bitte <b>${attr.chlor_dose}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${attr.chlor_pre}g).`
+      ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
       : `Chlorwert ist optimal.`;
     
-    this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${hist.chlor.amount}g (${hist.chlor.time})` : '';
+    this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
 
     let phText = "pH-Wert ist optimal.";
-    if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${attr.ph_senker_total}ml</b> hinzufügen.`;
-    else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${attr.ph_erhoeher_total}g</b> hinzufügen.`;
+    if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${Number(attr.ph_senker_total).toFixed(2)}ml</b> hinzufügen.`;
+    else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${Number(attr.ph_erhoeher_total).toFixed(2)}g</b> hinzufügen.`;
     this.querySelector('#ph-rec').innerHTML = phText;
 
-    const phPlusHist = hist.ph_plus ? `Zuletzt PH+: ${hist.ph_plus.amount}g (${hist.ph_plus.time})` : '';
-    const phMinusHist = hist.ph_minus ? `Zuletzt PH-: ${hist.ph_minus.amount}ml (${hist.ph_minus.time})` : '';
+    const phPlusHist = hist.ph_plus ? `Zuletzt PH+: ${Number(hist.ph_plus.amount).toFixed(2)}g (${hist.ph_plus.time})` : '';
+    const phMinusHist = hist.ph_minus ? `Zuletzt PH-: ${Number(hist.ph_minus.amount).toFixed(2)}ml (${hist.ph_minus.time})` : '';
     this.querySelector('#ph-hist').innerHTML = `${phPlusHist}${phPlusHist && phMinusHist ? ' | ' : ''}${phMinusHist}`;
 
     const maintenanceSection = this.querySelector('#maintenance-section');
@@ -132,20 +143,28 @@ class PoolChemistryCard extends HTMLElement {
       maintenanceSection.style.display = 'none';
     }
 
+    const formatNum = (val) => (val !== undefined && val !== null && val !== "") ? Number(val).toFixed(2) : '--';
+    
+    const c_ist = formatNum(attr.chlor_ist);
+    const ph_ist = formatNum(attr.ph_ist);
+    const t_ist = formatNum(attr.temp_ist);
+    const c_target = formatNum(attr.chlor_target);
+    const ph_target = formatNum(attr.ph_target);
+
     this.querySelector('#measurements-grid').innerHTML = `
-      <div class="m-item"><b>Chlor:</b> ${attr.chlor_ist} mg/l <small>(Ziel: ${attr.chlor_target})</small></div>
-      <div class="m-item"><b>pH-Wert:</b> ${attr.ph_ist} <small>(Ziel: ${attr.ph_target})</small></div>
-      <div class="m-item">🌡️ <b>Temperatur:</b> ${attr.temp_ist}°C</div>
+      <div class="m-item"><b>Chlor:</b> ${c_ist} mg/l <small>(Ziel: ${c_target})</small></div>
+      <div class="m-item"><b>pH-Wert:</b> ${ph_ist} <small>(Ziel: ${ph_target})</small></div>
+      <div class="m-item">🌡️ <b>Temperatur:</b> ${t_ist}°C</div>
     `;
 
-    this.querySelector('#footer-info').textContent = `Berechnet: ${attr.last_calculation} | Messung: ${attr.last_measurement}`;
+    this.querySelector('#footer-info').textContent = `Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}`;
   }
 
-  _handleAdd(hass, type) {
+  _handleAdd(type) {
     const input = this.querySelector(`#input-${type}`);
     const val = parseFloat(input.value);
-    if (val > 0) {
-      hass.callService("smart_pool_assistant", "log_maintenance", {
+    if (val > 0 && this._hass) {
+      this._hass.callService("smart_pool_assistant", "log_maintenance", {
         entity_id: this.config.recommendation_entity,
         type: type,
         amount: val

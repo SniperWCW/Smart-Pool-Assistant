@@ -1,13 +1,11 @@
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "documentation": "https://github.com/SniperWCW/smart_pool_assistant",
   "issue_tracker": "https://github.com/SniperWCW/smart_pool_assistant/issues",
   "dependencies": [],
-  "codeowners": [
-    "@SniperWCW"
-  ],
+  "codeowners": ["@SniperWCW"],
   "requirements": [],
   "config_flow": true,
   "iot_class": "local_polling",
