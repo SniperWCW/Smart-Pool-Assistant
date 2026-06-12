@@ -100,10 +100,10 @@ class PoolChemistryCard extends HTMLElement {
                   <ha-icon id="icon-covered" icon="mdi:pool"></ha-icon>
                   <button id="btn-toggle-cover" class="small-btn" style="margin-left:0;">--</button>
                 </div>
-                <div id="usage-modes" style="display: flex; gap: 4px;">
-                  <button class="mode-btn" data-mode="0">Keine</button>
-                  <button class="mode-btn" data-mode="1">Normal</button>
-                  <button class="mode-btn" data-mode="2">Party</button>
+                <div id="usage-modes" class="usage-grid">
+                  <button class="mode-btn" data-mode="0"><ha-icon icon="mdi:sleep"></ha-icon> Keine</button>
+                  <button class="mode-btn" data-mode="1"><ha-icon icon="mdi:account-group"></ha-icon> Normal</button>
+                  <button class="mode-btn" data-mode="2"><ha-icon icon="mdi:party-popper"></ha-icon> Party</button>
                 </div>
               </div>
             </div>
@@ -155,8 +155,23 @@ class PoolChemistryCard extends HTMLElement {
             .status-warning { color: var(--warning-color, #FF9800); }
             .status-critical { color: var(--error-color, #F44336); }
             .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; flex-shrink: 0; }
-            .mode-btn { height: 28px; padding: 0 8px; font-size: 0.8em; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--secondary-background-color); color: var(--primary-text-color); cursor: pointer; }
-            .mode-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+            .usage-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+            .mode-btn { 
+              height: 32px; 
+              padding: 0 10px; 
+              font-size: 0.85em; 
+              border-radius: 8px; 
+              border: 1px solid var(--divider-color); 
+              background: var(--secondary-background-color); 
+              color: var(--primary-text-color); 
+              cursor: pointer; 
+              display: flex; 
+              align-items: center; 
+              gap: 4px;
+              transition: all 0.2s ease;
+            }
+            .mode-btn ha-icon { --mdc-icon-size: 18px; margin: 0; color: inherit; }
+            .mode-btn.active { background: #4caf50; color: white; border-color: #4caf50; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
           </style>
         </ha-card>
       `;
@@ -262,13 +277,24 @@ class PoolChemistryCard extends HTMLElement {
     const input = this.querySelector(`#input-${type}`);
     let val = overrideVal !== null ? parseFloat(overrideVal) : (input ? parseFloat(input.value) : 0);
     
-    if ((val > 0 || type.startsWith('set_') || type === 'set_usage') && this._hass) {
+    if ((val >= 0 || type.startsWith('set_') || type === 'set_usage') && this._hass) {
+      // Optimistic UI Update: Sofortiges visuelles Feedback
+      if (type === 'set_usage') {
+        this.querySelectorAll('.mode-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.mode == val);
+        });
+      }
+      if (type === 'set_covered') {
+        this.querySelector('#btn-toggle-cover').textContent = val > 0 ? 'Abgedeckt' : 'Offen';
+        this.querySelector('#icon-covered').icon = val > 0 ? 'mdi:pool' : 'mdi:sun-side';
+      }
+
       this._hass.callService("smart_pool_assistant", "log_maintenance", {
         entity_id: this.config.recommendation_entity,
         type: type,
         amount: val
       });
-      input.value = "";
+      if (input) input.value = "";
     } else if (type === 'filter_clean' || type === 'filter_replace') {
        this._hass.callService("smart_pool_assistant", "log_maintenance", {
         entity_id: this.config.recommendation_entity,
