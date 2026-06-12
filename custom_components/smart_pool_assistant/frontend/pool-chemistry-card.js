@@ -53,6 +53,10 @@ class PoolChemistryCard extends HTMLElement {
                 <div class="rec-content">
                   <div id="chlor-rec"></div>
                   <div id="chlor-hist" class="hist-text"></div>
+                  <details class="chlor-breakdown-details">
+                    <summary>Berechnungsdetails</summary>
+                    <div id="chlor-breakdown-info"></div>
+                  </details>
                   <div class="log-input">
                     <input type="number" id="input-chlor" step="0.1" placeholder="Menge g">
                     <button id="btn-chlor">OK</button>
@@ -171,7 +175,44 @@ class PoolChemistryCard extends HTMLElement {
               transition: all 0.2s ease;
             }
             .mode-btn ha-icon { --mdc-icon-size: 18px; margin: 0; color: inherit; }
-            .mode-btn.active { background: #4caf50; color: white; border-color: #4caf50; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+            .mode-btn.active { background: var(--success-color, #4CAF50); color: white; border-color: var(--success-color, #4CAF50); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+            .chlor-breakdown-details {
+              margin-top: 10px;
+              background-color: var(--secondary-background-color);
+              border-radius: 6px;
+              padding: 8px 12px;
+              font-size: 0.9em;
+              color: var(--secondary-text-color);
+              display: none; /* Wird per JS gesteuert */
+            }
+            .chlor-breakdown-details summary {
+              cursor: pointer;
+              font-weight: bold;
+              color: var(--primary-text-color);
+              padding: 4px 0;
+            }
+            .breakdown-item {
+              padding: 2px 0;
+              display: flex;
+              justify-content: space-between;
+            }
+            .breakdown-item span {
+              font-weight: bold;
+              color: var(--primary-text-color);
+            }
+            .breakdown-sum {
+              border-top: 1px solid var(--divider-color);
+              margin-top: 5px;
+              padding-top: 5px;
+              font-weight: bold;
+            }
+            .breakdown-final {
+              font-weight: bold;
+              color: var(--primary-color);
+              font-size: 1.1em;
+              margin-top: 5px;
+            }
           </style>
         </ha-card>
       `;
@@ -258,6 +299,55 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#filter-clean-interval').textContent = cleanInterval !== null ? cleanInterval : '--';
     this.querySelector('#filter-replace-days').innerHTML = getColoredDays(daysSinceReplace, replaceStatus);
     this.querySelector('#filter-replace-interval').textContent = replaceInterval !== null ? replaceInterval : '--';
+
+    // Chlor Breakdown Info
+    const chlorBreakdownDetails = this.querySelector('.chlor-breakdown-details');
+    const chlorBreakdownInfo = this.querySelector('#chlor-breakdown-info');
+
+    if (attr.chlor_dose > 0) { // Nur Details anzeigen, wenn Chlor empfohlen wird
+      const base = Number(attr.chlor_breakdown_base || 0);
+      const shockAdj = Number(attr.chlor_breakdown_shock_adj || 0);
+      const tempAdj = Number(attr.chlor_breakdown_temp_adj || 0);
+      const envAdj = Number(attr.chlor_breakdown_env_adj || 0);
+      const batherAdj = Number(attr.chlor_breakdown_bather_adj || 0);
+      const sumRaw = Number(attr.chlor_breakdown_sum_raw || 0);
+      const minDoseApplied = Number(attr.chlor_breakdown_min_dose_applied || 0);
+      const finalDose = Number(attr.chlor_dose || 0); // attr.chlor_dose ist die finale Menge
+
+      let breakdownHtml = `
+        <div class="breakdown-item">Basis (Ziel-Ist): <span>${base.toFixed(2)}g</span></div>
+      `;
+      if (shockAdj !== 0) {
+        breakdownHtml += `<div class="breakdown-item">Schock-Faktor: <span>${shockAdj > 0 ? '+' : ''}${shockAdj.toFixed(2)}g</span></div>`;
+      }
+      if (tempAdj !== 0) {
+        breakdownHtml += `<div class="breakdown-item">Temperatur-Korrektur: <span>${tempAdj > 0 ? '+' : ''}${tempAdj.toFixed(2)}g</span></div>`;
+      }
+      if (envAdj !== 0) {
+        breakdownHtml += `<div class="breakdown-item">Abdeckung: <span>${envAdj > 0 ? '+' : ''}${envAdj.toFixed(2)}g</span></div>`;
+      }
+      if (batherAdj !== 0) {
+        breakdownHtml += `<div class="breakdown-item">Nutzung (Badelast): <span>${batherAdj > 0 ? '+' : ''}${batherAdj.toFixed(2)}g</span></div>`;
+      }
+
+      breakdownHtml += `
+        <div class="breakdown-item breakdown-sum">Summe (vor Min/Max): <span>${sumRaw.toFixed(2)}g</span></div>
+      `;
+      
+      if (minDoseApplied > 0) {
+        breakdownHtml += `<div class="breakdown-item">Mindestdosis angewendet: <span>+${(minDoseApplied - sumRaw).toFixed(2)}g</span></div>`;
+      } else if (finalDose !== sumRaw) { // Falls Maximaldosis angewendet wurde
+        breakdownHtml += `<div class="breakdown-item">Maximaldosis angewendet: <span>${(finalDose - sumRaw).toFixed(2)}g</span></div>`;
+      }
+
+      breakdownHtml += `
+        <div class="breakdown-item breakdown-final">Empfohlene Menge: <span>${finalDose.toFixed(2)}g</span></div>
+      `;
+      chlorBreakdownInfo.innerHTML = breakdownHtml;
+      chlorBreakdownDetails.style.display = 'block';
+    } else {
+      chlorBreakdownDetails.style.display = 'none';
+    }
 
     // Pool Status & Usage UI
     const btnCover = this.querySelector('#btn-toggle-cover');
