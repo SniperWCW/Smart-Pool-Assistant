@@ -76,7 +76,7 @@ class PoolChemistryCard extends HTMLElement {
               <div class="section-title">🕒 Letzte Aktivitäten:</div>
               <div id="maintenance-info" class="m-grid"></div>
             </div>
-            <div class="measurements-section">
+            <div class="measurements-section" style="margin-top: 12px;">
               <div class="section-title">📅 Aktuelle Messwerte:</div>
               <div id="measurements-grid" class="m-grid"></div>
             </div>
@@ -90,6 +90,20 @@ class PoolChemistryCard extends HTMLElement {
                 <div class="m-item">
                   <b>Wechsel:</b> <span id="filter-replace-days">--</span> Tage her <small>(Empf. alle <span id="filter-replace-interval">--</span> Tage)</small>
                   <button id="btn-filter-replace" class="small-btn">Gewechselt</button>
+                </div>
+              </div>
+            </div>
+            <div class="measurements-section" style="margin-top: 12px; margin-bottom: 12px;">
+              <div class="section-title">🏖️ Status & Nutzung:</div>
+              <div class="log-input" style="justify-content: space-between;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <ha-icon id="icon-covered" icon="mdi:pool"></ha-icon>
+                  <button id="btn-toggle-cover" class="small-btn" style="margin-left:0;">--</button>
+                </div>
+                <div id="usage-modes" style="display: flex; gap: 4px;">
+                  <button class="mode-btn" data-mode="0">Keine</button>
+                  <button class="mode-btn" data-mode="1">Normal</button>
+                  <button class="mode-btn" data-mode="2">Party</button>
                 </div>
               </div>
             </div>
@@ -141,6 +155,8 @@ class PoolChemistryCard extends HTMLElement {
             .status-warning { color: var(--warning-color, #FF9800); }
             .status-critical { color: var(--error-color, #F44336); }
             .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; flex-shrink: 0; }
+            .mode-btn { height: 28px; padding: 0 8px; font-size: 0.8em; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--secondary-background-color); color: var(--primary-text-color); cursor: pointer; }
+            .mode-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
           </style>
         </ha-card>
       `;
@@ -152,12 +168,20 @@ class PoolChemistryCard extends HTMLElement {
         if (this.querySelector('#input-ph_plus').value) this._handleAdd('ph_plus');
         else if (this.querySelector('#input-ph_minus').value) this._handleAdd('ph_minus'); // Use else if to prevent both from firing
       };
+      this.querySelector('#btn-toggle-cover').onclick = () => {
+        const isCovered = this._lastAttr.pool_covered;
+        this._handleAdd('set_covered', isCovered ? 0 : 1);
+      };
+      this.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.onclick = () => this._handleAdd('set_usage', btn.dataset.mode);
+      });
       this.querySelector('#btn-filter-clean').onclick = () => this._handleAdd('filter_clean');
       this.querySelector('#btn-filter-replace').onclick = () => this._handleAdd('filter_replace');
     }
 
     // Aktualisiere nur die dynamischen Inhalte
     const statusBox = this.querySelector('#status-box');
+    this._lastAttr = attr; // Store for toggle
     statusBox.className = `status-box ${isShock ? 'warning' : 'ok'}`;
     statusBox.textContent = isShock ? '⚠️ Stoßchlorung empfohlen' : '✅ Wasserqualität in Ordnung';
 
@@ -220,13 +244,25 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#filter-replace-days').innerHTML = getColoredDays(daysSinceReplace, replaceStatus);
     this.querySelector('#filter-replace-interval').textContent = replaceInterval !== null ? replaceInterval : '--';
 
+    // Pool Status & Usage UI
+    const btnCover = this.querySelector('#btn-toggle-cover');
+    const iconCover = this.querySelector('#icon-covered');
+    btnCover.textContent = attr.pool_covered ? 'Abgedeckt' : 'Offen';
+    iconCover.icon = attr.pool_covered ? 'mdi:pool' : 'mdi:sun-side';
+    
+    const usageModes = ["none", "normal", "party"];
+    this.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.className = `mode-btn ${usageModes[btn.dataset.mode] === attr.usage_mode ? 'active' : ''}`;
+    });
+
     this.querySelector('#footer-info').textContent = `Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}`;
   }
 
-  _handleAdd(type) {
-    const input = this.querySelector(`#input-${type}`); // This will be null for filter actions
-    const val = input ? parseFloat(input.value) : 0; // Default to 0 for filter actions
-    if (val > 0 && this._hass) {
+  _handleAdd(type, overrideVal = null) {
+    const input = this.querySelector(`#input-${type}`);
+    let val = overrideVal !== null ? parseFloat(overrideVal) : (input ? parseFloat(input.value) : 0);
+    
+    if ((val > 0 || type.startsWith('set_') || type === 'set_usage') && this._hass) {
       this._hass.callService("smart_pool_assistant", "log_maintenance", {
         entity_id: this.config.recommendation_entity,
         type: type,
