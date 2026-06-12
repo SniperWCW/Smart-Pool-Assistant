@@ -5,6 +5,7 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 ## Hauptfunktionen
 
 - **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren, eine **Temperatur-Korrektur** sowie den **Abdeckungs-Status** und die **Badelast** (Nutzungsmodus).
+- **Transparente Berechnung**: Aufschlüsselung der Dosierempfehlung (Basis, Temperatur, UV, Badelast) direkt in der UI.
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
@@ -17,6 +18,7 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
 - **Maximale Datensicherheit**: Nutzt die Home Assistant Storage-API. Alle Zeitstempel und Historien bleiben nach einem Neustart oder Update erhalten.
 - **Re-Konfiguration möglich!** Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
+- **Langzeitstatistiken**: Unterstützung für native Statistiken (pH, Chlor, Temperatur), um Verläufe über Monate hinweg zu verfolgen.
 - **Unterstützung für `persistent_notification` (konfigurierbar).**
 - **Letzte Aktivitäten**: Zeigt die letzte durchgeführte Aktion (z.B. "Chlor zugegeben" oder "Filter gereinigt") direkt auf der Karte an.
 
