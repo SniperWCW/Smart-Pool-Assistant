@@ -389,6 +389,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
                 "pool_covered": self.pool_covered,
                 "usage_mode": self.usage_mode,
+                "chlor_breakdown_base": 0.0,
+                "chlor_breakdown_shock_adj": 0.0,
+                "chlor_breakdown_temp_adj": 0.0,
+                "chlor_breakdown_env_adj": 0.0,
+                "chlor_breakdown_bather_adj": 0.0,
+                "chlor_breakdown_sum_raw": 0.0,
+                "chlor_breakdown_min_dose_applied": 0.0,
                 "history": self.maintenance_history
             }
 
@@ -433,8 +440,34 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if c_ist < 0.3: min_dose = 6.0
         elif c_ist < 0.8: min_dose = 3.0
 
-        raw_chlor = ((c_diff * volumen / wirkstoff) * shock_factor * env_factor * temp_factor) + bather_load_extra
+        chlor_base_amount_raw = (c_diff * volumen / wirkstoff)
+        raw_chlor = (chlor_base_amount_raw * shock_factor * env_factor * temp_factor) + bather_load_extra
         s_g = round(min(max(raw_chlor, min_dose), 25.0), 1)
+
+        # --- Werte für die Frontend-Anzeige der Berechnung ---
+        # Basiswert (ohne Faktoren)
+        chlor_breakdown_base = round(chlor_base_amount_raw, 2)
+        
+        # Anpassung durch Schock-Faktor
+        chlor_after_shock = chlor_base_amount_raw * shock_factor
+        chlor_breakdown_shock_adj = round(chlor_after_shock - chlor_base_amount_raw, 2)
+        
+        # Anpassung durch Temperatur
+        chlor_after_temp = chlor_after_shock * temp_factor
+        chlor_breakdown_temp_adj = round(chlor_after_temp - chlor_after_shock, 2)
+        
+        # Anpassung durch Abdeckung
+        chlor_after_env = chlor_after_temp * env_factor
+        chlor_breakdown_env_adj = round(chlor_after_env - chlor_after_temp, 2)
+        
+        # Anpassung durch Badelast (direkter Zuschlag)
+        chlor_breakdown_bather_adj = round(bather_load_extra, 2)
+        
+        # Summe der Anpassungen (vor Mindest-/Maximaldosis)
+        chlor_breakdown_sum_raw = round(raw_chlor, 2)
+        
+        # Mindestdosis, falls angewendet
+        chlor_breakdown_min_dose_applied = round(min_dose, 2) if raw_chlor < min_dose else 0.0
         
         # pH Berechnung
         ph_diff = ph_ziel - ph_ist
@@ -499,6 +532,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
             "history": self.maintenance_history,
+            "chlor_breakdown_base": chlor_breakdown_base,
+            "chlor_breakdown_shock_adj": chlor_breakdown_shock_adj,
+            "chlor_breakdown_temp_adj": chlor_breakdown_temp_adj,
+            "chlor_breakdown_env_adj": chlor_breakdown_env_adj,
+            "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
+            "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
+            "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
             "days_since_filter_clean": days_since_filter_clean,
             "pool_covered": self.pool_covered,
             "usage_mode": self.usage_mode,
