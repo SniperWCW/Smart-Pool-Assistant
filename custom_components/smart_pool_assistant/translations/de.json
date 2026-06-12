@@ -1,8 +1,5 @@
 {
   "config": {
-    "error": {
-      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor."
-    },
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
@@ -20,21 +17,12 @@
           "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
           "notify_service": "Benachrichtigungs-Dienst",
           "persistent_notification": "Benachrichtigung in HA anzeigen",
-          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)",
-          "filter_clean_interval": "Filter Reinigungsintervall (Tage)",
-          "filter_replace_interval": "Filter Wechselintervall (Tage)",
-          "filter_clean_yellow_threshold": "Filter Reinigung: Gelb-Schwelle (Tage vor Fälligkeit)",
-          "filter_clean_red_threshold": "Filter Reinigung: Rot-Schwelle (Tage vor Fälligkeit)",
-          "filter_replace_yellow_threshold": "Filter Wechsel: Gelb-Schwelle (Tage vor Fälligkeit)",
-          "filter_replace_red_threshold": "Filter Wechsel: Rot-Schwelle (Tage vor Fälligkeit)"
+          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)"
         }
       }
     }
   },
   "options": {
-    "error": {
-      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor."
-    },
     "step": {
       "init": {
         "data": {
