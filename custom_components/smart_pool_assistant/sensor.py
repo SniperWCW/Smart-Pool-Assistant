@@ -32,7 +32,7 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "Datenquelle", "data_source", None, "mdi:database-import"),
         PoolAssistantSensor(coordinator, "Abdeckung Status", "pool_covered", None, "mdi:pool"),
         PoolAssistantSensor(coordinator, "Nutzungsmodus", "usage_mode", None, "mdi:account-group"),
-        PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "days_since_filter_clean", "Tage", "mdi:filter-outline"),
+        PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
         PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
         PoolAssistantStatusSensor(coordinator),
     ]
@@ -81,7 +81,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "ph_target": data.get("ph_target"),
             "chlor_dose": data.get("chlor_dose"),
             "chlor_pre": data.get("chlor_pre"),
-            "days_since_filter_clean": data.get("days_since_filter_clean"),
+            "hours_since_filter_clean": data.get("hours_since_filter_clean"),
             "filter_clean_status": data.get("filter_clean_status"),
             "filter_clean_interval": data.get("filter_clean_interval"),
             "days_since_filter_replace": data.get("days_since_filter_replace"),
@@ -101,6 +101,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_breakdown_sum_raw": data.get("chlor_breakdown_sum_raw"),
             "chlor_breakdown_min_dose_applied": data.get("chlor_breakdown_min_dose_applied"),
             "data_source": data.get("data_source"),
+            "last_api_measurements": data.get("last_api_measurements"),
         }
 
     @property
