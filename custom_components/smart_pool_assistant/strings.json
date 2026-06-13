@@ -7,17 +7,23 @@
         "data": {
           "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
-          "ph_sensor": "pH-Wert-Sensor",
+          "ph_sensor": "pH-Sensor",
           "temp_sensor": "Temperatur-Sensor (°C)",
           "pool_volume": "Poolvolumen (m³)",
           "chlor_target": "Chlor Zielwert (mg/l)",
           "ph_target": "pH Zielwert",
           "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
-          "ph_down_dosage": "PH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
-          "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
+          "ph_up_dosage": "pH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
           "notify_service": "Benachrichtigungs-Dienst",
           "persistent_notification": "Benachrichtigung in HA anzeigen",
-          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)"
+          "follow_up_time": "Erinnerung zur Nachmessung (Minuten)",
+          "filter_clean_interval": "Filter Reinigungsintervall (Stunden)",
+          "filter_replace_interval": "Filter Wechselintervall (Tage)",
+          "filter_clean_yellow_threshold": "Reinigung: Warnung (Stunden vorher)",
+          "filter_clean_red_threshold": "Reinigung: Kritisch (Stunden überfällig)",
+          "filter_replace_yellow_threshold": "Wechsel: Warnung (Tage vorher)",
+          "filter_replace_red_threshold": "Wechsel: Kritisch (Tage überfällig)"
         }
       }
     }
@@ -28,23 +34,70 @@
         "data": {
           "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
-          "ph_sensor": "pH-Wert-Sensor",
+          "ph_sensor": "pH-Sensor",
           "temp_sensor": "Temperatur-Sensor (°C)",
           "pool_volume": "Poolvolumen (m³)",
           "chlor_target": "Chlor Zielwert (mg/l)",
           "ph_target": "pH Zielwert",
           "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
-          "ph_down_dosage": "PH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
-          "ph_up_dosage": "PH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
+          "ph_up_dosage": "pH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
           "notify_service": "Benachrichtigungs-Dienst",
           "persistent_notification": "Benachrichtigung in HA anzeigen",
           "follow_up_time": "Erinnerung zur Nachmessung (Minuten)",
-          "filter_clean_interval": "Filter Reinigungsintervall (Tage)",
+          "filter_clean_interval": "Filter Reinigungsintervall (Stunden)",
           "filter_replace_interval": "Filter Wechselintervall (Tage)",
-          "filter_clean_yellow_threshold": "Filter Reinigung: Gelb-Schwelle (Tage vor Fälligkeit)",
-          "filter_clean_red_threshold": "Filter Reinigung: Rot-Schwelle (Tage vor Fälligkeit)",
+          "filter_clean_yellow_threshold": "Filter Reinigung: Gelb-Schwelle (Stunden vor Fälligkeit)",
+          "filter_clean_red_threshold": "Filter Reinigung: Rot-Schwelle (Stunden vor Fälligkeit)",
           "filter_replace_yellow_threshold": "Filter Wechsel: Gelb-Schwelle (Tage vor Fälligkeit)",
           "filter_replace_red_threshold": "Filter Wechsel: Rot-Schwelle (Tage vor Fälligkeit)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "chlor_dose": { "name": "Chlor Nachdosierung" },
+      "chlor_pre": { "name": "Chlor vor dem Baden" },
+      "ph_senker_total": { "name": "pH-Minus Menge" },
+      "ph_erhoeher_total": { "name": "pH-Plus Menge" },
+      "chlor_ist": { "name": "Chlor Istwert" },
+      "ph_ist": { "name": "pH Istwert" },
+      "temp_ist": { "name": "Temperatur Istwert" },
+      "data_source": { "name": "Datenquelle" },
+      "pool_covered": { "name": "Abdeckung Status" },
+      "usage_mode": { "name": "Nutzungsmodus" },
+      "hours_since_filter_clean": { "name": "Stunden seit Filterreinigung" },
+      "days_since_filter_replace": { "name": "Tage seit Filterwechsel" },
+      "recommendation": { "name": "Empfehlung" }
+    }
+  }
+  ,
+  "services": {
+    "log_maintenance": {
+      "name": "Pool-Aktion protokollieren",
+      "description": "Erfasst Chemie-Zugaben, Filterwartung oder Statusänderungen in der Historie.",
+      "fields": {
+        "entity_id": {
+          "name": "Entität",
+          "description": "Die Pool-Empfehlung Entität."
+        },
+        "type": {
+          "name": "Typ",
+          "description": "Art der Aktion oder Chemie.",
+          "state": {
+            "chlor": "Chlor-Zugabe",
+            "ph_plus": "pH-Plus Zugabe",
+            "ph_minus": "pH-Minus Zugabe",
+            "filter_clean": "Filter gereinigt",
+            "filter_replace": "Filter gewechselt",
+            "set_covered": "Abdeckung Status (0=Offen, 1=Abgedeckt)",
+            "set_usage": "Nutzungsmodus (0=Kein, 1=Normal, 2=Party)"
+          }
+        },
+        "amount": {
+          "name": "Wert / Menge",
+          "description": "Menge (g/ml) oder Status-Wert (0/1/2)."
         }
       }
     }
