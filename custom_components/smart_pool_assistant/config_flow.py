@@ -19,6 +19,7 @@ from .const import (
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD
 )
 CONF_API_KEY = "api_key"
+CONF_UPDATE_INTERVAL = "update_interval"
 
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Pool Assistant."""
@@ -51,7 +52,7 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _get_schema(self, defaults=None, notify_services=None):
         if defaults is None:
             defaults = {}
-        
+
         if notify_services:
             notify_selector = selector.SelectSelector(
                 selector.SelectSelectorConfig(
@@ -65,6 +66,9 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return vol.Schema({
             vol.Optional(CONF_API_KEY, default=defaults.get(CONF_API_KEY, "")): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
+            vol.Required(CONF_UPDATE_INTERVAL, default=defaults.get(CONF_UPDATE_INTERVAL, 5)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", min=1, max=60, step=1)
+            ),
             vol.Optional(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
             vol.Optional(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
             vol.Optional(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
