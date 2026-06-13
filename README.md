@@ -8,8 +8,8 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 - **Transparente Berechnung**: Aufschlüsselung der Dosierempfehlung (Basis, Temperatur, UV, Badelast) direkt in der UI.
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
-- **Interaktive Log-Funktion**: Erfasse zugegebene Mengen direkt über die Karte inklusive Zeitstempel-Historie.
-- **Benachrichtigungssystem**: 
+- **Interaktive Log-Funktion**: Erfasse zugegebene Mengen und Wartungsaktionen direkt über die Karte inklusive Zeitstempel-Historie.
+- **Benachrichtigungssystem**:
   - Auswahl des Dienstes via Dropdown.
   - Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung (Follow-up).
 - **Filter-Wartung**: Verfolge Reinigungs- und Wechselintervalle des Filters.
@@ -17,6 +17,9 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
   - **Benachrichtigungen**: Automatische Meldungen bei Erreichen der Schwellenwerte.
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
 - **Maximale Datensicherheit**: Nutzt die Home Assistant Storage-API. Alle Zeitstempel und Historien bleiben nach einem Neustart oder Update erhalten.
+- **Visuelle Messwerte**: Farbliche Kennzeichnung (Grün/Gelb/Rot) von Chlor- und pH-Werten basierend auf der Abweichung zum Zielwert.
+- **Erweiterte Status-Logik**: Intelligente Hinweise (z.B. "pH-Wert zuerst anpassen"), um die Wirksamkeit der Chemie zu maximieren.
+- **Kompaktes Design**: Einklappbare Bereiche für Berechnungsdetails und Cloud-Messwerte.
 - **Re-Konfiguration möglich!** Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
 - **Langzeitstatistiken**: Unterstützung für native Statistiken (pH, Chlor, Temperatur), um Verläufe über Monate hinweg zu verfolgen.
 - **Unterstützung für `persistent_notification` (konfigurierbar).**
@@ -52,10 +55,12 @@ Du wirst nach folgenden Informationen gefragt:
 ### Filter-Wartung Einstellungen
 - **Reinigungsintervall**: Wie oft der Filter gereinigt werden soll (Standard: 24 Stunden).
 - **Wechselintervall**: Wie oft der Filter ersetzt werden soll (Standard: 180 Tage).
-- **Gelb-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **vor** Ablauf des Intervalls, ab denen die Warnung (Gelb) erscheint.
-- **Rot-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **nach** Ablauf des Intervalls (Überfälligkeit), ab denen der Status auf Kritisch (Rot) springt.
+- **Gelb-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **vor** Ablauf des Intervalls für die Warnanzeige.
+- **Rot-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **nach** Ablauf des Intervalls für den kritischen Status.
 
 ## Die Berechnungslogik
+
+Wichtig: Die Integration empfiehlt bei Abweichungen im pH-Wert immer, diesen **zuerst** zu korrigieren, da Chlor außerhalb des idealen pH-Bereichs (7.0 - 7.4) seine Wirkung nicht voll entfalten kann.
 
 ### Chlor
 Die Chlormenge wird durch eine Kombination verschiedener Faktoren ermittelt:
