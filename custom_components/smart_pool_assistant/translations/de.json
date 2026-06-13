@@ -9,6 +9,7 @@
         "description": "Konfiguriere die Sensoren und Zielwerte für deinen Pool oder Whirlpool.",
         "data": {
           "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
+          "update_interval": "Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
           "ph_sensor": "pH-Sensor",
           "temp_sensor": "Temperatur-Sensor (°C)",
@@ -39,6 +40,7 @@
       "init": {
         "data": {
           "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
+          "update_interval": "Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
           "ph_sensor": "pH-Sensor",
           "temp_sensor": "Temperatur-Sensor (°C)",
