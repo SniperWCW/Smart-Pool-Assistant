@@ -77,24 +77,26 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         if new_state is None or new_state.state in ("unknown", "unavailable", "none", "null"):
             return
-            
+
         # Prüfen auf Attribut-Änderungen (z.B. measured_at von PoolLab)
         old_ts = old_state.attributes.get("measured_at") if old_state else None
         new_ts = new_state.attributes.get("measured_at") or new_state.attributes.get("timestamp")
 
         is_real_change = (
-            old_state is not None 
-            and old_state.state not in ("unknown", "unavailable") 
+            old_state is not None
+            and old_state.state not in ("unknown", "unavailable")
             and (new_state.state != old_state.state or (new_ts and new_ts != old_ts))
         )
 
         if is_real_change:
             _LOGGER.debug("Source entity value changed, updating measurement timestamp")
-            if new_ts:
-                self.maintenance_history["last_measurement_raw"] = new_ts if isinstance(new_ts, str) else new_ts.isoformat()
-            else:
-                self.maintenance_history["last_measurement_raw"] = dt_util.now().isoformat()
-            
+            ts_iso = new_ts if isinstance(new_ts, str) else new_ts.isoformat() if new_ts else dt_util.now().isoformat()
+            self.maintenance_history["last_manual_measurement_raw"] = ts_iso
+
+            # Synchronisiere Anzeige-Zeitstempel (der neueste aus Cloud oder Manuell)
+            api_ts = self.maintenance_history.get("last_api_measurement_raw")
+            self.maintenance_history["last_measurement_raw"] = max(ts_iso, api_ts) if api_ts else ts_iso
+
             await self._store.async_save(self.maintenance_history)
             await self.async_request_refresh()
 
@@ -102,7 +104,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         """Log maintenance action and send notifications."""
         now = dt_util.now()
         ts_formatted = now.strftime("%d.%m. %H:%M")
-        
+
         label = ""
         unit = ""
         msg = None
@@ -119,7 +121,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             modes = ["none", "normal", "party"]
             self.usage_mode = modes[int(amount)] if int(amount) < len(modes) else "none"
             self.maintenance_history["usage_mode"] = self.usage_mode
-        
+
         # Update history for chemicals and filter
         if m_type in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"):
             self.maintenance_history[m_type] = {"amount": amount, "time": ts_formatted, "raw_ts": now.isoformat()}
@@ -134,7 +136,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 msg = f"Pool-Pflege: {amount}{unit} {label} zugegeben."
 
         await self._store.async_save(self.maintenance_history)
-        
+
         conf = self.config
         # Send Notification (Persistent & Service)
         if msg:
@@ -158,7 +160,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             delay = conf.get(CONF_FOLLOW_UP_TIME, 0)
             if delay > 0:
                 async_call_later(self.hass, delay * 60, self._send_follow_up)
-        
+
         await self.async_request_refresh()
 
     async def _send_notification(self, message: str, notification_id: str):
@@ -200,7 +202,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     async def _check_filter_notifications(self, conf: dict):
         """Check and send notifications for filter maintenance."""
         now = dt_util.now()
-        
+
         # Filter Clean
         hours_since_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
         if hours_since_clean is not None:
@@ -214,7 +216,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1: # Notify once a day
                     await self._send_notification(f"Filterreinigung bald fällig! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_yellow")
                     self.maintenance_history["last_notified_clean_yellow"] = now.isoformat()
-            
+
             # Red notification for cleaning
             if hours_since_clean >= (clean_interval + clean_red):
                 last_notified = self.maintenance_history.get("last_notified_clean_red")
@@ -266,19 +268,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             """Determine filter status based on time since last action and thresholds."""
             if time_since is None:
                 return "unknown"
-            
+
             time_until_due = interval - time_since
             if time_until_due <= red_threshold:
                 return "critical"
             if time_until_due <= yellow_threshold:
                 return "warning"
-            
+
             return "ok"
 
-        # 1. Bestehende Daten aus der Historie laden (Basis für die Anzeige)
-        last_meas_raw = self.maintenance_history.get("last_measurement_raw")
+        # 1. Bestehende Daten laden
         last_calc_raw = self.maintenance_history.get("last_calc_raw")
-        
+
         # Falls noch nie berechnet wurde, initialisieren wir mit jetzt (nur für die Anzeige)
         if not last_calc_raw:
             last_calc_raw = dt_util.now().isoformat()
@@ -291,7 +292,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         manual_found = False
 
         c_ist = ph_ist = temp_ist = None
-        new_meas_ts = None
         last_api_measurements = []
 
         # 1. Versuch: Cloud-Daten abrufen wenn Key vorhanden
@@ -305,11 +305,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                     "query": "query { CloudAccount { Accounts { Measurements { parameter value timestamp } } } }"
                 }
                 headers = {"Authorization": api_key}
-                
+
                 async with session.post(
-                    "https://backend.labcom.cloud/graphql", 
-                    json=payload, 
-                    headers=headers, 
+                    "https://backend.labcom.cloud/graphql",
+                    json=payload,
+                    headers=headers,
                     timeout=10
                 ) as resp:
                     if resp.status == 200:
@@ -319,7 +319,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             # Wir nehmen den ersten Account und sortieren Messwerte nach Zeitstempel (absteigend)
                             measurements = cloud_data["Accounts"][0].get("Measurements", [])
                             measurements.sort(key=lambda x: x.get("timestamp") or 0, reverse=True)
-                            
+
+                            # Neuesten Zeitstempel aus Cloud erfassen
+                            if measurements and (latest_ts := measurements[0].get("timestamp")):
+                                cloud_ts_iso = dt_util.utc_from_timestamp(latest_ts).isoformat()
+                                self.maintenance_history["last_api_measurement_raw"] = cloud_ts_iso
+
                             # Sammle die letzten 4 Messwerte für die Anzeige/Fehlersuche
                             for obs in measurements[:4]:
                                 p_ts = obs.get("timestamp")
@@ -332,23 +337,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             for obs in measurements:
                                 p_name = obs.get("parameter")
                                 p_val_raw = obs.get("value")
+                                if p_val_raw is None: continue
                                 try:
                                     # Sicherheitshalber in Float konvertieren, falls die API Strings liefert
-                                    p_val = float(p_val_raw) if p_val_raw is not None else None
+                                    p_val = float(p_val_raw)
                                 except (ValueError, TypeError):
                                     _LOGGER.debug("Could not parse value for %s: %s", p_name, p_val_raw)
                                     continue
 
-                                p_ts = obs.get("timestamp")
-                                
                                 if p_name == "PL Chlorine Free" and c_ist is None and p_val is not None:
                                     c_ist = p_val
-                                    if p_ts:
-                                        new_meas_ts = dt_util.utc_from_timestamp(p_ts).isoformat()
                                 if p_name == "PL pH" and ph_ist is None and p_val is not None:
                                     ph_ist = p_val
-                                    if p_ts and not new_meas_ts:
-                                        new_meas_ts = dt_util.utc_from_timestamp(p_ts).isoformat()
                                 if p_name == "PL Temperature" and temp_ist is None and p_val is not None:
                                     temp_ist = p_val
                                 if c_ist is not None and ph_ist is not None:
@@ -370,13 +370,19 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Werte zuweisen, falls Cloud nichts geliefert hat
         if c_ist is None and c_man is not None:
             c_ist = c_man
-            if c_man_ts and not new_meas_ts:
-                new_meas_ts = c_man_ts if isinstance(c_man_ts, str) else c_man_ts.isoformat()
+            if c_man_ts:
+                ts_iso = c_man_ts if isinstance(c_man_ts, str) else c_man_ts.isoformat()
+                old_man = self.maintenance_history.get("last_manual_measurement_raw")
+                if not old_man or ts_iso > old_man:
+                    self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
         if ph_ist is None and ph_man is not None:
             ph_ist = ph_man
-            if ph_man_ts and not new_meas_ts:
-                new_meas_ts = ph_man_ts if isinstance(ph_man_ts, str) else ph_man_ts.isoformat()
+            if ph_man_ts:
+                ts_iso = ph_man_ts if isinstance(ph_man_ts, str) else ph_man_ts.isoformat()
+                old_man = self.maintenance_history.get("last_manual_measurement_raw")
+                if not old_man or ts_iso > old_man:
+                    self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
         if temp_ist is None and temp_man is not None:
             temp_ist = temp_man
@@ -389,10 +395,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         elif manual_found:
             data_source = "Manuell"
 
-        # 2. Zeitstempel nur aktualisieren, wenn wir wirklich neue Daten erhalten haben
-        if new_meas_ts:
-            last_meas_raw = new_meas_ts
-            self.maintenance_history["last_measurement_raw"] = last_meas_raw
+        # Synchronisiere den kombinierten Zeitstempel für die Anzeige
+        api_ts = self.maintenance_history.get("last_api_measurement_raw")
+        manual_ts = self.maintenance_history.get("last_manual_measurement_raw")
+        if api_ts and manual_ts:
+            dt_api = dt_util.parse_datetime(api_ts)
+            dt_man = dt_util.parse_datetime(manual_ts)
+            last_meas_raw = api_ts if (dt_api and dt_man and dt_api > dt_man) else manual_ts
+        else:
+            last_meas_raw = api_ts or manual_ts
+        self.maintenance_history["last_measurement_raw"] = last_meas_raw
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
@@ -425,14 +437,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         c_ziel = conf.get(CONF_CHLOR_TARGET, 1.5)
         ph_ziel = conf.get(CONF_PH_TARGET, 7.2)
         wirkstoff = conf.get(CONF_CHLOR_CONTENT, 0.56)
-        
+
         if wirkstoff <= 0:
             wirkstoff = 0.56 # Schutz vor Division durch Null
-        
+
         # Nutzungs- und Abdeckungsfaktoren
         # Wenn offen, erhöhen wir die Grundzehrung (UV-Verlust)
         env_factor = 0.8 if self.pool_covered else 1.2
-        
+
         # Badelast-Zuschlag in Gramm (Absolutwerte)
         bather_load_extra = 0.0
         if self.usage_mode == "normal": bather_load_extra = 3.0
@@ -440,7 +452,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Chlor Berechnung
         c_diff = max(c_ziel - c_ist, 0)
-        
+
         # Temperatur-Korrekturfaktor für Chlor (höhere Zehrung bei warmem Wasser)
         temp_factor = 1.0
         if temp_ist is not None:
@@ -468,35 +480,35 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # --- Werte für die Frontend-Anzeige der Berechnung ---
         # Basiswert (ohne Faktoren)
         chlor_breakdown_base = round(chlor_base_amount_raw, 2)
-        
+
         # Anpassung durch Schock-Faktor
         chlor_after_shock = chlor_base_amount_raw * shock_factor
         chlor_breakdown_shock_adj = round(chlor_after_shock - chlor_base_amount_raw, 2)
-        
+
         # Anpassung durch Temperatur
         chlor_after_temp = chlor_after_shock * temp_factor
         chlor_breakdown_temp_adj = round(chlor_after_temp - chlor_after_shock, 2)
-        
+
         # Anpassung durch Abdeckung
         chlor_after_env = chlor_after_temp * env_factor
         chlor_breakdown_env_adj = round(chlor_after_env - chlor_after_temp, 2)
-        
+
         # Anpassung durch Badelast (direkter Zuschlag)
         chlor_breakdown_bather_adj = round(bather_load_extra, 2)
-        
+
         # Summe der Anpassungen (vor Mindest-/Maximaldosis)
         chlor_breakdown_sum_raw = round(raw_chlor, 2)
-        
+
         # Mindestdosis, falls angewendet
         chlor_breakdown_min_dose_applied = round(min_dose, 2) if raw_chlor < min_dose else 0.0
-        
+
         # pH Berechnung
         ph_diff = ph_ziel - ph_ist
         ph_diff_abs = abs(ph_diff)
-        
+
         ph_senker_ml = 0.0
         ph_erhoeher_g = 0.0
-        
+
         if ph_diff < 0: # pH zu hoch -> senken
             # Berechnung: ml = Differenz * (Dosierung / 10m3 / 0.2 pH-Schritt) * Poolvolumen
             factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
@@ -512,18 +524,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         filter_clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 24)
         filter_replace_interval = conf.get(CONF_FILTER_REPLACE_INTERVAL, 180)
-        
+
         filter_clean_yellow_threshold = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 4)
         filter_clean_red_threshold = conf.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)
         filter_replace_yellow_threshold = conf.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)
         filter_replace_red_threshold = conf.get(CONF_FILTER_REPLACE_RED_THRESHOLD, 0)
 
         filter_clean_status = get_filter_status(
-            hours_since_filter_clean, filter_clean_interval, 
+            hours_since_filter_clean, filter_clean_interval,
             filter_clean_yellow_threshold, filter_clean_red_threshold
         )
         filter_replace_status = get_filter_status(
-            days_since_filter_replace, filter_replace_interval, 
+            days_since_filter_replace, filter_replace_interval,
             filter_replace_yellow_threshold, filter_replace_red_threshold
         )
 
