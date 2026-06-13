@@ -50,10 +50,10 @@ Du wirst nach folgenden Informationen gefragt:
 - **Erinnerung**: Zeitspanne in Minuten, nach der eine Aufforderung zur Nachmessung gesendet wird.
 
 ### Filter-Wartung Einstellungen
-- **Reinigungsintervall**: Wie oft der Filter gereinigt werden soll (Standard: 30 Tage).
+- **Reinigungsintervall**: Wie oft der Filter gereinigt werden soll (Standard: 24 Stunden).
 - **Wechselintervall**: Wie oft der Filter ersetzt werden soll (Standard: 180 Tage).
-- **Gelb-Schwelle**: Tage **vor** Ablauf des Intervalls, ab denen die Warnung (Gelb) erscheint.
-- **Rot-Schwelle**: Tage **nach** Ablauf des Intervalls (Überfälligkeit), ab denen der Status auf Kritisch (Rot) springt.
+- **Gelb-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **vor** Ablauf des Intervalls, ab denen die Warnung (Gelb) erscheint.
+- **Rot-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **nach** Ablauf des Intervalls (Überfälligkeit), ab denen der Status auf Kritisch (Rot) springt.
 
 ## Die Berechnungslogik
 
@@ -98,5 +98,5 @@ Die Integration stellt folgende Sensoren bereit:
 - `sensor.pool_ph_minus`: Benötigte Menge PH-Minus in ml.
 - `sensor.pool_ph_plus`: Benötigte Menge PH-Plus in g.
 - `sensor.pool_empfehlung`: Textuelle Zusammenfassung der nächsten Schritte.
-- `sensor.pool_filter_reinigung_fällig`: Tage seit letzter Filterreinigung.
+- `sensor.pool_filter_reinigung_fällig`: Stunden seit letzter Filterreinigung.
 - `sensor.pool_filter_wechsel_fällig`: Tage seit letztem Filterwechsel.
