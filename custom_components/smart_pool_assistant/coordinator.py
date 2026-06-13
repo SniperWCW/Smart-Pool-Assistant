@@ -185,13 +185,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             domain, service_name = service.split(".")
             await self._send_notification("Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!", "follow_up")
 
-    def _get_days_since_last_action(self, action_key: str) -> int | None:
-        """Calculate days since last action."""
+    def _get_time_since_last_action(self, action_key: str, in_hours: bool = False) -> int | None:
+        """Calculate time since last action (hours or days)."""
         last_action_data = self.maintenance_history.get(action_key)
         if last_action_data and last_action_data.get("raw_ts"):
             last_ts = dt_util.parse_datetime(last_action_data["raw_ts"])
             if last_ts:
-                return (dt_util.now() - last_ts).days
+                diff = dt_util.now() - last_ts
+                if in_hours:
+                    return int(diff.total_seconds() // 3600)
+                return diff.days
         return None
 
     async def _check_filter_notifications(self, conf: dict):
@@ -199,29 +202,28 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         now = dt_util.now()
         
         # Filter Clean
-        days_since_clean = self._get_days_since_last_action("filter_clean")
-        if days_since_clean is not None:
-            clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 30)
-            clean_yellow = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 7)
+        hours_since_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
+        if hours_since_clean is not None:
+            clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 24)
+            clean_yellow = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 4)
             clean_red = conf.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)
 
             # Yellow notification
-            if days_since_clean > 0 and (clean_interval - clean_yellow) <= days_since_clean < clean_interval:
+            if hours_since_clean > 0 and (clean_interval - clean_yellow) <= hours_since_clean < clean_interval:
                 last_notified = self.maintenance_history.get("last_notified_clean_yellow")
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1: # Notify once a day
-                    await self._send_notification(f"Filterreinigung bald fällig! Vor {days_since_clean} Tagen gereinigt. Empfohlen alle {clean_interval} Tage.", "filter_clean_yellow")
+                    await self._send_notification(f"Filterreinigung bald fällig! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_yellow")
                     self.maintenance_history["last_notified_clean_yellow"] = now.isoformat()
             
             # Red notification for cleaning
-            # Rot löst aus, wenn das Intervall plus die rote Schwelle (Überfälligkeit) erreicht ist
-            if days_since_clean >= (clean_interval + clean_red):
+            if hours_since_clean >= (clean_interval + clean_red):
                 last_notified = self.maintenance_history.get("last_notified_clean_red")
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
-                    await self._send_notification(f"Filterreinigung ÜBERFÄLLIG! Vor {days_since_clean} Tagen gereinigt. Empfohlen alle {clean_interval} Tage.", "filter_clean_red")
+                    await self._send_notification(f"Filterreinigung ÜBERFÄLLIG! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_red")
                     self.maintenance_history["last_notified_clean_red"] = now.isoformat()
 
         # Filter Replace
-        days_since_replace = self._get_days_since_last_action("filter_replace")
+        days_since_replace = self._get_time_since_last_action("filter_replace")
         if days_since_replace is not None:
             replace_interval = conf.get(CONF_FILTER_REPLACE_INTERVAL, 180)
             replace_yellow = conf.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)
@@ -260,15 +262,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except ValueError:
                 return None, None
 
-        def get_filter_status(days_since: int | None, interval: int, yellow_threshold: int, red_threshold: int) -> str:
-            """Determine filter status based on days since last action and thresholds."""
-            if days_since is None:
+        def get_filter_status(time_since: int | None, interval: int, yellow_threshold: int, red_threshold: int) -> str:
+            """Determine filter status based on time since last action and thresholds."""
+            if time_since is None:
                 return "unknown"
             
-            days_until_due = interval - days_since
-            if days_until_due <= red_threshold:
+            time_until_due = interval - time_since
+            if time_until_due <= red_threshold:
                 return "critical"
-            if days_until_due <= yellow_threshold:
+            if time_until_due <= yellow_threshold:
                 return "warning"
             
             return "ok"
@@ -290,6 +292,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         c_ist = ph_ist = temp_ist = None
         new_meas_ts = None
+        last_api_measurements = []
 
         # 1. Versuch: Cloud-Daten abrufen wenn Key vorhanden
         if api_key:
@@ -313,24 +316,41 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         result = await resp.json()
                         cloud_data = result.get("data", {}).get("CloudAccount")
                         if cloud_data and cloud_data.get("Accounts"):
-                            # Wir nehmen den ersten Account und sortieren Messwerte nach Zeitstempel
+                            # Wir nehmen den ersten Account und sortieren Messwerte nach Zeitstempel (absteigend)
                             measurements = cloud_data["Accounts"][0].get("Measurements", [])
                             measurements.sort(key=lambda x: x.get("timestamp") or 0, reverse=True)
                             
+                            # Sammle die letzten 4 Messwerte für die Anzeige/Fehlersuche
+                            for obs in measurements[:4]:
+                                p_ts = obs.get("timestamp")
+                                last_api_measurements.append({
+                                    "parameter": obs.get("parameter"),
+                                    "value": obs.get("value"),
+                                    "timestamp": dt_util.utc_from_timestamp(p_ts).isoformat() if p_ts else None
+                                })
+
                             for obs in measurements:
                                 p_name = obs.get("parameter")
-                                p_val = obs.get("value")
+                                p_val_raw = obs.get("value")
+                                try:
+                                    # Sicherheitshalber in Float konvertieren, falls die API Strings liefert
+                                    p_val = float(p_val_raw) if p_val_raw is not None else None
+                                except (ValueError, TypeError):
+                                    _LOGGER.debug("Could not parse value for %s: %s", p_name, p_val_raw)
+                                    continue
+
                                 p_ts = obs.get("timestamp")
-                                if p_name == "PL Chlorine Free" and c_ist is None:
-                                    c_ist = float(p_val)
+                                
+                                if p_name == "PL Chlorine Free" and c_ist is None and p_val is not None:
+                                    c_ist = p_val
                                     if p_ts:
                                         new_meas_ts = dt_util.utc_from_timestamp(p_ts).isoformat()
-                                if p_name == "PL pH" and ph_ist is None:
-                                    ph_ist = float(p_val)
+                                if p_name == "PL pH" and ph_ist is None and p_val is not None:
+                                    ph_ist = p_val
                                     if p_ts and not new_meas_ts:
                                         new_meas_ts = dt_util.utc_from_timestamp(p_ts).isoformat()
-                                if p_name == "PL Temperature" and temp_ist is None:
-                                    temp_ist = float(p_val)
+                                if p_name == "PL Temperature" and temp_ist is None and p_val is not None:
+                                    temp_ist = p_val
                                 if c_ist is not None and ph_ist is not None:
                                     break
 
@@ -387,6 +407,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "is_error": True,
                 "last_calculation": dt_util.parse_datetime(last_calc_raw).strftime("%d.%m.%Y %H:%M Uhr"),
                 "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+                "last_api_measurements": last_api_measurements,
                 "pool_covered": self.pool_covered,
                 "usage_mode": self.usage_mode,
                 "chlor_breakdown_base": 0.0,
@@ -486,19 +507,19 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
 
         # Filter Wartung
-        days_since_filter_clean = self._get_days_since_last_action("filter_clean")
-        days_since_filter_replace = self._get_days_since_last_action("filter_replace")
+        hours_since_filter_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
+        days_since_filter_replace = self._get_time_since_last_action("filter_replace")
 
-        filter_clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 30)
+        filter_clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 24)
         filter_replace_interval = conf.get(CONF_FILTER_REPLACE_INTERVAL, 180)
         
-        filter_clean_yellow_threshold = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 7)
+        filter_clean_yellow_threshold = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 4)
         filter_clean_red_threshold = conf.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)
         filter_replace_yellow_threshold = conf.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)
         filter_replace_red_threshold = conf.get(CONF_FILTER_REPLACE_RED_THRESHOLD, 0)
 
         filter_clean_status = get_filter_status(
-            days_since_filter_clean, filter_clean_interval, 
+            hours_since_filter_clean, filter_clean_interval, 
             filter_clean_yellow_threshold, filter_clean_red_threshold
         )
         filter_replace_status = get_filter_status(
@@ -533,13 +554,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_target": ph_ziel,
             "history": self.maintenance_history,
             "chlor_breakdown_base": chlor_breakdown_base,
+            "last_api_measurements": last_api_measurements,
             "chlor_breakdown_shock_adj": chlor_breakdown_shock_adj,
             "chlor_breakdown_temp_adj": chlor_breakdown_temp_adj,
             "chlor_breakdown_env_adj": chlor_breakdown_env_adj,
             "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
             "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
             "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
-            "days_since_filter_clean": days_since_filter_clean,
+            "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,
             "usage_mode": self.usage_mode,
             "filter_clean_status": filter_clean_status,
