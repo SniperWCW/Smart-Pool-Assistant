@@ -19,6 +19,7 @@ from .const import (
 )
 
 CONF_API_KEY = "api_key"
+CONF_UPDATE_INTERVAL = "update_interval"
 _LOGGER = logging.getLogger(__name__)
 
 _STORAGE_VERSION = 1
@@ -30,7 +31,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(minutes=5),
+            update_interval=timedelta(
+                minutes=entry.options.get(CONF_UPDATE_INTERVAL, entry.data.get(CONF_UPDATE_INTERVAL, 5))
+            ),
         )
 
         self.entry = entry
@@ -417,8 +420,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "ph_erhoeher_total": 0,
                 "data_source": data_source,
                 "is_error": True,
-                "last_calculation": dt_util.parse_datetime(last_calc_raw).strftime("%d.%m.%Y %H:%M Uhr"),
-                "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+                "last_calculation": dt_util.as_local(dt_util.parse_datetime(last_calc_raw)).strftime("%d.%m.%Y %H:%M Uhr"),
+                "last_measurement": dt_util.as_local(dt_util.parse_datetime(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
                 "last_api_measurements": last_api_measurements,
                 "pool_covered": self.pool_covered,
                 "usage_mode": self.usage_mode,
@@ -560,8 +563,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_diff": ph_diff,
             "is_shock": c_ist < 0.5,
             "is_error": False,
-            "last_calculation": dt_util.parse_datetime(new_calc_ts).strftime("%d.%m.%Y %H:%M Uhr"),
-            "last_measurement": dt_util.parse_datetime(last_meas_raw).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+            "last_calculation": dt_util.as_local(dt_util.parse_datetime(new_calc_ts)).strftime("%d.%m.%Y %H:%M Uhr"),
+            "last_measurement": dt_util.as_local(dt_util.parse_datetime(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
             "history": self.maintenance_history,
