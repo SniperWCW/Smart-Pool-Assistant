@@ -91,17 +91,17 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_FOLLOW_UP_TIME, default=defaults.get(CONF_FOLLOW_UP_TIME, 60)): selector.NumberSelector(
                 selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1)
             ),
-            vol.Required(CONF_FILTER_CLEAN_INTERVAL, default=defaults.get(CONF_FILTER_CLEAN_INTERVAL, 30)): selector.NumberSelector(
-                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=1)
+            vol.Required(CONF_FILTER_CLEAN_INTERVAL, default=defaults.get(CONF_FILTER_CLEAN_INTERVAL, 24)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Stunden", step=1, min=1)
             ),
             vol.Required(CONF_FILTER_REPLACE_INTERVAL, default=defaults.get(CONF_FILTER_REPLACE_INTERVAL, 180)): selector.NumberSelector(
                 selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=1)
             ),
-            vol.Required(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, default=defaults.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 7)): selector.NumberSelector(
-                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
+            vol.Required(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, default=defaults.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 4)): selector.NumberSelector(
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Stunden", step=1, min=0)
             ),
             vol.Required(CONF_FILTER_CLEAN_RED_THRESHOLD, default=defaults.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)): selector.NumberSelector(
-                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
+                selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Stunden", step=1, min=0)
             ),
             vol.Required(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, default=defaults.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)): selector.NumberSelector(
                 selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Tage", step=1, min=0)
