@@ -80,6 +80,10 @@ class PoolChemistryCard extends HTMLElement {
               <div class="section-title">🕒 Letzte Aktivitäten:</div>
               <div id="maintenance-info" class="m-grid"></div>
             </div>
+            <details id="api-history-section" class="measurements-section" style="margin-top: 12px; display: none; background: rgba(3, 169, 244, 0.05); border: 1px dashed var(--primary-color);">
+              <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">☁️ Letzte Cloud-Messwerte (API)</summary>
+              <div id="api-history-list" style="font-size: 0.85em; margin-top: 8px;"></div>
+            </details>
             <div class="measurements-section" style="margin-top: 12px;">
               <div class="section-title">📅 Aktuelle Messwerte:</div>
               <div id="measurements-grid" class="m-grid"></div>
@@ -88,7 +92,7 @@ class PoolChemistryCard extends HTMLElement {
               <div class="section-title">⚙️ Filter Wartung:</div>
               <div id="filter-maintenance-grid" class="m-grid">
                 <div class="m-item">
-                  <b>Reinigung:</b> <span id="filter-clean-days">--</span> Tage her <small>(Empf. alle <span id="filter-clean-interval">--</span> Tage)</small>
+                  <b>Reinigung:</b> <span id="filter-clean-hours">--</span> Stunden her <small>(Empf. alle <span id="filter-clean-interval">--</span> Stunden)</small>
                   <button id="btn-filter-clean" class="small-btn">Gereinigt</button>
                 </div>
                 <div class="m-item">
@@ -124,27 +128,27 @@ class PoolChemistryCard extends HTMLElement {
             ha-icon { color: var(--primary-color); --mdc-icon-size: 28px; margin-top: 2px; }
             .hist-text { font-size: 0.85em; opacity: 0.7; font-style: italic; margin-top: 2px; min-height: 1.2em; }
             .log-input { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-            .log-input input { 
+            .log-input input {
               flex: 1 1 80px;
               min-width: 0;
-              height: 38px; 
-              border-radius: 6px; 
-              border: 1px solid var(--divider-color); 
-              background: var(--card-background-color); 
-              color: var(--primary-text-color); 
-              font-size: 1em; 
+              height: 38px;
+              border-radius: 6px;
+              border: 1px solid var(--divider-color);
+              background: var(--card-background-color);
+              color: var(--primary-text-color);
+              font-size: 1em;
               padding: 0 8px;
               box-sizing: border-box;
             }
-            .log-input button { 
-              height: 38px; 
-              cursor: pointer; 
-              background: var(--primary-color); 
-              color: white; 
-              border: none; 
-              border-radius: 6px; 
-              padding: 0 16px; 
-              font-size: 1em; 
+            .log-input button {
+              height: 38px;
+              cursor: pointer;
+              background: var(--primary-color);
+              color: white;
+              border: none;
+              border-radius: 6px;
+              padding: 0 16px;
+              font-size: 1em;
               font-weight: bold;
               flex-shrink: 0;
             }
@@ -160,17 +164,17 @@ class PoolChemistryCard extends HTMLElement {
             .status-critical { color: var(--error-color, #F44336); }
             .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; flex-shrink: 0; }
             .usage-grid { display: flex; gap: 8px; flex-wrap: wrap; }
-            .mode-btn { 
-              height: 32px; 
-              padding: 0 10px; 
-              font-size: 0.85em; 
-              border-radius: 8px; 
-              border: 1px solid var(--divider-color); 
-              background: var(--secondary-background-color); 
-              color: var(--primary-text-color); 
-              cursor: pointer; 
-              display: flex; 
-              align-items: center; 
+            .mode-btn {
+              height: 32px;
+              padding: 0 10px;
+              font-size: 0.85em;
+              border-radius: 8px;
+              border: 1px solid var(--divider-color);
+              background: var(--secondary-background-color);
+              color: var(--primary-text-color);
+              cursor: pointer;
+              display: flex;
+              align-items: center;
               gap: 4px;
               transition: all 0.2s ease;
             }
@@ -238,13 +242,32 @@ class PoolChemistryCard extends HTMLElement {
     // Aktualisiere nur die dynamischen Inhalte
     const statusBox = this.querySelector('#status-box');
     this._lastAttr = attr; // Store for toggle
-    statusBox.className = `status-box ${isShock ? 'warning' : 'ok'}`;
-    statusBox.textContent = isShock ? '⚠️ Stoßchlorung empfohlen' : '✅ Wasserqualität in Ordnung';
 
-    this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0 
+    // Status Box Logik erweitern
+    const hasPhIssue = (attr.ph_senker_total > 0 || attr.ph_erhoeher_total > 0);
+    const isShockRecommended = attr.is_shock === true; // Renamed for clarity with isShock variable
+
+    let statusText = '✅ Wasserqualität in Ordnung';
+    let statusClass = 'ok';
+
+    if (hasPhIssue && isShockRecommended) {
+      statusText = '⚠️ pH-Wert anpassen, danach Stoßchlorung!';
+      statusClass = 'warning';
+    } else if (hasPhIssue) {
+      statusText = '⚠️ pH-Wert zuerst anpassen!';
+      statusClass = 'warning';
+    } else if (isShockRecommended) {
+      statusText = '⚠️ Stoßchlorung empfohlen';
+      statusClass = 'warning';
+    }
+
+    statusBox.className = `status-box ${statusClass}`;
+    statusBox.textContent = statusText;
+
+    this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
       ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
       : `Chlorwert ist optimal.`;
-    
+
     this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
 
     let phText = "pH-Wert ist optimal.";
@@ -265,12 +288,24 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     const formatNum = (val) => (val !== undefined && val !== null && val !== "") ? Number(val).toFixed(2) : '--';
-    
+
     const c_ist = formatNum(attr.chlor_ist);
     const ph_ist = formatNum(attr.ph_ist);
     const t_ist = formatNum(attr.temp_ist);
     const c_target = formatNum(attr.chlor_target);
     const ph_target = formatNum(attr.ph_target);
+
+    // Helper to get colored text for measurements based on deviation
+    const getValColorClass = (val, target, t1, t2) => {
+      if (val === undefined || val === null || target === undefined || target === null || isNaN(val)) return '';
+      const diff = Math.abs(Number(val) - Number(target));
+      if (diff <= t1) return 'status-ok';
+      if (diff <= t2) return 'status-warning';
+      return 'status-critical';
+    };
+
+    const chlorColor = getValColorClass(attr.chlor_ist, attr.chlor_target, 0.3, 0.7);
+    const phColor = getValColorClass(attr.ph_ist, attr.ph_target, 0.1, 0.3);
 
     // Helper to get colored text for filter status
     const getColoredDays = (days, status) => {
@@ -282,23 +317,41 @@ class PoolChemistryCard extends HTMLElement {
     };
 
     this.querySelector('#measurements-grid').innerHTML = `
-      <div class="m-item"><b>Chlor:</b> ${c_ist} mg/l <small>(Ziel: ${c_target})</small></div>
-      <div class="m-item"><b>pH-Wert:</b> ${ph_ist} <small>(Ziel: ${ph_target})</small></div>
+      <div class="m-item"><b>Chlor:</b> <span class="${chlorColor}">${c_ist} mg/l</span> <small>(Ziel: ${c_target})</small></div>
+      <div class="m-item"><b>pH-Wert:</b> <span class="${phColor}">${ph_ist}</span> <small>(Ziel: ${ph_target})</small></div>
       <div class="m-item">🌡️ <b>Temperatur:</b> ${t_ist}°C</div>
     `;
 
     // Filter Maintenance Display
-    const daysSinceClean = attr.days_since_filter_clean;
+    const hoursSinceClean = attr.hours_since_filter_clean;
     const cleanStatus = attr.filter_clean_status;
     const cleanInterval = attr.filter_clean_interval;
     const daysSinceReplace = attr.days_since_filter_replace;
     const replaceStatus = attr.filter_replace_status;
     const replaceInterval = attr.filter_replace_interval;
 
-    this.querySelector('#filter-clean-days').innerHTML = getColoredDays(daysSinceClean, cleanStatus);
+    this.querySelector('#filter-clean-hours').innerHTML = getColoredDays(hoursSinceClean, cleanStatus);
     this.querySelector('#filter-clean-interval').textContent = cleanInterval !== null ? cleanInterval : '--';
     this.querySelector('#filter-replace-days').innerHTML = getColoredDays(daysSinceReplace, replaceStatus);
     this.querySelector('#filter-replace-interval').textContent = replaceInterval !== null ? replaceInterval : '--';
+
+    // Cloud History Display
+    const apiHistorySection = this.querySelector('#api-history-section');
+    const apiHistoryList = this.querySelector('#api-history-list');
+    if (attr.last_api_measurements && attr.last_api_measurements.length > 0) {
+        apiHistorySection.style.display = 'block';
+        apiHistoryList.innerHTML = attr.last_api_measurements.map(m => {
+            const time = m.timestamp ? new Date(m.timestamp).toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : '--';
+            const param = m.parameter ? m.parameter.replace('PL ', '') : 'Unbekannt';
+            const val = !isNaN(parseFloat(m.value)) ? Number(m.value).toFixed(2) : m.value;
+            return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--divider-color); padding: 4px 0;">
+                <span>${param}:</span>
+                <span><b>${val}</b> <small>(${time})</small></span>
+            </div>`;
+        }).join('');
+    } else {
+        apiHistorySection.style.display = 'none';
+    }
 
     // Chlor Breakdown Info
     const chlorBreakdownDetails = this.querySelector('.chlor-breakdown-details');
@@ -333,7 +386,7 @@ class PoolChemistryCard extends HTMLElement {
       breakdownHtml += `
         <div class="breakdown-item breakdown-sum">Summe (vor Min/Max): <span>${sumRaw.toFixed(2)}g</span></div>
       `;
-      
+
       if (minDoseApplied > 0) {
         breakdownHtml += `<div class="breakdown-item">Mindestdosis angewendet: <span>+${(minDoseApplied - sumRaw).toFixed(2)}g</span></div>`;
       } else if (finalDose !== sumRaw) { // Falls Maximaldosis angewendet wurde
@@ -354,7 +407,7 @@ class PoolChemistryCard extends HTMLElement {
     const iconCover = this.querySelector('#icon-covered');
     btnCover.textContent = attr.pool_covered ? 'Abgedeckt' : 'Offen';
     iconCover.icon = attr.pool_covered ? 'mdi:pool' : 'mdi:sun-side';
-    
+
     const usageModes = ["none", "normal", "party"];
     this.querySelectorAll('.mode-btn').forEach(btn => {
       btn.className = `mode-btn ${usageModes[btn.dataset.mode] === attr.usage_mode ? 'active' : ''}`;
@@ -366,7 +419,7 @@ class PoolChemistryCard extends HTMLElement {
   _handleAdd(type, overrideVal = null) {
     const input = this.querySelector(`#input-${type}`);
     let val = overrideVal !== null ? parseFloat(overrideVal) : (input ? parseFloat(input.value) : 0);
-    
+
     if ((val >= 0 || type.startsWith('set_') || type === 'set_usage') && this._hass) {
       // Optimistic UI Update: Sofortiges visuelles Feedback
       if (type === 'set_usage') {
