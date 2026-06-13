@@ -1,31 +1,24 @@
 log_maintenance:
-  name: Pool Wartung protokollieren
-  description: Erfasst die Zugabe von Chemie in der Historie und sendet Benachrichtigungen.
   fields:
     entity_id:
-      name: Entität
-      description: Die Pool-Empfehlung Entität.
       required: true
       selector:
         entity:
           integration: smart_pool_assistant
           domain: sensor
     type:
-      name: Typ
-      description: Art der Chemie.
       required: true
       selector:
         select:
           options:
-            - label: Chlor
-              value: chlor
-            - label: PH-Plus
-              value: ph_plus
-            - label: PH-Minus
-              value: ph_minus
+            - value: chlor
+            - value: ph_plus
+            - value: ph_minus
+            - value: filter_clean
+            - value: filter_replace
+            - value: set_covered
+            - value: set_usage
     amount:
-      name: Menge
-      description: Menge in Gramm oder Milliliter.
       required: true
       selector:
         number:
