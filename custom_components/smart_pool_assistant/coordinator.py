@@ -432,7 +432,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "chlor_breakdown_bather_adj": 0.0,
                 "chlor_breakdown_sum_raw": 0.0,
                 "chlor_breakdown_min_dose_applied": 0.0,
-                "history": self.maintenance_history
+                "history": self.maintenance_history,
+                "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
 
         # Konfiguration laden
@@ -454,7 +455,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         elif self.usage_mode == "party": bather_load_extra = 8.0
 
         # Chlor Berechnung
-        c_diff = max(c_ziel - c_ist, 0)
+        c_diff = max(c_ziel - c_ist, 0) if c_ist is not None else 0
 
         # Temperatur-Korrekturfaktor für Chlor (höhere Zehrung bei warmem Wasser)
         temp_factor = 1.0
@@ -466,19 +467,24 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Stoßchlorung Faktor
         shock_factor = 1.0
-        if c_ist < 0.1: shock_factor = 3.0
-        elif c_ist < 0.3: shock_factor = 2.4
-        elif c_ist < 0.6: shock_factor = 1.8
-        elif c_ist < 1.0: shock_factor = 1.3
+        if c_ist is not None:
+            if c_ist < 0.1: shock_factor = 3.0
+            elif c_ist < 0.3: shock_factor = 2.4
+            elif c_ist < 0.6: shock_factor = 1.8
+            elif c_ist < 1.0: shock_factor = 1.3
 
         # Mindestdosis
         min_dose = 2.0
-        if c_ist < 0.3: min_dose = 6.0
-        elif c_ist < 0.8: min_dose = 3.0
+        if c_ist is not None:
+            if c_ist < 0.3: min_dose = 6.0
+            elif c_ist < 0.8: min_dose = 3.0
 
         chlor_base_amount_raw = (c_diff * volumen / wirkstoff)
         raw_chlor = (chlor_base_amount_raw * shock_factor * env_factor * temp_factor) + bather_load_extra
-        s_g = round(min(max(raw_chlor, min_dose), 25.0), 1)
+        if c_ist is not None and c_ist >= c_ziel:
+            s_g = 0.0
+        else:
+            s_g = round(min(max(raw_chlor, min_dose), 25.0), 1) if c_ist is not None else 0.0
 
         # --- Werte für die Frontend-Anzeige der Berechnung ---
         # Basiswert (ohne Faktoren)
@@ -503,10 +509,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         chlor_breakdown_sum_raw = round(raw_chlor, 2)
 
         # Mindestdosis, falls angewendet
-        chlor_breakdown_min_dose_applied = round(min_dose, 2) if raw_chlor < min_dose else 0.0
+        chlor_breakdown_min_dose_applied = round(min_dose, 2) if (s_g > 0 and raw_chlor < min_dose) else 0.0
 
         # pH Berechnung
-        ph_diff = ph_ziel - ph_ist
+        ph_diff = ph_ziel - ph_ist if ph_ist is not None else 0
         ph_diff_abs = abs(ph_diff)
 
         ph_senker_ml = 0.0
@@ -545,6 +551,22 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Check and send filter notifications
         await self._check_filter_notifications(conf)
 
+        # Empfehlungstext generieren (Synchronisation mit Frontend)
+        has_ph_issue = (ph_senker_ml > 0 or ph_erhoeher_g > 0)
+        is_shock_recommended = (c_ist is not None and c_ist < 0.5)
+        is_chlor_too_high = (c_ist is not None and c_ist > (c_ziel + 0.2))
+
+        if has_ph_issue and is_shock_recommended:
+            recommendation = "⚠️ pH-Wert anpassen, danach Stoßchlorung!"
+        elif has_ph_issue:
+            recommendation = "⚠️ pH-Wert zuerst anpassen!"
+        elif is_shock_recommended:
+            recommendation = "⚠️ Stoßchlorung empfohlen"
+        elif is_chlor_too_high:
+            recommendation = "⚠️ Chlorwert ist zu hoch!"
+        else:
+            recommendation = "✅ Wasserqualität in Ordnung"
+
         # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren
         new_calc_ts = dt_util.now().isoformat()
         self.maintenance_history["last_calc_raw"] = new_calc_ts
@@ -556,18 +578,19 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_ist": ph_ist,
             "temp_ist": temp_ist,
             "chlor_dose": s_g,
-            "chlor_pre": round(max(s_g * 0.3, 1.0), 1),
+            "chlor_pre": round(max(s_g * 0.3, 1.0), 1) if s_g > 0 else 0.0,
             "ph_senker_total": ph_senker_ml,
             "ph_erhoeher_total": ph_erhoeher_g,
             "data_source": data_source,
             "ph_diff": ph_diff,
-            "is_shock": c_ist < 0.5,
+            "is_shock": (c_ist is not None and c_ist < 0.5),
             "is_error": False,
             "last_calculation": dt_util.as_local(dt_util.parse_datetime(new_calc_ts)).strftime("%d.%m.%Y %H:%M Uhr"),
             "last_measurement": dt_util.as_local(dt_util.parse_datetime(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
             "history": self.maintenance_history,
+            "recommendation": recommendation,
             "chlor_breakdown_base": chlor_breakdown_base,
             "last_api_measurements": last_api_measurements,
             "chlor_breakdown_shock_adj": chlor_breakdown_shock_adj,
