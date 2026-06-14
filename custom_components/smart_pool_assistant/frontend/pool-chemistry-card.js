@@ -1,4 +1,9 @@
 class PoolChemistryCard extends HTMLElement {
+  constructor() {
+    super();
+    this._layzspa_expanded = false;
+  }
+
   setConfig(config) {
     this.config = config;
   }
@@ -76,19 +81,24 @@ class PoolChemistryCard extends HTMLElement {
                 </div>
               </div>
             </div>
-            <div id="maintenance-section" class="measurements-section" style="margin-top: 12px; display: none;">
-              <div class="section-title">🕒 Letzte Aktivitäten:</div>
-              <div id="maintenance-info" class="m-grid"></div>
+
+            <div id="layzspa-container"></div>
+
+            <div class="info-row-container">
+              <div id="maintenance-section" class="measurements-section" style="display: none;">
+                <div class="section-title">🕒 Letzte Aktivitäten:</div>
+                <div id="maintenance-info" class="m-grid"></div>
+              </div>
+              <details id="api-history-section" class="measurements-section" style="display: none; background: rgba(3, 169, 244, 0.05); border: 1px dashed var(--primary-color);">
+                <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">☁️ Letzte Cloud-Messwerte (API)</summary>
+                <div id="api-history-list" style="font-size: 0.85em; margin-top: 8px;"></div>
+              </details>
             </div>
-            <details id="api-history-section" class="measurements-section" style="margin-top: 12px; display: none; background: rgba(3, 169, 244, 0.05); border: 1px dashed var(--primary-color);">
-              <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">☁️ Letzte Cloud-Messwerte (API)</summary>
-              <div id="api-history-list" style="font-size: 0.85em; margin-top: 8px;"></div>
-            </details>
-            <div class="measurements-section" style="margin-top: 12px;">
+            <div class="measurements-section">
               <div class="section-title">📅 Aktuelle Messwerte:</div>
               <div id="measurements-grid" class="m-grid"></div>
             </div>
-            <div class="measurements-section" style="margin-top: 12px;">
+            <div class="measurements-section">
               <div class="section-title">⚙️ Filter Wartung:</div>
               <div id="filter-maintenance-grid" class="m-grid">
                 <div class="m-item">
@@ -101,7 +111,7 @@ class PoolChemistryCard extends HTMLElement {
                 </div>
               </div>
             </div>
-            <div class="measurements-section" style="margin-top: 12px; margin-bottom: 12px;">
+            <div class="measurements-section" style="margin-bottom: 12px;">
               <div class="section-title">🏖️ Status & Nutzung:</div>
               <div class="log-input" style="justify-content: space-between;">
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -122,11 +132,12 @@ class PoolChemistryCard extends HTMLElement {
             .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
             .status-box.critical { background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; }
             .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
-            .recommendation-section { margin-bottom: 16px; line-height: 1.5; }
-            .rec-row { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-            @media (max-width: 350px) { .rec-row { flex-direction: column; } }
+            .recommendation-section { margin-bottom: 0; line-height: 1.5; }
+            .rec-row { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+            @media (max-width: 350px) { .rec-row { flex-direction: column; align-items: center; text-align: center; } }
+            .rec-row:last-of-type { margin-bottom: 0; }
             .rec-content { flex: 1; }
-            ha-icon { color: var(--primary-color); --mdc-icon-size: 28px; margin-top: 2px; }
+            .rec-row > ha-icon { color: var(--primary-color); --mdc-icon-size: 28px; margin-top: 2px; }
             .hist-text { font-size: 0.85em; opacity: 0.7; font-style: italic; margin-top: 2px; min-height: 1.2em; }
             .log-input { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
             .log-input input {
@@ -154,17 +165,22 @@ class PoolChemistryCard extends HTMLElement {
               flex-shrink: 0;
             }
             .log-input button:hover { opacity: 0.8; }
-            .measurements-section { background: var(--secondary-background-color); padding: 12px; border-radius: 8px; }
+            .measurements-section { background: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-top: 16px; }
             .section-title { font-size: 0.9em; font-weight: bold; margin-bottom: 8px; opacity: 0.8; }
             .m-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; font-size: 1em; }
             .m-item { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
             .m-item small { opacity: 0.6; }
             .footer { margin-top: 14px; font-size: 0.8em; color: var(--secondary-text-color); text-align: center; }
+            #icon-covered { --mdc-icon-size: 24px; margin-right: 8px; color: var(--primary-color); }
             .status-ok { color: var(--success-color, #4CAF50); }
             .status-warning { color: var(--warning-color, #FF9800); }
             .status-critical { color: var(--error-color, #F44336); }
             .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; flex-shrink: 0; }
             .usage-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+
+            .info-row-container { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+            .info-row-container > * { flex: 1; min-width: 250px; margin-top: 0 !important; }
+
             .mode-btn {
               height: 32px;
               padding: 0 10px;
@@ -179,8 +195,39 @@ class PoolChemistryCard extends HTMLElement {
               gap: 4px;
               transition: all 0.2s ease;
             }
-            .mode-btn ha-icon { --mdc-icon-size: 18px; margin: 0; color: inherit; }
+            .mode-btn ha-icon { --mdc-icon-size: 18px; margin: 0; color: inherit; display: block; }
             .mode-btn.active { background: var(--success-color, #4CAF50); color: white; border-color: var(--success-color, #4CAF50); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+            /* LayzSpa Panel Styles */
+            .layzspa-panel { border: 1px solid var(--divider-color); border-radius: 8px; margin-top: 16px; overflow: hidden; background: var(--card-background-color); }
+            .layzspa-header { padding: 10px 12px; background: var(--secondary-background-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+            .layzspa-title { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+            .layzspa-content { display: none; padding: 12px; flex-direction: column; gap: 12px; border-top: 1px solid var(--divider-color); }
+            .layzspa-panel.expanded .layzspa-content { display: flex; }
+            .layzspa-connection-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85em; opacity: 0.8; }
+            .layzspa-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+            .connected .layzspa-dot { background: var(--success-color, #4CAF50); box-shadow: 0 0 4px var(--success-color); }
+            .disconnected .layzspa-dot { background: var(--error-color, #F44336); }
+            .layzspa-info-row { display: flex; gap: 8px; flex-wrap: wrap; }
+            .layzspa-info-chip { background: var(--secondary-background-color); padding: 4px 8px; border-radius: 6px; flex: 1; min-width: 100px; display: flex; flex-direction: column; }
+            .lz-label { font-size: 0.75em; opacity: 0.6; text-transform: uppercase; }
+            .lz-value { font-size: 0.9em; font-weight: bold; }
+            .layzspa-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .lz-btn { background: var(--secondary-background-color); border: 1px solid var(--divider-color); color: var(--primary-text-color); border-radius: 8px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.8em; transition: all 0.2s; }
+            .lz-btn ha-icon { --mdc-icon-size: 20px; }
+            .lz-btn.active.pump { background: #2196F3; color: white; border-color: #2196F3; }
+            .lz-btn.active.heat { background: #FF5722; color: white; border-color: #FF5722; }
+            .lz-btn.active.bubbles { background: #00BCD4; color: white; border-color: #00BCD4; }
+            .lz-disabled { opacity: 0.5; cursor: not-allowed; }
+            .lz-temp-row { display: flex; align-items: center; justify-content: space-around; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; }
+            .lz-temp-block { text-align: center; }
+            .lz-temp-val { font-size: 1.2em; font-weight: bold; }
+            .lz-temp-target { color: var(--primary-color); }
+            .lz-rssi-excellent { color: #4CAF50; }
+            .lz-rssi-good { color: #8BC34A; }
+            .lz-rssi-fair { color: #FFC107; }
+            .lz-rssi-weak { color: #FF9800; }
+            .lz-rssi-bad { color: #F44336; }
 
             .chlor-breakdown-details {
               margin-top: 10px;
@@ -261,6 +308,9 @@ class PoolChemistryCard extends HTMLElement {
     statusBox.className = `status-box ${statusClass}`;
     statusBox.textContent = statusText;
 
+    // LayzSpa Panel Rendering
+    this._updateLayzSpaPanel();
+
     const chlorDiff = attr.chlor_ist - attr.chlor_target;
     this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
       ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
@@ -280,7 +330,8 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#ph-hist').innerHTML = `${phPlusHist}${phPlusHist && phMinusHist ? ' | ' : ''}${phMinusHist}`;
 
     const maintenanceSection = this.querySelector('#maintenance-section');
-    if (hist.last_action) {
+    const hasMaintenance = !!hist.last_action;
+    if (hasMaintenance) {
       maintenanceSection.style.display = 'block';
       this.querySelector('#maintenance-info').innerHTML = `<div class="m-item">✅ ${hist.last_action}</div>`;
     } else {
@@ -338,7 +389,8 @@ class PoolChemistryCard extends HTMLElement {
     // Cloud History Display
     const apiHistorySection = this.querySelector('#api-history-section');
     const apiHistoryList = this.querySelector('#api-history-list');
-    if (attr.last_api_measurements && attr.last_api_measurements.length > 0) {
+    const hasApiHistory = attr.last_api_measurements && attr.last_api_measurements.length > 0;
+    if (hasApiHistory) {
         apiHistorySection.style.display = 'block';
         apiHistoryList.innerHTML = attr.last_api_measurements.map(m => {
             const time = m.timestamp ? new Date(m.timestamp).toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : '--';
@@ -351,6 +403,11 @@ class PoolChemistryCard extends HTMLElement {
         }).join('');
     } else {
         apiHistorySection.style.display = 'none';
+    }
+
+    const infoRowContainer = this.querySelector('.info-row-container');
+    if (infoRowContainer) {
+        infoRowContainer.style.display = (hasMaintenance || hasApiHistory) ? 'flex' : 'none';
     }
 
     // Chlor Breakdown Info
@@ -416,6 +473,94 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#footer-info').textContent = `Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}`;
   }
 
+  _updateLayzSpaPanel() {
+    const cfg = this.config.layzspa;
+    const container = this.querySelector('#layzspa-container');
+    if (!cfg || !cfg.connection) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const hass = this._hass;
+    const get = (eid) => eid ? hass.states[eid] : null;
+
+    const conn = get(cfg.connection);
+    const isConnected = conn?.state === "on";
+    const pump = get(cfg.pump);
+    const heater = get(cfg.heater);
+    const bubbles = get(cfg.airbubbles);
+    const rssi = this._getRSSIInfo(get(cfg.rssi)?.state);
+
+    container.innerHTML = `
+      <div class="layzspa-panel ${this._layzspa_expanded ? 'expanded' : ''}">
+        <div class="layzspa-header" id="lz-header">
+          <div class="layzspa-title"><ha-icon icon="mdi:hot-tub"></ha-icon> LayzSpa</div>
+          <div class="layzspa-connection-badge ${isConnected ? 'connected' : 'disconnected'}">
+            <span class="layzspa-dot"></span>
+            ${isConnected ? 'Verbunden' : 'Getrennt'}
+            <ha-icon icon="${this._layzspa_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+          </div>
+        </div>
+        <div class="layzspa-content">
+          <div class="layzspa-info-row">
+            <div class="layzspa-info-chip">
+              <span class="lz-label">IP-Adresse</span>
+              <span class="lz-value">${get(cfg.ip)?.state || '--'}</span>
+            </div>
+            <div class="layzspa-info-chip">
+              <span class="lz-label">WLAN-Signal</span>
+              <span class="lz-value ${rssi.cssClass}">${rssi.label}</span>
+            </div>
+          </div>
+          <div class="layzspa-controls">
+            <button class="lz-btn ${pump?.state === 'on' ? 'active pump' : ''} ${!isConnected ? 'lz-disabled' : ''}" id="lz-pump"><ha-icon icon="mdi:pump"></ha-icon> Pumpe</button>
+            <button class="lz-btn ${heater?.state === 'on' ? 'active heat' : ''} ${!isConnected ? 'lz-disabled' : ''}" id="lz-heat"><ha-icon icon="mdi:fire"></ha-icon> Heizung</button>
+            <button class="lz-btn ${bubbles?.state === 'on' ? 'active bubbles' : ''} ${!isConnected ? 'lz-disabled' : ''}" id="lz-bubbles"><ha-icon icon="mdi:chart-bubble"></ha-icon> Blubber</button>
+          </div>
+          <div class="lz-temp-row">
+            <div class="lz-temp-block">
+              <span class="lz-label">Aktuell</span>
+              <div class="lz-temp-val">${parseFloat(get(cfg.temp_current)?.state || 0).toFixed(1)}°C</div>
+            </div>
+            <ha-icon icon="mdi:arrow-right-thin" style="color: rgba(255,255,255,0.2); --mdc-icon-size: 20px;"></ha-icon>
+            <div class="lz-temp-block">
+              <span class="lz-label">Ziel</span>
+              <div class="lz-temp-val lz-temp-target">${parseFloat(get(cfg.temp_target)?.state || 0).toFixed(1)}°C</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Panel Toggle
+    this.querySelector('#lz-header').onclick = () => {
+      this._layzspa_expanded = !this._layzspa_expanded;
+      this._updateLayzSpaPanel();
+    };
+
+    // Button Events
+    this.querySelector('#lz-pump').onclick = () => this._toggleLayzSpaEntity(cfg.pump);
+    this.querySelector('#lz-heat').onclick = () => this._toggleLayzSpaEntity(cfg.heater);
+    this.querySelector('#lz-bubbles').onclick = () => this._toggleLayzSpaEntity(cfg.airbubbles);
+  }
+
+  _toggleLayzSpaEntity(entityId) {
+    if (!entityId || !this._hass) return;
+    const state = this._hass.states[entityId].state;
+    const domain = entityId.split(".")[0];
+    this._hass.callService(domain, state === "on" ? "turn_off" : "turn_on", { entity_id: entityId });
+  }
+
+  _getRSSIInfo(rssiValue) {
+    const v = parseInt(rssiValue, 10);
+    if (isNaN(v)) return { label: "?", cssClass: "lz-rssi-bad" };
+    if (v >= -55) return { label: `${v} dBm`, cssClass: "lz-rssi-excellent" };
+    if (v >= -65) return { label: `${v} dBm`, cssClass: "lz-rssi-good" };
+    if (v >= -75) return { label: `${v} dBm`, cssClass: "lz-rssi-fair" };
+    if (v >= -85) return { label: `${v} dBm`, cssClass: "lz-rssi-weak" };
+    return { label: `${v} dBm`, cssClass: "lz-rssi-bad" };
+  }
+
   _handleAdd(type, overrideVal = null) {
     const input = this.querySelector(`#input-${type}`);
     let val = overrideVal !== null ? parseFloat(overrideVal) : (input ? parseFloat(input.value) : 0);
@@ -463,14 +608,119 @@ class PoolChemistryCardEditor extends HTMLElement {
     this.render();
   }
 
+  _valueChanged(ev) {
+    if (!this._config || !this._hass) return;
+    const target = ev.target;
+    if (!target.configValue) return;
+    const configValue = target.configValue;
+    const value = ev.detail.value;
+
+    let newConfig = { ...this._config };
+
+    if (configValue.startsWith("lz_")) {
+      const key = configValue.replace("lz_", "");
+      if (this._config.layzspa && this._config.layzspa[key] === value) return;
+      newConfig.layzspa = { ...newConfig.layzspa, [key]: value };
+    } else {
+      if (this._config[configValue] === value) return;
+      newConfig[configValue] = value;
+    }
+
+    this._dispatchConfigChanged(newConfig);
+  }
+
+  _dispatchConfigChanged(config) {
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _toggleLayzSpa(ev) {
+    const newConfig = {
+      ...this._config,
+      layzspa: {
+        ...(this._config.layzspa || {}),
+        enabled: ev.target.checked
+      }
+    };
+    this._dispatchConfigChanged(newConfig);
+  }
+
   render() {
-    if (!this.innerHTML) {
+    if (!this._hass || !this._config) return;
+
+    // Erstelle das Grundgerüst nur, wenn es noch nicht existiert
+    if (!this._initialized) {
       this.innerHTML = `
-        <div class="card-config" style="padding: 8px;">
-          <p>Die Konfiguration dieser Karte erfolgt aktuell primär über YAML.</p>
-          <p>Nutze die Tabs oben, um <b>Sichtbarkeit</b> und <b>Layout</b> (Breite/Spalten) anzupassen.</p>
+        <div class="card-config" style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
+          <ha-entity-picker id="main-picker" label="Empfehlungs-Entität (Hauptsensor)" allow-custom-entity></ha-entity-picker>
+          <hr style="width: 100%; border: 0.5px solid var(--divider-color);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Whirlpool-Steuerung (LayzSpa) aktivieren</span>
+            <ha-switch id="lz-enabled-switch"></ha-switch>
+          </div>
+          <div id="lz-pickers" style="display: none; flex-direction: column; gap: 8px; padding-left: 12px; border-left: 2px solid var(--primary-color);"></div>
         </div>
       `;
+
+      this.querySelector('#main-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
+      this.querySelector('#lz-enabled-switch').addEventListener('change', (ev) => this._toggleLayzSpa(ev));
+      this._initialized = true;
+    }
+
+    // Update Haupt-Picker
+    const mainPicker = this.querySelector('#main-picker');
+    if (mainPicker) {
+      mainPicker.hass = this._hass;
+      mainPicker.value = this._config.recommendation_entity;
+      mainPicker.configValue = "recommendation_entity";
+    }
+
+    // Update LayzSpa Switch
+    const lzSwitch = this.querySelector('#lz-enabled-switch');
+    if (lzSwitch) {
+      lzSwitch.checked = !!this._config.layzspa?.enabled;
+    }
+
+    const pickersDef = [
+        { key: "connection", label: "Verbindung (Binary Sensor)", domain: "binary_sensor" },
+        { key: "ip", label: "IP-Adresse (Sensor)", domain: "sensor" },
+        { key: "rssi", label: "WLAN-Signal (Sensor)", domain: "sensor" },
+        { key: "pump", label: "Pumpe (Switch)", domain: "switch" },
+        { key: "heater", label: "Heizung (Switch)", domain: "switch" },
+        { key: "airbubbles", label: "Luftblasen (Switch)", domain: "switch" },
+        { key: "temp_current", label: "Ist-Temperatur", domain: "sensor" },
+        { key: "temp_target", label: "Ziel-Temperatur", domain: "sensor" },
+      ];
+
+    const lzPickersContainer = this.querySelector('#lz-pickers');
+    if (lzPickersContainer) {
+      const isEnabled = !!this._config.layzspa?.enabled;
+      lzPickersContainer.style.display = isEnabled ? 'flex' : 'none';
+
+      if (isEnabled) {
+        pickersDef.forEach(p => {
+          let picker = lzPickersContainer.querySelector(`ha-entity-picker[data-key="${p.key}"]`);
+
+          if (!picker) {
+            picker = document.createElement('ha-entity-picker');
+            picker.setAttribute('data-key', p.key);
+            picker.label = p.label;
+            picker.configValue = `lz_${p.key}`;
+            picker.includeDomains = [p.domain];
+            picker.addEventListener('value-changed', (ev) => this._valueChanged(ev));
+            lzPickersContainer.appendChild(picker);
+          }
+
+        picker.hass = this._hass;
+          const currentValue = this._config.layzspa ? this._config.layzspa[p.key] : "";
+          if (picker.value !== currentValue) {
+            picker.value = currentValue;
+          }
+        });
+      }
     }
   }
 }
