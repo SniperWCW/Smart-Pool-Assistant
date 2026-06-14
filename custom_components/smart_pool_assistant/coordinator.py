@@ -82,23 +82,35 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             return
 
         # Prüfen auf Attribut-Änderungen (z.B. measured_at von PoolLab)
-        old_ts = old_state.attributes.get("measured_at") if old_state else None
-        new_ts = new_state.attributes.get("measured_at") or new_state.attributes.get("timestamp")
+        old_ts_attr = old_state.attributes.get("measured_at") or old_state.attributes.get("timestamp") if old_state else None
+        new_ts_attr = new_state.attributes.get("measured_at") or new_state.attributes.get("timestamp")
 
         is_real_change = (
             old_state is not None
             and old_state.state not in ("unknown", "unavailable")
-            and (new_state.state != old_state.state or (new_ts and new_ts != old_ts))
+            and (new_state.state != old_state.state or (new_ts_attr and new_ts_attr != old_ts_attr))
         )
 
         if is_real_change:
             _LOGGER.debug("Source entity value changed, updating measurement timestamp")
-            ts_iso = new_ts if isinstance(new_ts, str) else new_ts.isoformat() if new_ts else dt_util.now().isoformat()
+
+            # Zeitstempel bestimmen: Attribut bevorzugen, sonst "jetzt"
+            if new_ts_attr:
+                ts_iso = new_ts_attr if isinstance(new_ts_attr, str) else new_ts_attr.isoformat()
+            else:
+                ts_iso = dt_util.now().isoformat()
+
             self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
-            # Synchronisiere Anzeige-Zeitstempel (der neueste aus Cloud oder Manuell)
-            api_ts = self.maintenance_history.get("last_api_measurement_raw")
-            self.maintenance_history["last_measurement_raw"] = max(ts_iso, api_ts) if api_ts else ts_iso
+            # Globalen Anzeige-Zeitstempel synchronisieren
+            api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
+            dt_api = dt_util.parse_datetime(api_ts_str) if api_ts_str else None
+            dt_new = dt_util.parse_datetime(ts_iso)
+
+            if dt_api and dt_new and dt_api > dt_new:
+                self.maintenance_history["last_measurement_raw"] = api_ts_str
+            else:
+                self.maintenance_history["last_measurement_raw"] = ts_iso
 
             await self._store.async_save(self.maintenance_history)
             await self.async_request_refresh()
@@ -375,16 +387,20 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             c_ist = c_man
             if c_man_ts:
                 ts_iso = c_man_ts if isinstance(c_man_ts, str) else c_man_ts.isoformat()
-                old_man = self.maintenance_history.get("last_manual_measurement_raw")
-                if not old_man or ts_iso > old_man:
+                old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
+                dt_new_man = dt_util.parse_datetime(ts_iso)
+                dt_old_man = dt_util.parse_datetime(old_man_str) if old_man_str else None
+                if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
                     self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
         if ph_ist is None and ph_man is not None:
             ph_ist = ph_man
             if ph_man_ts:
                 ts_iso = ph_man_ts if isinstance(ph_man_ts, str) else ph_man_ts.isoformat()
-                old_man = self.maintenance_history.get("last_manual_measurement_raw")
-                if not old_man or ts_iso > old_man:
+                old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
+                dt_new_man = dt_util.parse_datetime(ts_iso)
+                dt_old_man = dt_util.parse_datetime(old_man_str) if old_man_str else None
+                if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
                     self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
         if temp_ist is None and temp_man is not None:
@@ -399,14 +415,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             data_source = "Manuell"
 
         # Synchronisiere den kombinierten Zeitstempel für die Anzeige
-        api_ts = self.maintenance_history.get("last_api_measurement_raw")
-        manual_ts = self.maintenance_history.get("last_manual_measurement_raw")
-        if api_ts and manual_ts:
-            dt_api = dt_util.parse_datetime(api_ts)
-            dt_man = dt_util.parse_datetime(manual_ts)
-            last_meas_raw = api_ts if (dt_api and dt_man and dt_api > dt_man) else manual_ts
+        api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
+        manual_ts_str = self.maintenance_history.get("last_manual_measurement_raw")
+
+        last_meas_raw = None
+        dt_api = dt_util.parse_datetime(api_ts_str) if api_ts_str else None
+        dt_man = dt_util.parse_datetime(manual_ts_str) if manual_ts_str else None
+
+        if dt_api and dt_man:
+            last_meas_raw = api_ts_str if dt_api >= dt_man else manual_ts_str
         else:
-            last_meas_raw = api_ts or manual_ts
+            last_meas_raw = api_ts_str or manual_ts_str
+
         self.maintenance_history["last_measurement_raw"] = last_meas_raw
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
@@ -455,29 +475,29 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         elif self.usage_mode == "party": bather_load_extra = 8.0
 
         # Chlor Berechnung
-        c_diff = max(c_ziel - c_ist, 0) if c_ist is not None else 0
+        c_diff = max(float(c_ziel) - float(c_ist), 0) if c_ist is not None else 0
 
         # Temperatur-Korrekturfaktor für Chlor (höhere Zehrung bei warmem Wasser)
         temp_factor = 1.0
         if temp_ist is not None:
-            if temp_ist > 32:
+            if float(temp_ist) > 32:
                 temp_factor = 1.5
-            elif temp_ist > 28:
+            elif float(temp_ist) > 28:
                 temp_factor = 1.2
 
         # Stoßchlorung Faktor
         shock_factor = 1.0
         if c_ist is not None:
-            if c_ist < 0.1: shock_factor = 3.0
-            elif c_ist < 0.3: shock_factor = 2.4
-            elif c_ist < 0.6: shock_factor = 1.8
-            elif c_ist < 1.0: shock_factor = 1.3
+            if float(c_ist) < 0.1: shock_factor = 3.0
+            elif float(c_ist) < 0.3: shock_factor = 2.4
+            elif float(c_ist) < 0.6: shock_factor = 1.8
+            elif float(c_ist) < 1.0: shock_factor = 1.3
 
         # Mindestdosis
         min_dose = 2.0
         if c_ist is not None:
-            if c_ist < 0.3: min_dose = 6.0
-            elif c_ist < 0.8: min_dose = 3.0
+            if float(c_ist) < 0.3: min_dose = 6.0
+            elif float(c_ist) < 0.8: min_dose = 3.0
 
         chlor_base_amount_raw = (c_diff * volumen / wirkstoff)
         raw_chlor = (chlor_base_amount_raw * shock_factor * env_factor * temp_factor) + bather_load_extra
@@ -551,21 +571,37 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Check and send filter notifications
         await self._check_filter_notifications(conf)
 
-        # Empfehlungstext generieren (Synchronisation mit Frontend)
-        has_ph_issue = (ph_senker_ml > 0 or ph_erhoeher_g > 0)
-        is_shock_recommended = (c_ist is not None and c_ist < 0.5)
-        is_chlor_too_high = (c_ist is not None and c_ist > (c_ziel + 0.2))
+        # --- Zentrale Status-Logik für Warnungen ---
+        warnings = []
 
-        if has_ph_issue and is_shock_recommended:
-            recommendation = "⚠️ pH-Wert anpassen, danach Stoßchlorung!"
-        elif has_ph_issue:
-            recommendation = "⚠️ pH-Wert zuerst anpassen!"
-        elif is_shock_recommended:
-            recommendation = "⚠️ Stoßchlorung empfohlen"
-        elif is_chlor_too_high:
-            recommendation = "⚠️ Chlorwert ist zu hoch!"
+        # Konvertierung für sicheren Vergleich
+        current_ph = float(ph_ist) if ph_ist is not None else None
+        target_ph = float(ph_ziel)
+        current_c = float(c_ist) if c_ist is not None else None
+        target_c = float(c_ziel)
+
+        # pH Check (Schwellenwert 0.1)
+        if current_ph is not None:
+            if current_ph > (target_ph + 0.1):
+                warnings.append("pH zu hoch")
+            elif current_ph < (target_ph - 0.1):
+                warnings.append("pH zu niedrig")
+
+        # Chlor Check (Schwellenwert 0.2)
+        if current_c is not None:
+            if current_c < 0.5:
+                warnings.append("Stoßchlorung empfohlen")
+            elif current_c > (target_c + 0.2):
+                warnings.append("Chlor zu hoch")
+            elif current_c < (target_c - 0.2) and s_g > 0:
+                warnings.append("Chlor nachdosieren")
+
+        # Finaler Empfehlungstext
+        if not warnings:
+            recommendation = "✅ Alle Werte im Zielbereich"
         else:
-            recommendation = "✅ Wasserqualität in Ordnung"
+            # Kombiniere Warnungen mit " & "
+            recommendation = "⚠️ " + " & ".join(warnings)
 
         # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren
         new_calc_ts = dt_util.now().isoformat()
