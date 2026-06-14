@@ -10,6 +10,12 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 - **Sicherheits-Logik**: Erkennt automatisch, wenn Werte bereits über dem Zielwert liegen und stoppt die Empfehlung (keine Überdosierung).
 - **Intelligente Status-Warnungen**: Visuelle Warnung (Rot) im Frontend und in der Entität, wenn der Chlorwert signifikant zu hoch ist.
 - **Zentralisierte Logik**: Die Empfehlungs-Entität (`sensor.pool_empfehlung`) nutzt dieselbe Logik wie das Frontend für konsistente Anzeigen in Automationen.
+- **Whirlpool-Steuerung (LayZSpa)**:
+  - Vollständige Integration von **Pumpe, Heizung und Luftsprudler**.
+  - Echtzeit-Anzeige der **Ist- und Zieltemperatur**.
+  - Überwachung der **Verbindungsqualität (RSSI)** mit farblicher Ampellogik.
+  - Anzeige der IP-Adresse und des Online-Status.
+  - Platzsparende, **einklappbare Sektion** in der Frontend-Karte.
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Präzise Zeitstempel**: Intelligente Unterscheidung zwischen Cloud-Messwerten (API) und manuellen Messungen (Sensoren). Zeitstempel bleiben auch nach Neustarts korrekt erhalten.
 - **Benachrichtigungssystem**:
@@ -19,8 +25,8 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
   - **Ampellogik**: Visuelle Anzeige (grün, gelb, rot) der Fälligkeit.
   - **Benachrichtigungen**: Automatische Meldungen bei Erreichen der Schwellenwerte.
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
-- **Maximale Datensicherheit**: Nutzt die Home Assistant Storage-API. Alle Zeitstempel und Historien bleiben nach einem Neustart oder Update erhalten.
-- **Visuelle Messwerte**: Farbliche Kennzeichnung (Grün/Gelb/Rot) von Chlor- und pH-Werten basierend auf der Abweichung zum Zielwert.
+- **Dynamisches UI-Layout**: Intelligente Anordnung der Info-Boxen (Letzte Aktivität & Cloud-API) nebeneinander auf großen Bildschirmen.
+- **Visuelle Messwerte**: Farbliche Kennzeichnung (Grün/Gelb/Rot) basierend auf Abweichungen zum Zielwert.
 - **Erweiterte Status-Logik**: Intelligente Hinweise (z.B. "pH-Wert zuerst anpassen"), um die Wirksamkeit der Chemie zu maximieren.
 - **Kompaktes Design**: Einklappbare Bereiche für Berechnungsdetails und Cloud-Messwerte.
 - **Re-Konfiguration möglich!** Entitäten und Einstellungen können nun über "Konfigurieren" geändert werden.
