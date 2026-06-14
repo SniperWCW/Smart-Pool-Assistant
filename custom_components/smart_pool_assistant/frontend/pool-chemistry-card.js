@@ -120,6 +120,7 @@ class PoolChemistryCard extends HTMLElement {
           <style>
             .status-box { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center; font-size: 1.1em; }
             .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
+            .status-box.critical { background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; }
             .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
             .recommendation-section { margin-bottom: 16px; line-height: 1.5; }
             .rec-row { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -244,8 +245,18 @@ class PoolChemistryCard extends HTMLElement {
     this._lastAttr = attr; // Store for toggle
 
     // Status Box Logik (Synchronisiert mit der Empfehlungs-Entität vom Coordinator)
-    const statusText = rec.state || '✅ Wasserqualität in Ordnung';
-    const statusClass = statusText.includes('✅') ? 'ok' : 'warning';
+    let statusText = rec.state || '✅ Alle Werte im Zielbereich';
+    let statusClass = 'ok';
+
+    // Sicherheit: Falls der State "unavailable" oder "unknown" ist
+    if (statusText === 'unavailable' || statusText === 'unknown') {
+        statusText = '⚠️ Warte auf Daten...';
+    }
+
+    if (statusText.includes('⚠️') || statusText.includes('hoch') || statusText.includes('niedrig')) {
+        // Wenn "hoch" oder "Stoß" vorkommt, nutzen wir Rot (critical), sonst Gelb (warning)
+        statusClass = (statusText.includes('hoch') || statusText.includes('Stoß')) ? 'critical' : 'warning';
+    }
 
     statusBox.className = `status-box ${statusClass}`;
     statusBox.textContent = statusText;
@@ -253,9 +264,9 @@ class PoolChemistryCard extends HTMLElement {
     const chlorDiff = attr.chlor_ist - attr.chlor_target;
     this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
       ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
-      : (chlorDiff > 0.1
+      : (chlorDiff > 0.2
           ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorDiff.toFixed(2)} mg/l)</span>`
-          : `Chlorwert ist optimal.`);
+          : (chlorDiff < -0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist optimal.`));
 
     this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
 
