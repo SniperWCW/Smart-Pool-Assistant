@@ -107,6 +107,4 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the recommendation text."""
-        if self.coordinator.data.get("is_shock"):
-            return "Stoßchlorung empfohlen"
-        return "Werte im Zielbereich"
+        return self.coordinator.data.get("recommendation")
