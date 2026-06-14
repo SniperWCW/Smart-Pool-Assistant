@@ -92,11 +92,8 @@ Zusätzlich wird eine **Mindestdosis** sichergestellt, damit die Desinfektion wi
 Basierend auf der Differenz zum Zielwert, dem Poolvolumen und den Herstellerangaben wird die exakte Menge an **PH-Plus** oder **PH-Minus** ermittelt. Dies gewährleistet eine präzise Anpassung an dein spezifisches Produkt.
 
 ## Frontend: Pool Chemistry Card
-<img width="1038" height="806" alt="image" src="https://github.com/user-attachments/assets/be4e6e87-92f5-4e04-ae12-572077c0643a" />
 <img width="528" height="687" alt="image" src="https://github.com/user-attachments/assets/00f47680-9cdd-4bbc-8754-3f1a6d013dd8" />
-<img width="1036" height="842" alt="image" src="https://github.com/user-attachments/assets/32911113-46be-405e-a443-d766bcb9456b" />
-
-
+<img width="1038" height="806" alt="image" src="https://github.com/user-attachments/assets/be4e6e87-92f5-4e04-ae12-572077c0643a" />
 
 Die Integration registriert automatisch eine Custom Card. Du kannst sie manuell zu deinem Dashboard hinzufügen:
 
