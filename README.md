@@ -9,8 +9,9 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Sicherheits-Logik**: Erkennt automatisch, wenn Werte bereits über dem Zielwert liegen und stoppt die Empfehlung (keine Überdosierung).
 - **Intelligente Status-Warnungen**: Visuelle Warnung (Rot) im Frontend und in der Entität, wenn der Chlorwert signifikant zu hoch ist.
+- **Zentralisierte Logik**: Die Empfehlungs-Entität (`sensor.pool_empfehlung`) nutzt dieselbe Logik wie das Frontend für konsistente Anzeigen in Automationen.
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
-- **Interaktive Log-Funktion**: Erfasse zugegebene Mengen und Wartungsaktionen direkt über die Karte inklusive Zeitstempel-Historie.
+- **Präzise Zeitstempel**: Intelligente Unterscheidung zwischen Cloud-Messwerten (API) und manuellen Messungen (Sensoren). Zeitstempel bleiben auch nach Neustarts korrekt erhalten.
 - **Benachrichtigungssystem**:
   - Auswahl des Dienstes via Dropdown.
   - Bestätigung bei Chemie-Zugabe und automatische Erinnerung zur Nachmessung (Follow-up).
@@ -83,6 +84,7 @@ Die Chlormenge wird durch eine Kombination verschiedener Faktoren ermittelt:
 - **Normal**: +3g Chlor-Zuschlag.
 - **Party**: +8g Chlor-Zuschlag.
 5. **Zielwert-Check**: Sobald der Ist-Wert den Zielwert erreicht oder überschreitet, wird die Empfehlung sofort auf **0g** gesetzt, um eine Überdosierung zu verhindern.
+6. **Warn-Schwellen**: Abweichungen von > 0.1 pH oder > 0.2 mg/l Chlor triggern spezifische Warnmeldungen ("pH zu hoch", "Chlor zu hoch").
 
 Zusätzlich wird eine **Mindestdosis** sichergestellt, damit die Desinfektion wirksam bleibt.
 
