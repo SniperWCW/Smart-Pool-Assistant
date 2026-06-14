@@ -243,30 +243,19 @@ class PoolChemistryCard extends HTMLElement {
     const statusBox = this.querySelector('#status-box');
     this._lastAttr = attr; // Store for toggle
 
-    // Status Box Logik erweitern
-    const hasPhIssue = (attr.ph_senker_total > 0 || attr.ph_erhoeher_total > 0);
-    const isShockRecommended = attr.is_shock === true; // Renamed for clarity with isShock variable
-
-    let statusText = '✅ Wasserqualität in Ordnung';
-    let statusClass = 'ok';
-
-    if (hasPhIssue && isShockRecommended) {
-      statusText = '⚠️ pH-Wert anpassen, danach Stoßchlorung!';
-      statusClass = 'warning';
-    } else if (hasPhIssue) {
-      statusText = '⚠️ pH-Wert zuerst anpassen!';
-      statusClass = 'warning';
-    } else if (isShockRecommended) {
-      statusText = '⚠️ Stoßchlorung empfohlen';
-      statusClass = 'warning';
-    }
+    // Status Box Logik (Synchronisiert mit der Empfehlungs-Entität vom Coordinator)
+    const statusText = rec.state || '✅ Wasserqualität in Ordnung';
+    const statusClass = statusText.includes('✅') ? 'ok' : 'warning';
 
     statusBox.className = `status-box ${statusClass}`;
     statusBox.textContent = statusText;
 
+    const chlorDiff = attr.chlor_ist - attr.chlor_target;
     this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
       ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
-      : `Chlorwert ist optimal.`;
+      : (chlorDiff > 0.1
+          ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorDiff.toFixed(2)} mg/l)</span>`
+          : `Chlorwert ist optimal.`);
 
     this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
 
