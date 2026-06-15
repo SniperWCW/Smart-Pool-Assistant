@@ -311,18 +311,30 @@ class PoolChemistryCard extends HTMLElement {
     // LayzSpa Panel Rendering
     this._updateLayzSpaPanel();
 
-    const chlorDiff = attr.chlor_ist - attr.chlor_target;
-    this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
-      ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
-      : (chlorDiff > 0.2
-          ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorDiff.toFixed(2)} mg/l)</span>`
-          : (chlorDiff < -0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist optimal.`));
+    const isFromStorage = attr.data_source === "Speicher";
+    const hasChlor = attr.chlor_ist !== null && attr.chlor_ist !== undefined && !isFromStorage;
+    const chlorDiff = hasChlor ? attr.chlor_ist - attr.chlor_target : 0;
+
+    if (!hasChlor) {
+      this.querySelector('#chlor-rec').innerHTML = isFromStorage
+        ? "<i>Warte auf neue Messung (Werte aus Speicher)</i>"
+        : "Warte auf Messwerte...";
+    } else {
+      this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
+        ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
+        : (chlorDiff > 0.2
+            ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorDiff.toFixed(2)} mg/l)</span>`
+            : (chlorDiff < -0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist optimal.`));
+    }
 
     this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
 
-    let phText = "pH-Wert ist optimal.";
-    if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${Number(attr.ph_senker_total).toFixed(2)}ml</b> hinzufügen.`;
-    else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${Number(attr.ph_erhoeher_total).toFixed(2)}g</b> hinzufügen.`;
+    let phText = isFromStorage ? "<i>Warte auf neue Messung...</i>" : "Warte auf Messwerte...";
+    if (attr.ph_ist !== null && attr.ph_ist !== undefined && !isFromStorage) {
+      phText = "pH-Wert ist optimal.";
+      if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${Number(attr.ph_senker_total).toFixed(2)}ml</b> hinzufügen.`;
+      else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${Number(attr.ph_erhoeher_total).toFixed(2)}g</b> hinzufügen.`;
+    }
     this.querySelector('#ph-rec').innerHTML = phText;
 
     const phPlusHist = hist.ph_plus ? `Zuletzt PH+: ${Number(hist.ph_plus.amount).toFixed(2)}g (${hist.ph_plus.time})` : '';
@@ -370,7 +382,8 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#measurements-grid').innerHTML = `
       <div class="m-item"><b>Chlor:</b> <span class="${chlorColor}">${c_ist} mg/l</span> <small>(Ziel: ${c_target})</small></div>
       <div class="m-item"><b>pH-Wert:</b> <span class="${phColor}">${ph_ist}</span> <small>(Ziel: ${ph_target})</small></div>
-      <div class="m-item">🌡️ <b>Temperatur:</b> ${t_ist}°C</div>
+      <div class="m-item">🌡️ <b>Temp:</b> ${t_ist}°C</div>
+      <div class="m-item"><b>Quelle:</b> <b>${attr.data_source || '--'}</b></div>
     `;
 
     // Filter Maintenance Display
@@ -470,7 +483,18 @@ class PoolChemistryCard extends HTMLElement {
       btn.className = `mode-btn ${usageModes[btn.dataset.mode] === attr.usage_mode ? 'active' : ''}`;
     });
 
-    this.querySelector('#footer-info').textContent = `Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}`;
+    // Fallback auf den letzten Update-Zeitpunkt der Entität selbst, falls das Attribut fehlt
+    const lastCalcRaw = attr.last_calculation_raw || rec.last_updated;
+    const footer = this.querySelector('#footer-info');
+    footer.innerHTML = `
+      <div>Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}</div>
+      <div style="margin-top: 4px; opacity: 0.8;">Daten-Aktualität: <ha-relative-time id="rel-time-footer"></ha-relative-time></div>
+    `;
+    const relTime = this.querySelector('#rel-time-footer');
+    if (relTime) {
+      relTime.hass = hass;
+      relTime.datetime = lastCalcRaw;
+    }
   }
 
   _updateLayzSpaPanel() {
