@@ -6,16 +6,18 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 
 - **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren, eine **Temperatur-Korrektur** sowie den **Abdeckungs-Status** und die **Badelast** (Nutzungsmodus).
 - **Transparente Berechnung**: Aufschlüsselung der Dosierempfehlung (Basis, Temperatur, UV, Badelast) direkt in der UI.
+- **Direkte Bluetooth-Anbindung**: Liest Messwerte (Chlor, pH, Aktivsauerstoff, Cyanursäure) und Batteriestand direkt vom **PoolLab 1.0** aus.
+- **Hybrid-Datenquelle**: Automatische Priorisierung: Bluetooth > Cloud (LabCom) > Manuelle Sensoren.
 - **pH-Regulierung**: Berechnet die benötigte Menge an **PH-Minus** (ml) oder **PH-Plus** (g).
 - **Sicherheits-Logik**: Erkennt automatisch, wenn Werte bereits über dem Zielwert liegen und stoppt die Empfehlung (keine Überdosierung).
 - **Intelligente Status-Warnungen**: Visuelle Warnung (Rot) im Frontend und in der Entität, wenn der Chlorwert signifikant zu hoch ist.
-- **Zentralisierte Logik**: Die Empfehlungs-Entität (`sensor.pool_empfehlung`) nutzt dieselbe Logik wie das Frontend für konsistente Anzeigen in Automationen.
 - **Whirlpool-Steuerung (LayZSpa)**:
   - Vollständige Integration von **Pumpe, Heizung und Luftsprudler**.
   - Echtzeit-Anzeige der **Ist- und Zieltemperatur**.
   - Überwachung der **Verbindungsqualität (RSSI)** mit farblicher Ampellogik.
   - Anzeige der IP-Adresse und des Online-Status.
   - Platzsparende, **einklappbare Sektion** in der Frontend-Karte.
+- **Zentralisierte Logik**: Die Empfehlungs-Entität (`sensor.pool_empfehlung`) nutzt dieselbe Logik wie das Frontend für konsistente Anzeigen in Automationen.
 - **Bade-Logik**: Gibt spezifische Empfehlungen für die Dosierung vor und nach dem Baden.
 - **Präzise Zeitstempel**: Intelligente Unterscheidung zwischen Cloud-Messwerten (API) und manuellen Messungen (Sensoren). Zeitstempel bleiben auch nach Neustarts korrekt erhalten.
 - **Benachrichtigungssystem**:
@@ -24,6 +26,7 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 - **Filter-Wartung**: Verfolge Reinigungs- und Wechselintervalle des Filters.
   - **Ampellogik**: Visuelle Anzeige (grün, gelb, rot) der Fälligkeit.
   - **Benachrichtigungen**: Automatische Meldungen bei Erreichen der Schwellenwerte.
+- **Daten-Persistenz**: Letzte Messwerte bleiben auch bei ausgeschaltetem Messgerät oder Offline-Status der Cloud erhalten ("Speicher"-Modus).
 - **Integrierte Frontend-Karte**: Spezialisierte Lovelace-Karte mit direkten Eingabefeldern.
 - **Dynamisches UI-Layout**: Intelligente Anordnung der Info-Boxen (Letzte Aktivität & Cloud-API) nebeneinander auf großen Bildschirmen.
 - **Visuelle Messwerte**: Farbliche Kennzeichnung (Grün/Gelb/Rot) basierend auf Abweichungen zum Zielwert.
@@ -53,6 +56,7 @@ Gehe zu **Einstellungen > Geräte & Dienste > Integration hinzufügen** und such
 
 Du wirst nach folgenden Informationen gefragt:
 - **Sensoren**: Entitäten für Chlor (mg/l), pH-Wert und Temperatur.
+- **Bluetooth**: Auswahl deines PoolLab-Geräts aus der Liste der entdeckten Geräte.
 - **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
 - **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
 - **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
@@ -131,5 +135,6 @@ Die Integration stellt folgende Sensoren bereit:
 - `sensor.pool_ph_minus`: Benötigte Menge PH-Minus in ml.
 - `sensor.pool_ph_plus`: Benötigte Menge PH-Plus in g.
 - `sensor.pool_empfehlung`: Textuelle Zusammenfassung der nächsten Schritte.
+- `sensor.pool_ble_battery`: Batteriestatus des PoolLab-Geräts (via Bluetooth).
 - `sensor.pool_filter_reinigung_fällig`: Stunden seit letzter Filterreinigung.
 - `sensor.pool_filter_wechsel_fällig`: Tage seit letztem Filterwechsel.
