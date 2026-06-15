@@ -11,13 +11,13 @@ log_maintenance:
       selector:
         select:
           options:
-            - value: chlor
-            - value: ph_plus
-            - value: ph_minus
-            - value: filter_clean
-            - value: filter_replace
-            - value: set_covered
-            - value: set_usage
+            - "chlor"
+            - "ph_plus"
+            - "ph_minus"
+            - "filter_clean"
+            - "filter_replace"
+            - "set_covered"
+            - "set_usage"
     amount:
       required: true
       selector:
