@@ -72,6 +72,7 @@
       "chlor_ist": { "name": "Chlor Istwert" },
       "ph_ist": { "name": "pH Istwert" },
       "temp_ist": { "name": "Temperatur Istwert" },
+      "ble_battery": { "name": "PoolLab Batterie" },
       "data_source": { "name": "Datenquelle" },
       "pool_covered": { "name": "Abdeckung Status" },
       "usage_mode": { "name": "Nutzungsmodus" },
