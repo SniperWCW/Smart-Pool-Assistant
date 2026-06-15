@@ -8,6 +8,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -34,6 +35,8 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "Nutzungsmodus", "usage_mode", None, "mdi:account-group"),
         PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
         PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
+        PoolAssistantSensor(coordinator, "Cyanursäure", "cyanuric_acid", "ppm", "mdi:shield-check"),
+        PoolAssistantBatterySensor(coordinator),
         PoolAssistantStatusSensor(coordinator),
     ]
     async_add_entities(sensors)
@@ -57,6 +60,21 @@ class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         return self.coordinator.data.get(self._key)
+
+class PoolAssistantBatterySensor(CoordinatorEntity, SensorEntity):
+    """Representation of the PoolLab battery level via BLE."""
+
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_native_unit_of_measurement = "%"
+
+    def __init__(self, coordinator: SmartPoolCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_name = "PoolLab Batterie"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_ble_battery"
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("history", {}).get("ble_battery")
 
 class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     """Status sensor for recommendation text."""
