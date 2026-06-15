@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -7,6 +8,7 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
+from homeassistant.components.bluetooth import async_ble_device_from_address
 
 from .const import (
     DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
@@ -17,9 +19,11 @@ from .const import (
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD
 )
+from .poollab_ble import PoolLabBLEClient
 
 CONF_API_KEY = "api_key"
 CONF_UPDATE_INTERVAL = "update_interval"
+CONF_BLE_ADDRESS = "ble_address"
 _LOGGER = logging.getLogger(__name__)
 
 _STORAGE_VERSION = 1
@@ -42,6 +46,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Standardwerte für neue Logik initialisieren
         self.pool_covered = True
         self.usage_mode = "none" # none, normal, party
+
+    def _parse_ts_aware(self, ts_str: str | None):
+        """Helper to parse a timestamp string into an aware datetime object."""
+        if not ts_str: return None
+        dt = dt_util.parse_datetime(ts_str)
+        if dt and dt.tzinfo is None:
+            dt = dt.replace(tzinfo=dt_util.UTC)
+        return dt
 
     @property
     def config(self):
@@ -81,31 +93,21 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if new_state is None or new_state.state in ("unknown", "unavailable", "none", "null"):
             return
 
-        # Prüfen auf Attribut-Änderungen (z.B. measured_at von PoolLab)
-        old_ts_attr = old_state.attributes.get("measured_at") or old_state.attributes.get("timestamp") if old_state else None
-        new_ts_attr = new_state.attributes.get("measured_at") or new_state.attributes.get("timestamp")
-
-        is_real_change = (
-            old_state is not None
-            and old_state.state not in ("unknown", "unavailable")
-            and (new_state.state != old_state.state or (new_ts_attr and new_ts_attr != old_ts_attr))
-        )
+        # Jedes Update der Quell-Entität triggert eine Neuberechnung,
+        # um auch "Heartbeats" oder identische Werte sofort zu erfassen.
+        is_real_change = True
 
         if is_real_change:
-            _LOGGER.debug("Source entity value changed, updating measurement timestamp")
-
-            # Zeitstempel bestimmen: Attribut bevorzugen, sonst "jetzt"
-            if new_ts_attr:
-                ts_iso = new_ts_attr if isinstance(new_ts_attr, str) else new_ts_attr.isoformat()
-            else:
-                ts_iso = dt_util.now().isoformat()
+            _LOGGER.debug("Source entity update detected, triggering refresh")
+            new_ts = new_state.attributes.get("measured_at") or new_state.attributes.get("timestamp") or dt_util.now().isoformat()
+            ts_iso = new_ts if isinstance(new_ts, str) else new_ts.isoformat()
 
             self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
             # Globalen Anzeige-Zeitstempel synchronisieren
             api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
-            dt_api = dt_util.parse_datetime(api_ts_str) if api_ts_str else None
-            dt_new = dt_util.parse_datetime(ts_iso)
+            dt_api = self._parse_ts_aware(api_ts_str)
+            dt_new = self._parse_ts_aware(ts_iso)
 
             if dt_api and dt_new and dt_api > dt_new:
                 self.maintenance_history["last_measurement_raw"] = api_ts_str
@@ -274,8 +276,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             if state is None or state.state in ("unknown", "unavailable"):
                 return None, None
             try:
-                ts = state.attributes.get("measured_at") or state.attributes.get("timestamp")
-                return float(state.state), ts
+                # Zeitstempel aus Attribut oder HA-Update-Zeit
+                ts_raw = state.attributes.get("measured_at") or state.attributes.get("timestamp") or state.last_updated
+                ts = ts_raw if isinstance(ts_raw, str) else ts_raw.isoformat()
+
+                # Ersetze Komma durch Punkt für deutsche Sensor-Strings
+                val_str = state.state.replace(',', '.')
+                return float(val_str), ts
             except ValueError:
                 return None, None
 
@@ -293,24 +300,72 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             return "ok"
 
         # 1. Bestehende Daten laden
-        last_calc_raw = self.maintenance_history.get("last_calc_raw")
-
-        # Falls noch nie berechnet wurde, initialisieren wir mit jetzt (nur für die Anzeige)
-        if not last_calc_raw:
-            last_calc_raw = dt_util.now().isoformat()
+        # Immer einen aktuellen Zeitstempel für den "letzten Lauf" parat haben
+        now_iso = dt_util.now().isoformat()
+        last_calc_raw = self.maintenance_history.get("last_calc_raw", now_iso)
 
         conf = self.config
         api_key = conf.get(CONF_API_KEY)
+        ble_address = conf.get(CONF_BLE_ADDRESS)
 
         data_source = "Nicht verfügbar"
         cloud_found = False
         manual_found = False
+        ble_found = False
 
         c_ist = ph_ist = temp_ist = None
-        last_api_measurements = []
+        # Lade letzte bekannte API-Messwerte aus dem Speicher
+        last_api_measurements = self.maintenance_history.get("last_api_measurements", [])
 
-        # 1. Versuch: Cloud-Daten abrufen wenn Key vorhanden
-        if api_key:
+        # Zeitstempel der Berechnung sofort aktualisieren, damit das UI "tickt"
+        now_iso = dt_util.now().isoformat()
+        self.maintenance_history["last_calc_raw"] = now_iso
+        last_calc_raw = now_iso
+
+        # 1. Versuch: Bluetooth-Daten abrufen (PoolLab direkt)
+        if ble_address:
+            try:
+                _LOGGER.debug("Fetching data from PoolLab via Bluetooth: %s", ble_address)
+                device = async_ble_device_from_address(self.hass, ble_address, connectable=True)
+                if device:
+                    client = PoolLabBLEClient(device)
+                    try:
+                        # Timeout leicht reduziert und CancelledError explizit fangen,
+                        # um Setup-Abstürze unter Python 3.11+ zu verhindern.
+                        ble_data = await asyncio.wait_for(client.async_read_data(), timeout=40.0)
+
+                        ble_found = True
+                        # Speichere Batteriestatus in der Historie
+                        self.maintenance_history["ble_battery"] = ble_data.battery
+
+                        ble_ts_list = []
+                        # Erweiterte Mappings für verschiedene Firmware-Versionen
+                        if m_c := (ble_data.measurements.get(2) or ble_data.measurements.get(8) or ble_data.measurements.get(3)):
+                            c_ist = m_c.value
+                            ble_ts_list.append(m_c.timestamp)
+                        if m_ph := (ble_data.measurements.get(1) or ble_data.measurements.get(9)):
+                            ph_ist = m_ph.value
+                            ble_ts_list.append(m_ph.timestamp)
+                        if m_temp := ble_data.measurements.get(4):
+                            temp_ist = m_temp.value
+                            ble_ts_list.append(m_temp.timestamp)
+                        if m_cya := ble_data.measurements.get(11):
+                            self.maintenance_history["cyanuric_acid"] = m_cya.value
+
+                        if ble_ts_list:
+                            # Verwende den neuesten Zeitstempel der abgerufenen BLE-Messungen
+                            latest_ble_ts = max(ble_ts_list)
+                            self.maintenance_history["last_ble_measurement_raw"] = dt_util.utc_from_timestamp(latest_ble_ts).isoformat()
+
+                    except (asyncio.TimeoutError, asyncio.CancelledError):
+                        _LOGGER.warning("Bluetooth-Abfrage für PoolLab zeitlich überschritten oder abgebrochen. Nutze Cloud/Manuelle Daten falls verfügbar.")
+                else:
+                    _LOGGER.warning("PoolLab Bluetooth device not found: %s", ble_address)
+            except Exception as err:
+                _LOGGER.error("Error fetching PoolLab BLE data: %s", err)
+
+        # 2. Versuch: Cloud-Daten (nur falls BLE keine Werte geliefert hat)
+        if api_key and (c_ist is None or ph_ist is None):
             try:
                 _LOGGER.debug("Fetching data from PoolLab Cloud")
                 session = async_get_clientsession(self.hass)
@@ -341,6 +396,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                                 self.maintenance_history["last_api_measurement_raw"] = cloud_ts_iso
 
                             # Sammle die letzten 4 Messwerte für die Anzeige/Fehlersuche
+                            last_api_measurements = []
                             for obs in measurements[:4]:
                                 p_ts = obs.get("timestamp")
                                 last_api_measurements.append({
@@ -348,6 +404,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                                     "value": obs.get("value"),
                                     "timestamp": dt_util.utc_from_timestamp(p_ts).isoformat() if p_ts else None
                                 })
+                            self.maintenance_history["last_api_measurements"] = last_api_measurements
 
                             for obs in measurements:
                                 p_name = obs.get("parameter")
@@ -388,8 +445,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             if c_man_ts:
                 ts_iso = c_man_ts if isinstance(c_man_ts, str) else c_man_ts.isoformat()
                 old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
-                dt_new_man = dt_util.parse_datetime(ts_iso)
-                dt_old_man = dt_util.parse_datetime(old_man_str) if old_man_str else None
+                dt_new_man = self._parse_ts_aware(ts_iso)
+                dt_old_man = self._parse_ts_aware(old_man_str)
                 if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
                     self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
@@ -398,34 +455,54 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             if ph_man_ts:
                 ts_iso = ph_man_ts if isinstance(ph_man_ts, str) else ph_man_ts.isoformat()
                 old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
-                dt_new_man = dt_util.parse_datetime(ts_iso)
-                dt_old_man = dt_util.parse_datetime(old_man_str) if old_man_str else None
+                dt_new_man = self._parse_ts_aware(ts_iso)
+                dt_old_man = self._parse_ts_aware(old_man_str)
                 if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
                     self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
         if temp_ist is None and temp_man is not None:
             temp_ist = temp_man
 
+        # 4. Fallback auf Historie, falls aktuelle Quellen keine Daten liefern (Persistenz)
+        if c_ist is None:
+            c_ist = self.maintenance_history.get("last_c")
+        else:
+            self.maintenance_history["last_c"] = c_ist
+
+        if ph_ist is None:
+            ph_ist = self.maintenance_history.get("last_ph")
+        else:
+            self.maintenance_history["last_ph"] = ph_ist
+
+        if temp_ist is None:
+            temp_ist = self.maintenance_history.get("last_temp")
+        else:
+            self.maintenance_history["last_temp"] = temp_ist
+
         # Bestimmung der Datenquelle
-        if cloud_found and manual_found:
-            data_source = "Cloud & Manuell"
-        elif cloud_found:
-            data_source = "Cloud/API"
-        elif manual_found:
-            data_source = "Manuell"
+        sources = []
+        if ble_found: sources.append("Bluetooth")
+        if cloud_found: sources.append("Cloud")
+        if manual_found: sources.append("Manuell")
+        data_source = " & ".join(sources) if sources else ("Speicher" if c_ist is not None else "Nicht verfügbar")
+
+        # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
 
         # Synchronisiere den kombinierten Zeitstempel für die Anzeige
         api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
         manual_ts_str = self.maintenance_history.get("last_manual_measurement_raw")
+        ble_ts_str = self.maintenance_history.get("last_ble_measurement_raw")
 
         last_meas_raw = None
-        dt_api = dt_util.parse_datetime(api_ts_str) if api_ts_str else None
-        dt_man = dt_util.parse_datetime(manual_ts_str) if manual_ts_str else None
+        dt_api = self._parse_ts_aware(api_ts_str)
+        dt_man = self._parse_ts_aware(manual_ts_str)
+        dt_ble = self._parse_ts_aware(ble_ts_str)
 
-        if dt_api and dt_man:
-            last_meas_raw = api_ts_str if dt_api >= dt_man else manual_ts_str
-        else:
-            last_meas_raw = api_ts_str or manual_ts_str
+        # Den neuesten Zeitstempel aller Quellen finden
+        ts_candidates = [(dt_api, api_ts_str), (dt_man, manual_ts_str), (dt_ble, ble_ts_str)]
+        valid_ts = [t for t in ts_candidates if t[0] is not None]
+        if valid_ts:
+            last_meas_raw = max(valid_ts, key=lambda x: x[0])[1]
 
         self.maintenance_history["last_measurement_raw"] = last_meas_raw
 
@@ -440,10 +517,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "ph_erhoeher_total": 0,
                 "data_source": data_source,
                 "is_error": True,
-                "last_calculation": dt_util.as_local(dt_util.parse_datetime(last_calc_raw)).strftime("%d.%m.%Y %H:%M Uhr"),
-                "last_measurement": dt_util.as_local(dt_util.parse_datetime(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+                "last_calculation": dt_util.as_local(self._parse_ts_aware(last_calc_raw)).strftime("%d.%m.%Y %H:%M Uhr"),
+                "last_calculation_raw": dt_util.now().isoformat(),
+                "last_measurement": dt_util.as_local(self._parse_ts_aware(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+                "last_measurement_raw": last_meas_raw,
                 "last_api_measurements": last_api_measurements,
                 "pool_covered": self.pool_covered,
+                "ble_battery": self.maintenance_history.get("ble_battery"),
+                "cyanuric_acid": self.maintenance_history.get("cyanuric_acid"),
                 "usage_mode": self.usage_mode,
                 "chlor_breakdown_base": 0.0,
                 "chlor_breakdown_shock_adj": 0.0,
@@ -621,12 +702,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_diff": ph_diff,
             "is_shock": (c_ist is not None and c_ist < 0.5),
             "is_error": False,
-            "last_calculation": dt_util.as_local(dt_util.parse_datetime(new_calc_ts)).strftime("%d.%m.%Y %H:%M Uhr"),
-            "last_measurement": dt_util.as_local(dt_util.parse_datetime(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+            "last_calculation": dt_util.as_local(self._parse_ts_aware(new_calc_ts)).strftime("%d.%m.%Y %H:%M Uhr"),
+            "last_calculation_raw": new_calc_ts,
+            "last_measurement": dt_util.as_local(self._parse_ts_aware(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
+            "last_measurement_raw": last_meas_raw,
             "chlor_target": c_ziel,
             "ph_target": ph_ziel,
+            "ble_battery": self.maintenance_history.get("ble_battery"),
             "history": self.maintenance_history,
             "recommendation": recommendation,
+            "cyanuric_acid": self.maintenance_history.get("cyanuric_acid"),
             "chlor_breakdown_base": chlor_breakdown_base,
             "last_api_measurements": last_api_measurements,
             "chlor_breakdown_shock_adj": chlor_breakdown_shock_adj,
