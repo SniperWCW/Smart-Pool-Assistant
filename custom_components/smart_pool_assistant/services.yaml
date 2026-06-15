@@ -1,0 +1,28 @@
+log_maintenance:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: smart_pool_assistant
+          domain: sensor
+    type:
+      required: true
+      selector:
+        select:
+          options:
+            - "chlor"
+            - "ph_plus"
+            - "ph_minus"
+            - "filter_clean"
+            - "filter_replace"
+            - "set_covered"
+            - "set_usage"
+    amount:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 5000
+          step: 0.1
+          mode: box

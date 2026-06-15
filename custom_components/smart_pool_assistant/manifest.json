@@ -1,0 +1,23 @@
+{
+  "domain": "smart_pool_assistant",
+  "name": "Smart Pool Assistant",
+  "version": "1.0.9",
+  "documentation": "https://github.com/SniperWCW/smart_pool_assistant",
+  "issue_tracker": "https://github.com/SniperWCW/smart_pool_assistant/issues",
+  "dependencies": [
+    "bluetooth"
+  ],
+  "codeowners": ["@SniperWCW"],
+  "requirements": [
+    "bleak-retry-connector>=3.5.0"
+  ],
+  "bluetooth": [
+  { "local_name": "PoolLab" },
+  { "local_name": "PoolLab 1.0" },
+  { "local_name": "PoolLab*" }
+
+  ],
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "integration_type": "service"
+}
