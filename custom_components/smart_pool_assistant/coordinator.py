@@ -450,6 +450,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         cloud_found = False
         manual_found = False
         ble_found = False
+        cached_ble_found = False
         ble_connected = False
 
         c_ist = ph_ist = temp_ist = None
@@ -484,14 +485,17 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         if m_c := get_ble_measurement(ble_data, (1, 8, 3)):
                             c_ist = m_c.value
                             chlor_source = "Bluetooth"
+                            self.maintenance_history["last_ble_c"] = m_c.value
                             ble_ts_list.append(m_c.timestamp)
                         if m_ph := get_ble_measurement(ble_data, (9, 27, 28, 29, 30, 31, 32, 33, 34, 36, 48)):
                             ph_ist = m_ph.value
                             ph_source = "Bluetooth"
+                            self.maintenance_history["last_ble_ph"] = m_ph.value
                             ble_ts_list.append(m_ph.timestamp)
                         if m_temp := ble_data.measurements.get(4):
                             temp_ist = m_temp.value
                             temp_source = "Bluetooth"
+                            self.maintenance_history["last_ble_temp"] = m_temp.value
                             ble_ts_list.append(m_temp.timestamp)
                         if m_cya := ble_data.measurements.get(11):
                             self.maintenance_history["cyanuric_acid"] = m_cya.value
@@ -605,6 +609,40 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except Exception as err:
                 _LOGGER.error("Error fetching PoolLab data: %s", err)
 
+        api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
+        ble_ts_str = self.maintenance_history.get("last_ble_measurement_raw")
+        dt_api_for_values = self._parse_ts_aware(api_ts_str)
+        dt_ble_for_values = self._parse_ts_aware(ble_ts_str)
+        use_cached_ble_values = (
+            not ble_found
+            and dt_ble_for_values is not None
+            and (dt_api_for_values is None or dt_ble_for_values > dt_api_for_values)
+        )
+
+        if use_cached_ble_values:
+            cached_ble_c = self.maintenance_history.get("last_ble_c")
+            cached_ble_ph = self.maintenance_history.get("last_ble_ph")
+            cached_ble_temp = self.maintenance_history.get("last_ble_temp")
+
+            if cached_ble_c is not None:
+                c_ist = cached_ble_c
+                chlor_source = "Bluetooth"
+            if cached_ble_ph is not None:
+                ph_ist = cached_ble_ph
+                ph_source = "Bluetooth"
+            if cached_ble_temp is not None and temp_source != "Manuell":
+                temp_ist = cached_ble_temp
+                temp_source = "Bluetooth"
+
+            if cached_ble_c is not None or cached_ble_ph is not None:
+                cached_ble_found = True
+                cloud_found = False
+                _LOGGER.debug(
+                    "Using cached BLE values because BLE timestamp is newer than Cloud: ble=%s api=%s",
+                    ble_ts_str,
+                    api_ts_str,
+                )
+
         # 2. Versuch: Manuelle Sensoren prüfen (immer prüfen für Quellen-Erkennung)
         c_man, c_man_ts = get_state_info(conf.get(CONF_CHLOR_SENSOR))
         ph_man, ph_man_ts = get_state_info(conf.get(CONF_PH_SENSOR))
@@ -668,7 +706,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Bestimmung der Datenquelle
         sources = []
-        if ble_found: sources.append("Bluetooth")
+        if ble_found or cached_ble_found: sources.append("Bluetooth")
         if cloud_found: sources.append("Cloud")
         if manual_found: sources.append("Manuell")
         data_source = " & ".join(sources) if sources else ("Speicher" if c_ist is not None else "Nicht verfügbar")

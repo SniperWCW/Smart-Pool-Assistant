@@ -157,7 +157,24 @@ class PoolLabBLEClient:
 
                 # Step 1: GET_INFO (battery @ byte 21, count @ byte 3-4)
                 _LOGGER.debug("Sending PoolLab GET_INFO command")
-                info_resp = await self._send_command(client, self._build_command(0x01))
+                info_resp: bytes | None = None
+                for attempt in range(3):
+                    try:
+                        info_resp = await self._send_command(client, self._build_command(0x01))
+                        break
+                    except BleakError as err:
+                        _LOGGER.debug(
+                            "PoolLab GET_INFO failed: attempt=%s/3 error=%s",
+                            attempt + 1,
+                            err,
+                        )
+                        if attempt == 2:
+                            raise
+                        await asyncio.sleep(0.5 * (attempt + 1))
+
+                if info_resp is None:
+                    raise BleakError("PoolLab GET_INFO returned no response")
+
                 result_count = struct.unpack_from("<H", info_resp, 5)[0] if len(info_resp) > 7 else 0
                 battery = struct.unpack_from("<H", info_resp, 21)[0]
                 _LOGGER.debug(
