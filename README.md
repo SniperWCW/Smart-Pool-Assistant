@@ -2,13 +2,14 @@
 
 Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration, die dich bei der Wasserpflege deines Pools oder Whirlpools unterstützt. Basierend auf aktuellen Messwerten liefert sie präzise Dosierempfehlungen und verwaltet die Wartungshistorie.
 
-**Aktueller Release-Stand: V1.0.9**
+**Aktueller Release-Stand: V1.0.10**
 
 ## Hauptfunktionen
 
 - **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren, eine **Temperatur-Korrektur** sowie den **Abdeckungs-Status** und die **Badelast** (Nutzungsmodus).
 - **Transparente Berechnung**: Aufschlüsselung der Dosierempfehlung (Basis, Temperatur, UV, Badelast) direkt in der UI.
 - **Direkte Bluetooth-Anbindung**: Liest Messwerte (Chlor, pH, Aktivsauerstoff, Cyanursäure) und Batteriestand direkt vom **PoolLab 1.0** aus, auch über einen **ESP Bluetooth Proxy**.
+- **Erweiterte Bluetooth-Diagnose**: Detaillierte Logs für Connect, Notify, Read und Parsing helfen dabei, Verbindungsfehler sauber einzugrenzen.
 - **Getrennte Quellenlogik**: Bluetooth, Cloud/API und manuelle Werte werden je Messwert getrennt ausgewertet. Neuere Bluetooth-Messungen werden nicht mehr von älteren Cloud-Werten überschrieben.
 - **Transparente Messquellen**: Die Empfehlungs-Entität (`sensor.pool_empfehlung`) zeigt pro Wert die Quelle an, z. B. `chlor_source`, `ph_source`, `temp_source` und `last_measurement_source`.
 - **Präzise Zeitstempel**: Intelligente Unterscheidung zwischen Cloud-Messwerten (API) und manuellen Messungen (Sensoren). Zeitstempel bleiben auch nach Neustarts korrekt erhalten.
