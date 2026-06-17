@@ -1,5 +1,20 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.15] - 2026-06-17
+
+### Neu
+- **PoolLab-Abruf direkt in der Karte**: Die Lovelace-Karte enthält jetzt in den aktuellen Messwerten einen integrierten Abrufbutton mit Status-, Fehler- und Cooldown-Anzeige.
+- **Technische Dokumentation**: Neue Datei `TECHNISCHE_DOKUMENTATION.md` dokumentiert Architektur, Datenfluss, Button-Plattform und aktuelle BLE-/Cloud-Logik.
+
+### Verbesserungen
+- **Cloud-Polling wieder konfigurierbar**: Das Cloud-Update-Intervall ist wieder über Config Flow und Options Flow einstellbar, Standard `5` Minuten.
+- **Getrennte Abrufstrategie geschärft**: Der manuelle Abruf priorisiert BLE, während Cloud-Daten weiterhin zyklisch im Hintergrund aktualisiert werden.
+- **Dokumentation bereinigt**: README und technische Doku spiegeln jetzt den tatsächlichen Stand mit Button-Plattform, Kartenintegration und Cloud-Intervall wider.
+
+### Fixes
+- **BT-Status bis ins Frontend durchgereicht**: `bluetooth_connected` wird jetzt sauber an den Empfehlungssensor und die Karte weitergegeben.
+- **Stabilere BLE-Statusanzeige**: Die Zeile **BT Verbindung** bleibt am letzten erfolgreichen manuellen BLE-Verbindungsaufbau orientiert, statt bei jedem Cloud-Refresh wieder auf rot zu springen.
+
 ## [1.0.14] - 2026-06-17
 
 ### Neu

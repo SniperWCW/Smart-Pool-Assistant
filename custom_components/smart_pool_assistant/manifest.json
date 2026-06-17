@@ -1,9 +1,9 @@
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.14",
-  "documentation": "https://github.com/SniperWCW/smart_pool_assistant",
-  "issue_tracker": "https://github.com/SniperWCW/smart_pool_assistant/issues",
+  "version": "1.0.15",
+  "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
+  "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": [
     "bluetooth"
   ],

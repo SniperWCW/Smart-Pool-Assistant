@@ -124,6 +124,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_breakdown_sum_raw": data.get("chlor_breakdown_sum_raw"),
             "chlor_breakdown_min_dose_applied": data.get("chlor_breakdown_min_dose_applied"),
             "data_source": data.get("data_source"),
+            "bluetooth_connected": data.get("bluetooth_connected"),
             "last_api_measurements": data.get("last_api_measurements"),
             "poollab_fetch_result": data.get("poollab_fetch_result"),
             "poollab_fetch_error": data.get("poollab_fetch_error"),

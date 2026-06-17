@@ -2,7 +2,7 @@
 
 Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration, die dich bei der Wasserpflege deines Pools oder Whirlpools unterstützt. Basierend auf aktuellen Messwerten liefert sie präzise Dosierempfehlungen und verwaltet die Wartungshistorie.
 
-**Aktueller Release-Stand: V1.0.14**
+**Aktueller Release-Stand: V1.0.15**
 
 ## Hauptfunktionen
 
@@ -10,6 +10,9 @@ Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration
 - **Transparente Berechnung**: Aufschlüsselung der Dosierempfehlung (Basis, Temperatur, UV, Badelast) direkt in der UI.
 - **Direkte Bluetooth-Anbindung**: Liest Messwerte (Chlor, pH, Aktivsauerstoff, Cyanursäure) und Batteriestand direkt vom **PoolLab 1.0** aus, auch über einen **ESP Bluetooth Proxy**.
 - **Manueller PoolLab-Abruf**: Keine automatische PoolLab-Abfrage mehr. Neue Messwerte werden gezielt über `button.poollab_messwerte_abrufen` geholt.
+- **Cloud bleibt automatisch aktuell**: PoolLab-Cloud-Daten werden weiterhin zyklisch über das konfigurierbare **Cloud-Update-Intervall** aktualisiert, ohne BLE automatisch zu verbinden.
+- **Abruf direkt in der Karte**: Die Lovelace-Karte enthält den PoolLab-Abrufbutton jetzt direkt in der Messwertetabelle, inklusive Status- und Cooldown-Anzeige.
+- **Sichtbarer BLE-Status**: Die Zeile **BT Verbindung** zeigt den letzten erfolgreichen BLE-Verbindungsaufbau nun direkt in der Karte an.
 - **Erweiterte Bluetooth-Diagnose**: Detaillierte Logs für Connect, Notify, Read und Parsing helfen dabei, Verbindungsfehler sauber einzugrenzen.
 - **Proxy-schonender BLE-Abruf**: Weniger aggressive Retries, längere Settling-Delays, keine parallelen BLE-Versuche und Cooldowns nach Erfolg oder Fehler.
 - **BLE-Cache-Schutz**: Neuere Bluetooth-Messwerte bleiben aktiv, auch wenn ein spaeterer BLE-Abruf fehlschlaegt und aeltere Cloud-Daten verfuegbar sind.
@@ -66,6 +69,7 @@ Du wirst nach folgenden Informationen gefragt:
 - **Sensoren**: Entitäten für Chlor (mg/l), pH-Wert und Temperatur.
 - **Bluetooth**: Auswahl deines PoolLab-Geräts aus der Liste der entdeckten Geräte.
 - **PoolLab API-Key (optional)**: Nur relevant, wenn du statt BLE ausschließlich die Cloud-API für manuelle Abrufe nutzen willst.
+- **Cloud-Update-Intervall**: Zyklischer Cloud-Abruf in Minuten, Standard `5`, Bereich `1-60`.
 - **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
 - **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
 - **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
@@ -77,12 +81,14 @@ Du wirst nach folgenden Informationen gefragt:
 ### Manueller PoolLab-Abruf
 - Die Integration verbindet sich nicht mehr zyklisch mit dem PoolLab.
 - Für einen Abruf: PoolLab einschalten, Messung/Zero durchführen, kurz warten und dann `button.poollab_messwerte_abrufen` drücken.
+- Der gleiche Abruf ist auch direkt in der Lovelace-Karte unter **Aktuelle Messwerte** integriert.
 - Nach einem erfolgreichen BLE-Abruf gilt ein Cooldown von 20 Sekunden, nach Fehlern 30 Sekunden.
-- Ein interner Housekeeping-Refresh läuft weiter alle 15 Minuten, damit lokale Berechnungen und Wartungsbenachrichtigungen aktuell bleiben, ohne das PoolLab automatisch zu verbinden.
+- Cloud-Daten laufen weiterhin zyklisch über das konfigurierte **Cloud-Update-Intervall** weiter, ohne das PoolLab per BLE automatisch zu verbinden.
+- Die Zeile **BT Verbindung** zeigt den letzten erfolgreichen BLE-Verbindungsaufbau an. Die Integration trennt danach wieder bewusst, statt die Verbindung offen zu halten.
 
 ### Filter-Wartung Einstellungen
 - **Reinigungsintervall**: Wie oft der Filter gereinigt werden soll (Standard: 24 Stunden).
-- **Wechselintervall**: Wie oft der Filter ersetzt werden soll (Standard: 180 Tage).
+- **Wechselintervall**: Wie oft der Filter ersetzt werden soll (Standard: 5 Tage).
 - **Gelb-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **vor** Ablauf des Intervalls für die Warnanzeige.
 - **Rot-Schwelle**: Stunden (Reinigung) bzw. Tage (Wechsel) **nach** Ablauf des Intervalls für den kritischen Status.
 

@@ -2,6 +2,7 @@ DOMAIN = "smart_pool_assistant"
 
 CONF_API_KEY = "api_key"
 CONF_BLE_ADDRESS = "ble_address"
+CONF_UPDATE_INTERVAL = "update_interval"
 CONF_CHLOR_SENSOR = "chlor_sensor"
 CONF_PH_SENSOR = "ph_sensor"
 CONF_TEMP_SENSOR = "temp_sensor"

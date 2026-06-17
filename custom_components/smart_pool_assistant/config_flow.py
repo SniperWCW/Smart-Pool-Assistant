@@ -15,7 +15,7 @@ from homeassistant.components.bluetooth import (
 )
 
 from .const import (
-    DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
+    DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
@@ -125,6 +125,9 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
             )
         ),
         vol.Optional(CONF_API_KEY, default=defaults.get(CONF_API_KEY, "")): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
+        vol.Required(CONF_UPDATE_INTERVAL, default=defaults.get(CONF_UPDATE_INTERVAL, 5)): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1, min=1, max=60)
+        ),
         vol.Optional(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Optional(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Optional(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),

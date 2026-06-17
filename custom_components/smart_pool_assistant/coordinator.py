@@ -12,7 +12,7 @@ from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
+    DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
@@ -26,17 +26,26 @@ _LOGGER = logging.getLogger(__name__)
 
 _STORAGE_VERSION = 1
 _STORAGE_KEY = f"{DOMAIN}_maintenance"
-_HOUSEKEEPING_INTERVAL = timedelta(minutes=15)
+_DEFAULT_UPDATE_INTERVAL_MINUTES = 5
 _BLE_SUCCESS_COOLDOWN = timedelta(seconds=20)
 _BLE_ERROR_COOLDOWN = timedelta(seconds=30)
 
 class SmartPoolCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
+        update_interval_minutes = entry.options.get(
+            CONF_UPDATE_INTERVAL,
+            entry.data.get(CONF_UPDATE_INTERVAL, _DEFAULT_UPDATE_INTERVAL_MINUTES),
+        )
+        try:
+            update_interval_minutes = max(1, int(update_interval_minutes))
+        except (TypeError, ValueError):
+            update_interval_minutes = _DEFAULT_UPDATE_INTERVAL_MINUTES
+
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=_HOUSEKEEPING_INTERVAL,
+            update_interval=timedelta(minutes=update_interval_minutes),
         )
 
         self.entry = entry
@@ -525,10 +534,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         manual_found = False
         ble_found = False
         cached_ble_found = False
-        ble_connected = False
+        ble_connected = bool(self.maintenance_history.get("bluetooth_connected", False))
         poollab_fetch_result = self.maintenance_history.get("last_poollab_fetch_result")
         poollab_fetch_error = self.maintenance_history.get("last_poollab_fetch_error")
         poollab_fetch_completed_at = self.maintenance_history.get("last_poollab_fetch_completed_at")
+
+        if not ble_address and ble_connected:
+            ble_connected = False
+            self.maintenance_history["bluetooth_connected"] = False
 
         c_ist = ph_ist = temp_ist = None
         chlor_source = ph_source = temp_source = None
@@ -554,6 +567,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                         ble_found = True
                         ble_connected = True
+                        self.maintenance_history["bluetooth_connected"] = True
                         poollab_fetch_result = "success"
                         poollab_fetch_error = None
                         poollab_fetch_completed_at = dt_util.now().isoformat()
@@ -607,18 +621,24 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             self.maintenance_history["last_ble_measurement_raw"] = dt_util.utc_from_timestamp(latest_ble_ts).isoformat()
 
                     except (asyncio.TimeoutError, asyncio.CancelledError):
+                        ble_connected = False
+                        self.maintenance_history["bluetooth_connected"] = False
                         poollab_fetch_result = "error"
                         poollab_fetch_error = "Bluetooth-Abfrage fuer PoolLab wurde abgebrochen oder hat das Timeout erreicht."
                         poollab_fetch_completed_at = dt_util.now().isoformat()
                         self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
                         _LOGGER.warning("Bluetooth-Abfrage fuer PoolLab zeitlich ueberschritten oder abgebrochen. Nutze Cache oder manuelle Daten.")
                 else:
+                    ble_connected = False
+                    self.maintenance_history["bluetooth_connected"] = False
                     poollab_fetch_result = "error"
                     poollab_fetch_error = f"PoolLab Bluetooth-Geraet nicht gefunden: {ble_address}"
                     poollab_fetch_completed_at = dt_util.now().isoformat()
                     self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
                     _LOGGER.warning("PoolLab Bluetooth device not found: %s", ble_address)
             except Exception as err:
+                ble_connected = False
+                self.maintenance_history["bluetooth_connected"] = False
                 poollab_fetch_result = "error"
                 poollab_fetch_error = f"{type(err).__name__}: {err}"
                 poollab_fetch_completed_at = dt_util.now().isoformat()
@@ -630,8 +650,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                     err,
                 )
 
-        # 2. Versuch: Cloud-Daten nur manuell abrufen, wenn kein BLE-Geraet konfiguriert ist.
-        if perform_remote_fetch and api_key and not ble_address and (c_ist is None or ph_ist is None):
+        # 2. Versuch: Cloud-Daten zyklisch abrufen. Ein manueller Abruf soll BLE priorisieren
+        # und nur dann die Cloud verwenden, wenn kein BLE-Geraet konfiguriert ist.
+        should_fetch_cloud = bool(api_key) and (c_ist is None or ph_ist is None) and (
+            not perform_remote_fetch or not ble_address
+        )
+        if should_fetch_cloud:
             try:
                 _LOGGER.debug("Fetching data from PoolLab Cloud")
                 session = async_get_clientsession(self.hass)
@@ -697,13 +721,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                             if c_ist is not None or ph_ist is not None:
                                 cloud_found = True
-                                poollab_fetch_result = "success"
-                                poollab_fetch_error = None
-                                poollab_fetch_completed_at = dt_util.now().isoformat()
+                                if perform_remote_fetch:
+                                    poollab_fetch_result = "success"
+                                    poollab_fetch_error = None
+                                    poollab_fetch_completed_at = dt_util.now().isoformat()
             except Exception as err:
-                poollab_fetch_result = "error"
-                poollab_fetch_error = f"Cloud API Fehler: {err}"
-                poollab_fetch_completed_at = dt_util.now().isoformat()
+                if perform_remote_fetch:
+                    poollab_fetch_result = "error"
+                    poollab_fetch_error = f"Cloud API Fehler: {err}"
+                    poollab_fetch_completed_at = dt_util.now().isoformat()
                 _LOGGER.error("Error fetching PoolLab data: %s", err)
 
         next_poollab_fetch_allowed_at = self._get_next_poollab_fetch_allowed_at()

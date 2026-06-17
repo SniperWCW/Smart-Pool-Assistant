@@ -25,6 +25,125 @@ class PoolChemistryCard extends HTMLElement {
     };
   }
 
+  _resolvePoolLabFetchButtonEntity() {
+    if (!this._hass) return null;
+
+    if (this.config?.fetch_button_entity && this._hass.states[this.config.fetch_button_entity]) {
+      return this.config.fetch_button_entity;
+    }
+
+    if (this._hass.states["button.poollab_messwerte_abrufen"]) {
+      return "button.poollab_messwerte_abrufen";
+    }
+
+    const candidates = Object.keys(this._hass.states)
+      .filter((entityId) => entityId.startsWith("button.poollab_messwerte_abrufen"))
+      .sort((a, b) => a.localeCompare(b));
+
+    return candidates[0] || null;
+  }
+
+  _getPoolLabFetchUi(attr) {
+    const buttonEntity = this._resolvePoolLabFetchButtonEntity();
+    const nextAllowedAt = attr.next_poollab_fetch_allowed_at ? Date.parse(attr.next_poollab_fetch_allowed_at) : NaN;
+    const remainingSeconds = Number.isFinite(nextAllowedAt)
+      ? Math.max(0, Math.ceil((nextAllowedAt - Date.now()) / 1000))
+      : 0;
+    const lastCompletedAt = attr.last_poollab_fetch_completed_at
+      ? new Date(attr.last_poollab_fetch_completed_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      : null;
+    const fetchResult = attr.poollab_fetch_result;
+    const fetchError = attr.poollab_fetch_error;
+
+    if (!buttonEntity) {
+      return {
+        entityId: null,
+        disabled: true,
+        label: "Nicht gefunden",
+        status: "Kein PoolLab-Abruf-Button erkannt. Optional im Karten-Editor setzen.",
+        meta: "fehlt",
+      };
+    }
+
+    if (fetchResult === "running") {
+      return {
+        entityId: buttonEntity,
+        disabled: true,
+        label: "Abruf läuft...",
+        status: "PoolLab wird gerade abgefragt.",
+        meta: "läuft",
+      };
+    }
+
+    if (remainingSeconds > 0) {
+      return {
+        entityId: buttonEntity,
+        disabled: true,
+        label: `Warten (${remainingSeconds}s)`,
+        status: `Nächster Abruf in ${remainingSeconds} Sekunden möglich.`,
+        meta: "warte",
+      };
+    }
+
+    if (fetchResult === "error" && fetchError) {
+      return {
+        entityId: buttonEntity,
+        disabled: false,
+        label: "Erneut abrufen",
+        status: fetchError,
+        meta: "fehler",
+      };
+    }
+
+    if (lastCompletedAt) {
+      return {
+        entityId: buttonEntity,
+        disabled: false,
+        label: "Messwerte abrufen",
+        status: `Zuletzt erfolgreich um ${lastCompletedAt}.`,
+        meta: "bereit",
+      };
+    }
+
+    return {
+      entityId: buttonEntity,
+      disabled: false,
+      label: "Messwerte abrufen",
+      status: "Bereit für einen manuellen PoolLab-Abruf.",
+      meta: "bereit",
+    };
+  }
+
+  async _pressPoolLabFetchButton() {
+    if (!this._hass) return;
+
+    const entityId = this._resolvePoolLabFetchButtonEntity();
+    if (!entityId) return;
+
+    const button = this.querySelector("#btn-poollab-fetch");
+    const status = this.querySelector("#poollab-fetch-status");
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Abruf läuft...";
+    }
+    if (status) {
+      status.textContent = "PoolLab-Abruf wird gestartet...";
+    }
+
+    try {
+      await this._hass.callService("button", "press", { entity_id: entityId });
+    } catch (err) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Messwerte abrufen";
+      }
+      if (status) {
+        status.textContent = `Abruf fehlgeschlagen: ${err?.message || err}`;
+      }
+    }
+  }
+
   set hass(hass) {
     this._hass = hass;
     if (!this.config || !hass) return;
@@ -225,6 +344,34 @@ class PoolChemistryCard extends HTMLElement {
               font-size: 0.82em;
               font-weight: 500;
               opacity: 0.7;
+            }
+            .table-action {
+              display: flex;
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 6px;
+            }
+            .fetch-btn {
+              height: 32px;
+              padding: 0 12px;
+              border-radius: 8px;
+              border: 1px solid rgba(3, 169, 244, 0.35);
+              background: rgba(3, 169, 244, 0.14);
+              color: var(--primary-color);
+              font-size: 0.85em;
+              font-weight: 700;
+              cursor: pointer;
+            }
+            .fetch-btn:hover {
+              background: rgba(3, 169, 244, 0.2);
+            }
+            .fetch-btn:disabled {
+              opacity: 0.6;
+              cursor: default;
+            }
+            .fetch-status {
+              margin-top: 0;
+              white-space: normal;
             }
             .history-table .table-row .table-label { min-width: 0; }
             .history-table .table-row .table-value { font-weight: 600; }
@@ -518,6 +665,7 @@ class PoolChemistryCard extends HTMLElement {
     const bluetoothBadge = bluetoothConnected
       ? '<span class="bt-badge connected"><span class="bt-dot"></span>Bluetooth: Ja</span>'
       : '<span class="bt-badge disconnected"><span class="bt-dot"></span>Bluetooth: Nein</span>';
+    const fetchUi = this._getPoolLabFetchUi(attr);
 
     // Helper to get colored text for filter status
     const getColoredDays = (days, status) => {
@@ -554,7 +702,19 @@ class PoolChemistryCard extends HTMLElement {
         <div class="table-value">${bluetoothBadge}</div>
         <div class="table-meta">${bluetoothConnected ? 'aktiv' : 'inaktiv'}</div>
       </div>
+      <div class="table-row">
+        <div class="table-label">PoolLab Abruf</div>
+        <div class="table-value table-action">
+          <button id="btn-poollab-fetch" class="fetch-btn" ${fetchUi.disabled ? "disabled" : ""}>${fetchUi.label}</button>
+          <span id="poollab-fetch-status" class="table-sub fetch-status">${fetchUi.status}</span>
+        </div>
+        <div class="table-meta">${fetchUi.meta}</div>
+      </div>
     `;
+    const fetchButton = this.querySelector('#btn-poollab-fetch');
+    if (fetchButton) {
+      fetchButton.onclick = () => this._pressPoolLabFetchButton();
+    }
     // Filter Maintenance Display
     const hoursSinceClean = attr.hours_since_filter_clean;
     const cleanStatus = attr.filter_clean_status;
@@ -859,6 +1019,8 @@ class PoolChemistryCardEditor extends HTMLElement {
       this.innerHTML = `
         <div class="card-config" style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
           <ha-entity-picker id="main-picker" label="Empfehlungs-Entität (Hauptsensor)" allow-custom-entity></ha-entity-picker>
+          <ha-entity-picker id="fetch-button-picker" label="PoolLab-Abruf-Button (optional)" allow-custom-entity></ha-entity-picker>
+          <div style="font-size: 0.8em; opacity: 0.7;">Leer lassen = automatische Erkennung von <code>button.poollab_messwerte_abrufen</code>.</div>
           <hr style="width: 100%; border: 0.5px solid var(--divider-color);">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <span>Whirlpool-Steuerung (LayzSpa) aktivieren</span>
@@ -869,6 +1031,7 @@ class PoolChemistryCardEditor extends HTMLElement {
       `;
 
       this.querySelector('#main-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
+      this.querySelector('#fetch-button-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
       this.querySelector('#lz-enabled-switch').addEventListener('change', (ev) => this._toggleLayzSpa(ev));
       this._initialized = true;
     }
@@ -879,6 +1042,14 @@ class PoolChemistryCardEditor extends HTMLElement {
       mainPicker.hass = this._hass;
       mainPicker.value = this._config.recommendation_entity;
       mainPicker.configValue = "recommendation_entity";
+    }
+
+    const fetchButtonPicker = this.querySelector('#fetch-button-picker');
+    if (fetchButtonPicker) {
+      fetchButtonPicker.hass = this._hass;
+      fetchButtonPicker.value = this._config.fetch_button_entity || "";
+      fetchButtonPicker.configValue = "fetch_button_entity";
+      fetchButtonPicker.includeDomains = ["button"];
     }
 
     // Update LayzSpa Switch
