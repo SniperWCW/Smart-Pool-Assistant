@@ -11,7 +11,7 @@ from homeassistant.helpers import entity_registry as er
 from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:

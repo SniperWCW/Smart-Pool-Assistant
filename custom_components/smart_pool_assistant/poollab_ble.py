@@ -47,8 +47,8 @@ class PoolLabBLEClient:
     async def _start_notify_with_retry(
         self,
         client: BleakClient,
-        attempts: int = 3,
-        delay: float = 1.5,
+        attempts: int = 2,
+        delay: float = 2.0,
     ) -> None:
         """Start notifications, retrying transient ESPHome GATT errors."""
         for attempt in range(1, attempts + 1):
@@ -82,7 +82,7 @@ class PoolLabBLEClient:
     async def _send_command(self, client: BleakClient, cmd: bytes, timeout: float = 5.0) -> bytes:
         """Send a command and wait until the PoolLab signals that a response is ready."""
         self._notify_event.clear()
-        await asyncio.sleep(0.25)  # Slightly more conservative for BLE proxy stability
+        await asyncio.sleep(0.4)  # Slightly more conservative for BLE proxy stability
         _LOGGER.debug(
             "PoolLab BLE write: char=%s timeout=%s payload_len=%s payload=%s",
             MOSI_UUID,
@@ -97,7 +97,7 @@ class PoolLabBLEClient:
             raise BleakError("Timeout waiting for PoolLab response") from err
 
         # The signal only means "response ready"; give proxied links a moment to settle.
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.4)
         response = bytes(await client.read_gatt_char(MISO_UUID))
         _LOGGER.debug(
             "PoolLab BLE read: char=%s response_len=%s response=%s",
@@ -153,24 +153,24 @@ class PoolLabBLEClient:
         try:
             async with client:
                 await self._start_notify_with_retry(client)
-                await asyncio.sleep(0.5)  # Wait until notifications are active
+                await asyncio.sleep(1.0)  # Let proxies settle before the first command
 
                 # Step 1: GET_INFO (battery @ byte 21, count @ byte 3-4)
                 _LOGGER.debug("Sending PoolLab GET_INFO command")
                 info_resp: bytes | None = None
-                for attempt in range(3):
+                for attempt in range(2):
                     try:
                         info_resp = await self._send_command(client, self._build_command(0x01))
                         break
                     except BleakError as err:
                         _LOGGER.debug(
-                            "PoolLab GET_INFO failed: attempt=%s/3 error=%s",
+                            "PoolLab GET_INFO failed: attempt=%s/2 error=%s",
                             attempt + 1,
                             err,
                         )
-                        if attempt == 2:
+                        if attempt == 1:
                             raise
-                        await asyncio.sleep(0.5 * (attempt + 1))
+                        await asyncio.sleep(1.0)
 
                 if info_resp is None:
                     raise BleakError("PoolLab GET_INFO returned no response")
@@ -206,7 +206,7 @@ class PoolLabBLEClient:
                     )
 
                     resp: bytes | None = None
-                    for attempt in range(3):
+                    for attempt in range(2):
                         try:
                             resp = await self._send_command(
                                 client,
@@ -216,15 +216,15 @@ class PoolLabBLEClient:
                             break
                         except BleakError as err:
                             _LOGGER.debug(
-                                "PoolLab chunk read failed: chunk=%s attempt=%s/3 error=%s",
+                                "PoolLab chunk read failed: chunk=%s attempt=%s/2 error=%s",
                                 chunk_idx,
                                 attempt + 1,
                                 err,
                             )
-                            if attempt == 2:
+                            if attempt == 1:
                                 raise
                             _LOGGER.debug("Retrying PoolLab measurement read for chunk %s after BLE error: %s", chunk_idx, err)
-                            await asyncio.sleep(0.35)
+                            await asyncio.sleep(1.0)
 
                     if resp:
                         _LOGGER.debug(

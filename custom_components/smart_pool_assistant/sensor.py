@@ -125,6 +125,11 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_breakdown_min_dose_applied": data.get("chlor_breakdown_min_dose_applied"),
             "data_source": data.get("data_source"),
             "last_api_measurements": data.get("last_api_measurements"),
+            "poollab_fetch_result": data.get("poollab_fetch_result"),
+            "poollab_fetch_error": data.get("poollab_fetch_error"),
+            "last_poollab_fetch_requested_at": data.get("last_poollab_fetch_requested_at"),
+            "last_poollab_fetch_completed_at": data.get("last_poollab_fetch_completed_at"),
+            "next_poollab_fetch_allowed_at": data.get("next_poollab_fetch_allowed_at"),
         }
 
     @property

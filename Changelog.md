@@ -1,5 +1,19 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.14] - 2026-06-17
+
+### Neu
+- **Manueller PoolLab-Abruf**: Neue Button-Entität `button.poollab_messwerte_abrufen` für gezielte Einzelabrufe nach einer Messung.
+
+### Verbesserungen
+- **Kein automatisches PoolLab-Polling mehr**: BLE- und Cloud-Abrufe werden nur noch explizit ausgelöst, nicht mehr zyklisch.
+- **Proxy-schonendere BLE-Kommunikation**: Weniger aggressive Retries, längere Settling-Delays sowie Cooldowns nach Erfolg und Fehlern.
+- **Konfigurationsbereinigung**: Das frühere Update-Intervall wurde aus dem Config Flow entfernt, da es keinen PoolLab-Abruf mehr steuert.
+- **Dokumentation aktualisiert**: README, Versionsstand und Bedienablauf für den neuen manuellen Abruf wurden angepasst.
+
+### Fixes
+- **Wartungs-Refresh**: Lokale Housekeeping-Updates bleiben aktiv, damit Filter- und Erinnerungslogik weiterhin ohne automatischen PoolLab-Connect funktioniert.
+
 ## [1.0.9] - 2026-06-15
 
 ### Neu

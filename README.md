@@ -2,15 +2,16 @@
 
 Der **Smart Pool Assistant** ist eine leistungsstarke Home Assistant Integration, die dich bei der Wasserpflege deines Pools oder Whirlpools unterstützt. Basierend auf aktuellen Messwerten liefert sie präzise Dosierempfehlungen und verwaltet die Wartungshistorie.
 
-**Aktueller Release-Stand: V1.0.13**
+**Aktueller Release-Stand: V1.0.14**
 
 ## Hauptfunktionen
 
 - **Präzise Chlor-Berechnung**: Berücksichtigt Stoßchlorungs-Faktoren, eine **Temperatur-Korrektur** sowie den **Abdeckungs-Status** und die **Badelast** (Nutzungsmodus).
 - **Transparente Berechnung**: Aufschlüsselung der Dosierempfehlung (Basis, Temperatur, UV, Badelast) direkt in der UI.
 - **Direkte Bluetooth-Anbindung**: Liest Messwerte (Chlor, pH, Aktivsauerstoff, Cyanursäure) und Batteriestand direkt vom **PoolLab 1.0** aus, auch über einen **ESP Bluetooth Proxy**.
+- **Manueller PoolLab-Abruf**: Keine automatische PoolLab-Abfrage mehr. Neue Messwerte werden gezielt über `button.poollab_messwerte_abrufen` geholt.
 - **Erweiterte Bluetooth-Diagnose**: Detaillierte Logs für Connect, Notify, Read und Parsing helfen dabei, Verbindungsfehler sauber einzugrenzen.
-- **Stabilere BLE-Abfrage**: Notification-Start wird bei transienten ESPHome-GATT-Fehlern erneut versucht; PoolLab-Kommandos werden gemäß BLE-Doku mit kurzer Payload gesendet.
+- **Proxy-schonender BLE-Abruf**: Weniger aggressive Retries, längere Settling-Delays, keine parallelen BLE-Versuche und Cooldowns nach Erfolg oder Fehler.
 - **BLE-Cache-Schutz**: Neuere Bluetooth-Messwerte bleiben aktiv, auch wenn ein spaeterer BLE-Abruf fehlschlaegt und aeltere Cloud-Daten verfuegbar sind.
 - **Getrennte Quellenlogik**: Bluetooth, Cloud/API und manuelle Werte werden je Messwert getrennt ausgewertet. Neuere Bluetooth-Messungen werden nicht mehr von älteren Cloud-Werten überschrieben.
 - **Transparente Messquellen**: Die Empfehlungs-Entität (`sensor.pool_empfehlung`) zeigt pro Wert die Quelle an, z. B. `chlor_source`, `ph_source`, `temp_source` und `last_measurement_source`.
@@ -64,6 +65,7 @@ Gehe zu **Einstellungen > Geräte & Dienste > Integration hinzufügen** und such
 Du wirst nach folgenden Informationen gefragt:
 - **Sensoren**: Entitäten für Chlor (mg/l), pH-Wert und Temperatur.
 - **Bluetooth**: Auswahl deines PoolLab-Geräts aus der Liste der entdeckten Geräte.
+- **PoolLab API-Key (optional)**: Nur relevant, wenn du statt BLE ausschließlich die Cloud-API für manuelle Abrufe nutzen willst.
 - **Poolvolumen**: Wassermenge in m³ (z.B. 0.96 für einen kleinen Whirlpool).
 - **Zielwerte**: Deine gewünschten Idealwerte für Chlor und pH.
 - **Wirkstoffanteil**: Der Anteil des Wirkstoffs in deinem Chlor-Produkt (Standard: 0.56 für 56%iges Granulat).
@@ -71,6 +73,12 @@ Du wirst nach folgenden Informationen gefragt:
 - **Dosierung PH-Plus**: Menge in g, um 10 m³ Wasser um 0,1 Einheiten zu heben (z.B. 100 g).
 - **Benachrichtigungs-Dienst**: Der zu verwendende Dienst (z.B. `notify.mobile_app_iphone`).
 - **Erinnerung**: Zeitspanne in Minuten, nach der eine Aufforderung zur Nachmessung gesendet wird.
+
+### Manueller PoolLab-Abruf
+- Die Integration verbindet sich nicht mehr zyklisch mit dem PoolLab.
+- Für einen Abruf: PoolLab einschalten, Messung/Zero durchführen, kurz warten und dann `button.poollab_messwerte_abrufen` drücken.
+- Nach einem erfolgreichen BLE-Abruf gilt ein Cooldown von 20 Sekunden, nach Fehlern 30 Sekunden.
+- Ein interner Housekeeping-Refresh läuft weiter alle 15 Minuten, damit lokale Berechnungen und Wartungsbenachrichtigungen aktuell bleiben, ohne das PoolLab automatisch zu verbinden.
 
 ### Filter-Wartung Einstellungen
 - **Reinigungsintervall**: Wie oft der Filter gereinigt werden soll (Standard: 24 Stunden).
@@ -134,7 +142,7 @@ layzspa:
   temp_target: sensor.layzspa_target_temp_c
 ```
 
-## Sensoren
+## Entitäten
 
 Die Integration stellt folgende Sensoren bereit:
 - `sensor.pool_chlor_nachdosierung`: Gesamtmenge Chlor in Gramm.
@@ -142,6 +150,9 @@ Die Integration stellt folgende Sensoren bereit:
 - `sensor.pool_ph_minus`: Benötigte Menge PH-Minus in ml.
 - `sensor.pool_ph_plus`: Benötigte Menge PH-Plus in g.
 - `sensor.pool_empfehlung`: Textuelle Zusammenfassung der nächsten Schritte.
-- `sensor.pool_ble_battery`: Batteriestatus des PoolLab-Geräts (via Bluetooth).
-- `sensor.pool_filter_reinigung_fällig`: Stunden seit letzter Filterreinigung.
-- `sensor.pool_filter_wechsel_fällig`: Tage seit letztem Filterwechsel.
+- `sensor.poollab_batterie`: Batteriestatus des PoolLab-Geräts (via Bluetooth).
+- `sensor.pool_filter_reinigung_fallig`: Stunden seit letzter Filterreinigung.
+- `sensor.pool_filter_wechsel_fallig`: Tage seit letztem Filterwechsel.
+
+Zusätzlich wird folgender Button bereitgestellt:
+- `button.poollab_messwerte_abrufen`: Startet genau einen PoolLab-Abruf über BLE oder, falls nur ein API-Key konfiguriert ist, über die Cloud.

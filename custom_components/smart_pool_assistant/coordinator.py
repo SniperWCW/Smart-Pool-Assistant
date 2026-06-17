@@ -9,9 +9,10 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 from homeassistant.components.bluetooth import async_ble_device_from_address
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    DOMAIN, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
+    DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
@@ -21,13 +22,13 @@ from .const import (
 )
 from .poollab_ble import PoolLabBLEClient
 
-CONF_API_KEY = "api_key"
-CONF_UPDATE_INTERVAL = "update_interval"
-CONF_BLE_ADDRESS = "ble_address"
 _LOGGER = logging.getLogger(__name__)
 
 _STORAGE_VERSION = 1
 _STORAGE_KEY = f"{DOMAIN}_maintenance"
+_HOUSEKEEPING_INTERVAL = timedelta(minutes=15)
+_BLE_SUCCESS_COOLDOWN = timedelta(seconds=20)
+_BLE_ERROR_COOLDOWN = timedelta(seconds=30)
 
 class SmartPoolCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
@@ -35,14 +36,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(
-                minutes=entry.options.get(CONF_UPDATE_INTERVAL, entry.data.get(CONF_UPDATE_INTERVAL, 5))
-            ),
+            update_interval=_HOUSEKEEPING_INTERVAL,
         )
 
         self.entry = entry
         self._store = Store(hass, _STORAGE_VERSION, f"{_STORAGE_KEY}_{entry.entry_id}")
         self.maintenance_history = {}
+        self._poollab_fetch_lock = asyncio.Lock()
+        self._poollab_fetch_requested = False
+        self._next_poollab_fetch_allowed_at = None
         # Standardwerte für neue Logik initialisieren
         self.pool_covered = True
         self.usage_mode = "none" # none, normal, party
@@ -123,6 +125,74 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         """Return combined config from data and options."""
         return {**self.entry.data, **self.entry.options}
 
+    def _get_next_poollab_fetch_allowed_at(self) -> str | None:
+        """Return the next allowed fetch timestamp if the cooldown is still active."""
+        if self._next_poollab_fetch_allowed_at and self._next_poollab_fetch_allowed_at <= dt_util.now():
+            self._next_poollab_fetch_allowed_at = None
+            self.maintenance_history.pop("next_poollab_fetch_allowed_at", None)
+        return self._next_poollab_fetch_allowed_at.isoformat() if self._next_poollab_fetch_allowed_at else None
+
+    def _set_poollab_cooldown(self, cooldown: timedelta | None) -> None:
+        """Persist the next allowed manual PoolLab fetch time."""
+        if cooldown is None:
+            self._next_poollab_fetch_allowed_at = None
+            self.maintenance_history.pop("next_poollab_fetch_allowed_at", None)
+            return
+
+        self._next_poollab_fetch_allowed_at = dt_util.now() + cooldown
+        self.maintenance_history["next_poollab_fetch_allowed_at"] = self._next_poollab_fetch_allowed_at.isoformat()
+
+    def _remaining_poollab_cooldown(self) -> int:
+        """Return the remaining cooldown in whole seconds."""
+        next_allowed = self._get_next_poollab_fetch_allowed_at()
+        if not next_allowed:
+            return 0
+
+        next_allowed_dt = self._parse_ts_aware(next_allowed)
+        if next_allowed_dt is None:
+            return 0
+
+        remaining = (next_allowed_dt - dt_util.now()).total_seconds()
+        if remaining <= 0:
+            self._next_poollab_fetch_allowed_at = None
+            self.maintenance_history.pop("next_poollab_fetch_allowed_at", None)
+            return 0
+
+        return int(remaining + 0.999)
+
+    async def async_fetch_poollab_measurements(self) -> None:
+        """Fetch PoolLab values exactly once on explicit user request."""
+        if not self.config.get(CONF_BLE_ADDRESS) and not self.config.get(CONF_API_KEY):
+            raise HomeAssistantError("Kein PoolLab-Abruf konfiguriert.")
+
+        if self._poollab_fetch_lock.locked():
+            raise HomeAssistantError("Ein PoolLab-Abruf laeuft bereits.")
+
+        if remaining := self._remaining_poollab_cooldown():
+            message = f"PoolLab-Abruf bitte erst in {remaining} Sekunden erneut ausloesen."
+            self.maintenance_history["last_poollab_fetch_result"] = "cooldown"
+            self.maintenance_history["last_poollab_fetch_error"] = message
+            await self._store.async_save(self.maintenance_history)
+            await self.async_request_refresh()
+            raise HomeAssistantError(message)
+
+        async with self._poollab_fetch_lock:
+            self._poollab_fetch_requested = True
+            self.maintenance_history["last_poollab_fetch_requested_at"] = dt_util.now().isoformat()
+            self.maintenance_history["last_poollab_fetch_result"] = "running"
+            self.maintenance_history["last_poollab_fetch_error"] = None
+            await self._store.async_save(self.maintenance_history)
+            try:
+                await self.async_request_refresh()
+            finally:
+                self._poollab_fetch_requested = False
+
+        fetch_result = self.data.get("poollab_fetch_result")
+        if fetch_result == "error":
+            raise HomeAssistantError(self.data.get("poollab_fetch_error") or "PoolLab-Abruf fehlgeschlagen.")
+        if fetch_result == "cooldown":
+            raise HomeAssistantError(self.data.get("poollab_fetch_error") or "PoolLab-Abruf ist noch gesperrt.")
+
     async def async_load_history(self):
         """Load maintenance history from storage."""
         stored = await self._store.async_load()
@@ -131,6 +201,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.maintenance_history = normalized
             self.pool_covered = stored.get("pool_covered", True)
             self.usage_mode = stored.get("usage_mode", "none")
+            next_allowed = stored.get("next_poollab_fetch_allowed_at")
+            if isinstance(next_allowed, str):
+                self._next_poollab_fetch_allowed_at = self._parse_ts_aware(next_allowed)
             if normalized != stored:
                 await self._store.async_save(self.maintenance_history)
 
@@ -445,6 +518,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         conf = self.config
         api_key = conf.get(CONF_API_KEY)
         ble_address = conf.get(CONF_BLE_ADDRESS)
+        perform_remote_fetch = self._poollab_fetch_requested
 
         data_source = "Nicht verfügbar"
         cloud_found = False
@@ -452,6 +526,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         ble_found = False
         cached_ble_found = False
         ble_connected = False
+        poollab_fetch_result = self.maintenance_history.get("last_poollab_fetch_result")
+        poollab_fetch_error = self.maintenance_history.get("last_poollab_fetch_error")
+        poollab_fetch_completed_at = self.maintenance_history.get("last_poollab_fetch_completed_at")
 
         c_ist = ph_ist = temp_ist = None
         chlor_source = ph_source = temp_source = None
@@ -463,8 +540,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self.maintenance_history["last_calc_raw"] = now_iso
         last_calc_raw = now_iso
 
-        # 1. Versuch: Bluetooth-Daten abrufen (PoolLab direkt)
-        if ble_address:
+        # 1. Versuch: Bluetooth-Daten nur auf expliziten Abruf verbinden.
+        if perform_remote_fetch and ble_address:
             try:
                 _LOGGER.debug("Fetching data from PoolLab via Bluetooth: %s", ble_address)
                 device = async_ble_device_from_address(self.hass, ble_address, connectable=True)
@@ -477,6 +554,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                         ble_found = True
                         ble_connected = True
+                        poollab_fetch_result = "success"
+                        poollab_fetch_error = None
+                        poollab_fetch_completed_at = dt_util.now().isoformat()
+                        self._set_poollab_cooldown(_BLE_SUCCESS_COOLDOWN)
                         # Speichere Batteriestatus in der Historie
                         self.maintenance_history["ble_battery"] = ble_data.battery
 
@@ -526,10 +607,22 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             self.maintenance_history["last_ble_measurement_raw"] = dt_util.utc_from_timestamp(latest_ble_ts).isoformat()
 
                     except (asyncio.TimeoutError, asyncio.CancelledError):
-                        _LOGGER.warning("Bluetooth-Abfrage für PoolLab zeitlich überschritten oder abgebrochen. Nutze Cloud/Manuelle Daten falls verfügbar.")
+                        poollab_fetch_result = "error"
+                        poollab_fetch_error = "Bluetooth-Abfrage fuer PoolLab wurde abgebrochen oder hat das Timeout erreicht."
+                        poollab_fetch_completed_at = dt_util.now().isoformat()
+                        self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
+                        _LOGGER.warning("Bluetooth-Abfrage fuer PoolLab zeitlich ueberschritten oder abgebrochen. Nutze Cache oder manuelle Daten.")
                 else:
+                    poollab_fetch_result = "error"
+                    poollab_fetch_error = f"PoolLab Bluetooth-Geraet nicht gefunden: {ble_address}"
+                    poollab_fetch_completed_at = dt_util.now().isoformat()
+                    self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
                     _LOGGER.warning("PoolLab Bluetooth device not found: %s", ble_address)
             except Exception as err:
+                poollab_fetch_result = "error"
+                poollab_fetch_error = f"{type(err).__name__}: {err}"
+                poollab_fetch_completed_at = dt_util.now().isoformat()
+                self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
                 _LOGGER.warning(
                     "PoolLab BLE read failed, using fallback data if available: address=%s error_type=%s error=%s",
                     ble_address,
@@ -537,10 +630,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                     err,
                 )
 
-        # 2. Versuch: Cloud-Daten nur dann als Fallback holen, wenn BLE
-        # komplett nicht verfügbar war. Sonst würde die Cloud die frischere
-        # Bluetooth-Messung wieder als Basis verdrängen.
-        if api_key and not ble_found and (c_ist is None or ph_ist is None):
+        # 2. Versuch: Cloud-Daten nur manuell abrufen, wenn kein BLE-Geraet konfiguriert ist.
+        if perform_remote_fetch and api_key and not ble_address and (c_ist is None or ph_ist is None):
             try:
                 _LOGGER.debug("Fetching data from PoolLab Cloud")
                 session = async_get_clientsession(self.hass)
@@ -606,8 +697,23 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                             if c_ist is not None or ph_ist is not None:
                                 cloud_found = True
+                                poollab_fetch_result = "success"
+                                poollab_fetch_error = None
+                                poollab_fetch_completed_at = dt_util.now().isoformat()
             except Exception as err:
+                poollab_fetch_result = "error"
+                poollab_fetch_error = f"Cloud API Fehler: {err}"
+                poollab_fetch_completed_at = dt_util.now().isoformat()
                 _LOGGER.error("Error fetching PoolLab data: %s", err)
+
+        next_poollab_fetch_allowed_at = self._get_next_poollab_fetch_allowed_at()
+        self.maintenance_history["last_poollab_fetch_result"] = poollab_fetch_result
+        if poollab_fetch_error:
+            self.maintenance_history["last_poollab_fetch_error"] = poollab_fetch_error
+        else:
+            self.maintenance_history.pop("last_poollab_fetch_error", None)
+        if poollab_fetch_completed_at:
+            self.maintenance_history["last_poollab_fetch_completed_at"] = poollab_fetch_completed_at
 
         api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
         ble_ts_str = self.maintenance_history.get("last_ble_measurement_raw")
@@ -753,6 +859,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
+            await self._store.async_save(self.maintenance_history)
             return {
                 "chlor_ist": c_ist,
                 "ph_ist": ph_ist,
@@ -784,6 +891,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "chlor_breakdown_bather_adj": 0.0,
                 "chlor_breakdown_sum_raw": 0.0,
                 "chlor_breakdown_min_dose_applied": 0.0,
+                "poollab_fetch_result": poollab_fetch_result,
+                "poollab_fetch_error": poollab_fetch_error,
+                "last_poollab_fetch_requested_at": self.maintenance_history.get("last_poollab_fetch_requested_at"),
+                "last_poollab_fetch_completed_at": poollab_fetch_completed_at,
+                "next_poollab_fetch_allowed_at": next_poollab_fetch_allowed_at,
                 "history": self.maintenance_history,
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
@@ -977,6 +1089,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
             "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
             "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
+            "poollab_fetch_result": poollab_fetch_result,
+            "poollab_fetch_error": poollab_fetch_error,
+            "last_poollab_fetch_requested_at": self.maintenance_history.get("last_poollab_fetch_requested_at"),
+            "last_poollab_fetch_completed_at": poollab_fetch_completed_at,
+            "next_poollab_fetch_allowed_at": next_poollab_fetch_allowed_at,
             "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,
             "usage_mode": self.usage_mode,
