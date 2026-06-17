@@ -43,18 +43,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self._store = Store(hass, _STORAGE_VERSION, f"{_STORAGE_KEY}_{entry.entry_id}")
         self.maintenance_history = {}
-        # Standardwerte fÃƒÂ¼r neue Logik initialisieren
+        # Standardwerte für neue Logik initialisieren
         self.pool_covered = True
         self.usage_mode = "none" # none, normal, party
 
     def _activity_text(self, m_type: str | None, amount: float | int | None) -> str:
         """Return a human readable activity label."""
         if m_type == "chlor":
-            return f"{amount:g}g Chlor hinzugefÃƒÂ¼gt" if amount is not None else "Chlor hinzugefÃƒÂ¼gt"
+            return f"{amount:g}g Chlor hinzugefügt" if amount is not None else "Chlor hinzugefügt"
         if m_type == "ph_plus":
-            return f"{amount:g}g PH-Plus hinzugefÃƒÂ¼gt" if amount is not None else "PH-Plus hinzugefÃƒÂ¼gt"
+            return f"{amount:g}g PH-Plus hinzugefügt" if amount is not None else "PH-Plus hinzugefügt"
         if m_type == "ph_minus":
-            return f"{amount:g}ml PH-Minus hinzugefÃƒÂ¼gt" if amount is not None else "PH-Minus hinzugefÃƒÂ¼gt"
+            return f"{amount:g}ml PH-Minus hinzugefügt" if amount is not None else "PH-Minus hinzugefügt"
         if m_type == "filter_clean":
             return "Filter gereinigt"
         if m_type == "filter_replace":
@@ -65,11 +65,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             mode_labels = {"none": "Keine", "normal": "Normal", "party": "Party"}
             return f"Nutzungsmodus: {mode_labels.get(self.usage_mode, self.usage_mode)}"
         return ""
-
-    @staticmethod
-    def _format_interval(value: float | int) -> str:
-        """Format intervals without trailing decimals for whole numbers."""
-        return str(int(value)) if float(value).is_integer() else f"{value:g}"
 
     def _normalize_loaded_history(self, stored: dict) -> dict:
         """Fix legacy history entries in-place after loading from storage."""
@@ -143,7 +138,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         """Set up listeners for entity state changes."""
         conf = self.config
         entities = []
-        # Nur EntitÃƒÂ¤ten ÃƒÂ¼berwachen, die auch wirklich konfiguriert wurden
+        # Nur Entitäten überwachen, die auch wirklich konfiguriert wurden
         for key in [CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR]:
             if eid := conf.get(key):
                 entities.append(eid)
@@ -180,7 +175,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 item.pop("_dt", None)
             return normalized[:5]
 
-        # Fallback fÃƒÂ¼r ÃƒÂ¤ltere gespeicherte Daten ohne AktivitÃƒÂ¤tsliste
+        # Fallback für ältere gespeicherte Daten ohne Aktivitätsliste
         items = []
 
         for key in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace", "set_covered", "set_usage"):
@@ -214,7 +209,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if new_state is None or new_state.state in ("unknown", "unavailable", "none", "null"):
             return
 
-        # Jedes Update der Quell-EntitÃƒÂ¤t triggert eine Neuberechnung,
+        # Jedes Update der Quell-Entität triggert eine Neuberechnung,
         # um auch "Heartbeats" oder identische Werte sofort zu erfassen.
         is_real_change = True
 
@@ -280,7 +275,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "raw_ts": now.isoformat(),
             })
             self.maintenance_history["last_activities"] = activities[:5]
-            # Wording fÃƒÂ¼r Wartung vs. Chemie anpassen
+            # Wording für Wartung vs. Chemie anpassen
             if m_type == "filter_clean":
                 msg = "Pool-Wartung: Filter gereinigt."
             elif m_type == "filter_replace":
@@ -338,7 +333,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         service = conf.get(CONF_NOTIFY_SERVICE)
         if service:
             domain, service_name = service.split(".")
-            await self._send_notification("Die Einwirkzeit ist um. Bitte Pool-Werte erneut prÃƒÂ¼fen!", "follow_up")
+            await self._send_notification("Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!", "follow_up")
 
     def _get_time_since_last_action(self, action_key: str, in_hours: bool = False) -> int | None:
         """Calculate time since last action (hours or days)."""
@@ -367,20 +362,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             if hours_since_clean > 0 and (clean_interval - clean_yellow) <= hours_since_clean < clean_interval:
                 last_notified = self.maintenance_history.get("last_notified_clean_yellow")
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1: # Notify once a day
-                    await self._send_notification(
-                        f"Filterreinigung bald fÃ¤llig: letzte Reinigung vor {self._format_interval(hours_since_clean)} Stunden. Empfohlen: alle {self._format_interval(clean_interval)} Stunden.",
-                        "filter_clean_yellow"
-                    )
+                    await self._send_notification(f"Filterreinigung bald fällig! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_yellow")
                     self.maintenance_history["last_notified_clean_yellow"] = now.isoformat()
 
             # Red notification for cleaning
             if hours_since_clean >= (clean_interval + clean_red):
                 last_notified = self.maintenance_history.get("last_notified_clean_red")
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
-                    await self._send_notification(
-                        f"Filterreinigung Ã¼berfÃ¤llig: letzte Reinigung vor {self._format_interval(hours_since_clean)} Stunden. Empfohlen: alle {self._format_interval(clean_interval)} Stunden.",
-                        "filter_clean_red"
-                    )
+                    await self._send_notification(f"Filterreinigung ÜBERFÄLLIG! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_red")
                     self.maintenance_history["last_notified_clean_red"] = now.isoformat()
 
         # Filter Replace
@@ -395,7 +384,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 last_notified = self.maintenance_history.get("last_notified_replace_yellow")
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
                     await self._send_notification(
-                        f"Filterwechsel bald fÃ¤llig: letzter Wechsel vor {self._format_interval(days_since_replace)} Tagen. Empfohlen: alle {self._format_interval(replace_interval)} Tage.",
+                        f"Filterwechsel bald fällig! Vor {days_since_replace} Tagen gewechselt. Empfohlen alle {replace_interval} Tage.",
                         "filter_replace_yellow"
                     )
                     self.maintenance_history["last_notified_replace_yellow"] = now.isoformat()
@@ -405,7 +394,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 last_notified = self.maintenance_history.get("last_notified_replace_red")
                 if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
                     await self._send_notification(
-                        f"Filterwechsel Ã¼berfÃ¤llig: letzter Wechsel vor {self._format_interval(days_since_replace)} Tagen. Empfohlen: alle {self._format_interval(replace_interval)} Tage.",
+                        f"Filterwechsel ÜBERFÄLLIG! Vor {days_since_replace} Tagen gewechselt. Empfohlen alle {replace_interval} Tage.",
                         "filter_replace_red"
                     )
                     self.maintenance_history["last_notified_replace_red"] = now.isoformat()
@@ -422,7 +411,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 ts_raw = state.attributes.get("measured_at") or state.attributes.get("timestamp") or state.last_updated
                 ts = ts_raw if isinstance(ts_raw, str) else ts_raw.isoformat()
 
-                # Ersetze Komma durch Punkt fÃƒÂ¼r deutsche Sensor-Strings
+                # Ersetze Komma durch Punkt für deutsche Sensor-Strings
                 val_str = state.state.replace(',', '.')
                 return float(val_str), ts
             except ValueError:
@@ -449,7 +438,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             return "ok"
 
         # 1. Bestehende Daten laden
-        # Immer einen aktuellen Zeitstempel fÃƒÂ¼r den "letzten Lauf" parat haben
+        # Immer einen aktuellen Zeitstempel für den "letzten Lauf" parat haben
         now_iso = dt_util.now().isoformat()
         last_calc_raw = self.maintenance_history.get("last_calc_raw", now_iso)
 
@@ -457,7 +446,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         api_key = conf.get(CONF_API_KEY)
         ble_address = conf.get(CONF_BLE_ADDRESS)
 
-        data_source = "Nicht verfÃƒÂ¼gbar"
+        data_source = "Nicht verfügbar"
         cloud_found = False
         manual_found = False
         ble_found = False
@@ -479,29 +468,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Fetching data from PoolLab via Bluetooth: %s", ble_address)
                 device = async_ble_device_from_address(self.hass, ble_address, connectable=True)
                 if device:
-                    _LOGGER.debug(
-                        "Bluetooth lookup resolved device: name=%s address=%s rssi=%s details=%s",
-                        getattr(device, "name", None),
-                        getattr(device, "address", None),
-                        getattr(device, "rssi", None),
-                        getattr(device, "details", None),
-                    )
                     client = PoolLabBLEClient(device)
                     try:
                         # Timeout leicht reduziert und CancelledError explizit fangen,
                         # um Setup-Abstürze unter Python 3.11+ zu verhindern.
-                        _LOGGER.debug("Starting BLE read timeout guard for PoolLab: 40s")
                         ble_data = await asyncio.wait_for(client.async_read_data(), timeout=40.0)
 
                         ble_found = True
                         ble_connected = True
                         # Speichere Batteriestatus in der Historie
                         self.maintenance_history["ble_battery"] = ble_data.battery
-                        _LOGGER.debug(
-                            "BLE read finished successfully: battery=%s measurement_types=%s",
-                            ble_data.battery,
-                            sorted(ble_data.measurements.keys()),
-                        )
 
                         ble_ts_list = []
                         # Erweiterte Mappings gemäß BLE-Doku: mehrere OEM-/Test-Varianten möglich
@@ -545,25 +521,22 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             latest_ble_ts = max(ble_ts_list)
                             self.maintenance_history["last_ble_measurement_raw"] = dt_util.utc_from_timestamp(latest_ble_ts).isoformat()
 
-                    except (asyncio.TimeoutError, asyncio.CancelledError) as err:
-                        _LOGGER.warning(
-                            "Bluetooth-Abfrage für PoolLab zeitlich überschritten oder abgebrochen. device=%s error=%s",
-                            ble_address,
-                            err,
-                        )
+                    except (asyncio.TimeoutError, asyncio.CancelledError):
+                        _LOGGER.warning("Bluetooth-Abfrage für PoolLab zeitlich überschritten oder abgebrochen. Nutze Cloud/Manuelle Daten falls verfügbar.")
                 else:
                     _LOGGER.warning("PoolLab Bluetooth device not found: %s", ble_address)
-            except Exception:
-                _LOGGER.exception("Error fetching PoolLab BLE data for address=%s", ble_address)
+            except Exception as err:
+                _LOGGER.error("Error fetching PoolLab BLE data: %s", err)
+
         # 2. Versuch: Cloud-Daten nur dann als Fallback holen, wenn BLE
-        # komplett nicht verfÃƒÂ¼gbar war. Sonst wÃƒÂ¼rde die Cloud die frischere
-        # Bluetooth-Messung wieder als Basis verdrÃƒÂ¤ngen.
+        # komplett nicht verfügbar war. Sonst würde die Cloud die frischere
+        # Bluetooth-Messung wieder als Basis verdrängen.
         if api_key and not ble_found and (c_ist is None or ph_ist is None):
             try:
                 _LOGGER.debug("Fetching data from PoolLab Cloud")
                 session = async_get_clientsession(self.hass)
 
-                # GraphQL Query fÃƒÂ¼r die Cloud API
+                # GraphQL Query für die Cloud API
                 payload = {
                     "query": "query { CloudAccount { Accounts { Measurements { parameter value timestamp } } } }"
                 }
@@ -588,7 +561,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                                 cloud_ts_iso = dt_util.utc_from_timestamp(latest_ts).isoformat()
                                 self.maintenance_history["last_api_measurement_raw"] = cloud_ts_iso
 
-                            # Sammle die letzten 4 Messwerte fÃƒÂ¼r die Anzeige/Fehlersuche
+                            # Sammle die letzten 4 Messwerte für die Anzeige/Fehlersuche
                             last_api_measurements = []
                             for obs in measurements[:4]:
                                 p_ts = obs.get("timestamp")
@@ -627,7 +600,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except Exception as err:
                 _LOGGER.error("Error fetching PoolLab data: %s", err)
 
-        # 2. Versuch: Manuelle Sensoren prÃƒÂ¼fen (immer prÃƒÂ¼fen fÃƒÂ¼r Quellen-Erkennung)
+        # 2. Versuch: Manuelle Sensoren prüfen (immer prüfen für Quellen-Erkennung)
         c_man, c_man_ts = get_state_info(conf.get(CONF_CHLOR_SENSOR))
         ph_man, ph_man_ts = get_state_info(conf.get(CONF_PH_SENSOR))
         temp_man, _ = get_state_info(conf.get(CONF_TEMP_SENSOR))
@@ -693,11 +666,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if ble_found: sources.append("Bluetooth")
         if cloud_found: sources.append("Cloud")
         if manual_found: sources.append("Manuell")
-        data_source = " & ".join(sources) if sources else ("Speicher" if c_ist is not None else "Nicht verfÃƒÂ¼gbar")
+        data_source = " & ".join(sources) if sources else ("Speicher" if c_ist is not None else "Nicht verfügbar")
 
-        # Wenn wichtige Sensoren fehlen, keine Berechnung durchfÃƒÂ¼hren
+        # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
 
-        # Synchronisiere den kombinierten Zeitstempel fÃƒÂ¼r die Anzeige
+        # Synchronisiere den kombinierten Zeitstempel für die Anzeige
         api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
         manual_ts_str = self.maintenance_history.get("last_manual_measurement_raw")
         ble_ts_str = self.maintenance_history.get("last_ble_measurement_raw")
@@ -709,9 +682,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         dt_man = self._parse_ts_aware(manual_ts_str)
         dt_ble = self._parse_ts_aware(ble_ts_str)
 
-        # FÃƒÂ¼r die Anzeige priorisieren wir die jeweils neueste tatsÃƒÂ¤chlich
-        # vorliegende Messquelle. So springt die Anzeige nicht auf eine ÃƒÂ¤ltere
-        # Cloud-Quelle zurÃƒÂ¼ck, wenn Bluetooth oder manuelle Werte neuer sind.
+        # Für die Anzeige priorisieren wir die jeweils neueste tatsächlich
+        # vorliegende Messquelle. So springt die Anzeige nicht auf eine ältere
+        # Cloud-Quelle zurück, wenn Bluetooth oder manuelle Werte neuer sind.
         measurement_candidates = []
 
         if dt_ble:
@@ -735,7 +708,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             last_meas_raw,
         )
 
-        # Wenn wichtige Sensoren fehlen, keine Berechnung durchfÃƒÂ¼hren
+        # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
             return {
                 "chlor_ist": c_ist,
@@ -769,7 +742,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "chlor_breakdown_sum_raw": 0.0,
                 "chlor_breakdown_min_dose_applied": 0.0,
                 "history": self.maintenance_history,
-                "recommendation": "Ã¢Å¡Â Ã¯Â¸Â Keine Messwerte vorhanden"
+                "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
 
         # Konfiguration laden
@@ -782,7 +755,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             wirkstoff = 0.56 # Schutz vor Division durch Null
 
         # Nutzungs- und Abdeckungsfaktoren
-        # Wenn offen, erhÃƒÂ¶hen wir die Grundzehrung (UV-Verlust)
+        # Wenn offen, erhöhen wir die Grundzehrung (UV-Verlust)
         env_factor = 0.8 if self.pool_covered else 1.2
 
         # Badelast-Zuschlag in Gramm (Absolutwerte)
@@ -793,7 +766,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Chlor Berechnung
         c_diff = max(float(c_ziel) - float(c_ist), 0) if c_ist is not None else 0
 
-        # Temperatur-Korrekturfaktor fÃƒÂ¼r Chlor (hÃƒÂ¶here Zehrung bei warmem Wasser)
+        # Temperatur-Korrekturfaktor für Chlor (höhere Zehrung bei warmem Wasser)
         temp_factor = 1.0
         if temp_ist is not None:
             if float(temp_ist) > 32:
@@ -801,7 +774,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             elif float(temp_ist) > 28:
                 temp_factor = 1.2
 
-        # StoÃƒÅ¸chlorung Faktor
+        # Stoßchlorung Faktor
         shock_factor = 1.0
         if c_ist is not None:
             if float(c_ist) < 0.1: shock_factor = 3.0
@@ -822,7 +795,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         else:
             s_g = round(min(max(raw_chlor, min_dose), 25.0), 1) if c_ist is not None else 0.0
 
-        # --- Werte fÃƒÂ¼r die Frontend-Anzeige der Berechnung ---
+        # --- Werte für die Frontend-Anzeige der Berechnung ---
         # Basiswert (ohne Faktoren)
         chlor_breakdown_base = round(chlor_base_amount_raw, 2)
 
@@ -858,7 +831,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             # Berechnung: ml = Differenz * (Dosierung / 10m3 / 0.2 pH-Schritt) * Poolvolumen
             factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
             ph_senker_ml = round(ph_diff_abs * factor * volumen, 1)
-        elif ph_diff > 0: # pH zu niedrig -> erhÃƒÂ¶hen
+        elif ph_diff > 0: # pH zu niedrig -> erhöhen
             # Berechnung: g = Differenz * (Dosierung / 10m3 / 0.1 pH-Schritt) * Poolvolumen
             factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
@@ -887,10 +860,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Check and send filter notifications
         await self._check_filter_notifications(conf)
 
-        # --- Zentrale Status-Logik fÃƒÂ¼r Warnungen ---
+        # --- Zentrale Status-Logik für Warnungen ---
         warnings = []
 
-        # Konvertierung fÃƒÂ¼r sicheren Vergleich
+        # Konvertierung für sicheren Vergleich
         current_ph = float(ph_ist) if ph_ist is not None else None
         target_ph = float(ph_ziel)
         current_c = float(c_ist) if c_ist is not None else None
@@ -906,7 +879,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Chlor Check (Schwellenwert 0.2)
         if current_c is not None:
             if current_c < 0.5:
-                warnings.append("StoÃƒÅ¸chlorung empfohlen")
+                warnings.append("Stoßchlorung empfohlen")
             elif current_c > (target_c + 0.2):
                 warnings.append("Chlor zu hoch")
             elif current_c < (target_c - 0.2) and s_g > 0:
@@ -914,10 +887,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Finaler Empfehlungstext
         if not warnings:
-            recommendation = "Ã¢Å“â€¦ Alle Werte im Zielbereich"
+            recommendation = "✅ Alle Werte im Zielbereich"
         else:
             # Kombiniere Warnungen mit " & "
-            recommendation = "Ã¢Å¡Â Ã¯Â¸Â " + " & ".join(warnings)
+            recommendation = "⚠️ " + " & ".join(warnings)
 
         # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren
         new_calc_ts = dt_util.now().isoformat()
