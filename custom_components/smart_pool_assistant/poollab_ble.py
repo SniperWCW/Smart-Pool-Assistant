@@ -44,6 +44,36 @@ class PoolLabBLEClient:
     def _on_notify(self, _sender: BleakGATTCharacteristic, _data: bytearray) -> None:
         self._notify_event.set()
 
+    async def _start_notify_with_retry(
+        self,
+        client: BleakClient,
+        attempts: int = 3,
+        delay: float = 1.5,
+    ) -> None:
+        """Start notifications, retrying transient ESPHome GATT errors."""
+        for attempt in range(1, attempts + 1):
+            try:
+                _LOGGER.debug(
+                    "Starting MISO signal notifications on %s attempt=%s/%s",
+                    SIGNAL_UUID,
+                    attempt,
+                    attempts,
+                )
+                await client.start_notify(SIGNAL_UUID, self._on_notify)
+                _LOGGER.debug("MISO signal notifications started on %s", SIGNAL_UUID)
+                return
+            except BleakError as err:
+                _LOGGER.warning(
+                    "PoolLab start_notify failed: address=%s attempt=%s/%s error=%s",
+                    self._device.address,
+                    attempt,
+                    attempts,
+                    err,
+                )
+                if attempt == attempts:
+                    raise
+                await asyncio.sleep(delay * attempt)
+
     @staticmethod
     def _hex_preview(data: bytes, limit: int = 32) -> str:
         """Return a short hex preview for debug logging."""
@@ -79,12 +109,7 @@ class PoolLabBLEClient:
 
     @staticmethod
     def _build_command(cmd_type: int, payload: bytes = b"") -> bytes:
-        frame = bytearray(128)
-        frame[0] = PREAMBLE
-        frame[1] = cmd_type
-        for i, b in enumerate(payload):
-            frame[3 + i] = b
-        return bytes(frame)
+        return bytes((PREAMBLE, cmd_type & 0xFF, (cmd_type >> 8) & 0xFF)) + payload
 
     @staticmethod
     def _parse_measurements(data: bytes) -> list[PoolLabMeasurement]:
@@ -127,8 +152,7 @@ class PoolLabBLEClient:
 
         try:
             async with client:
-                _LOGGER.debug("Starting MISO signal notifications on %s", SIGNAL_UUID)
-                await client.start_notify(SIGNAL_UUID, self._on_notify)
+                await self._start_notify_with_retry(client)
                 await asyncio.sleep(0.5)  # Wait until notifications are active
 
                 # Step 1: GET_INFO (battery @ byte 21, count @ byte 3-4)
@@ -220,8 +244,13 @@ class PoolLabBLEClient:
 
                 await client.stop_notify(SIGNAL_UUID)
                 _LOGGER.debug("Stopped MISO signal notifications on %s", SIGNAL_UUID)
-        except Exception:
-            _LOGGER.exception("BLE read failed during command flow for %s", self._device.address)
+        except Exception as err:
+            _LOGGER.warning(
+                "BLE read failed during command flow for %s: %s: %s",
+                self._device.address,
+                type(err).__name__,
+                err,
+            )
             raise
 
         latest: dict[int, PoolLabMeasurement] = {}

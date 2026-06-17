@@ -526,7 +526,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 else:
                     _LOGGER.warning("PoolLab Bluetooth device not found: %s", ble_address)
             except Exception as err:
-                _LOGGER.error("Error fetching PoolLab BLE data: %s", err)
+                _LOGGER.warning(
+                    "PoolLab BLE read failed, using fallback data if available: address=%s error_type=%s error=%s",
+                    ble_address,
+                    type(err).__name__,
+                    err,
+                )
 
         # 2. Versuch: Cloud-Daten nur dann als Fallback holen, wenn BLE
         # komplett nicht verfügbar war. Sonst würde die Cloud die frischere
