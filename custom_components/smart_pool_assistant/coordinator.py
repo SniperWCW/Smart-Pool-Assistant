@@ -18,7 +18,8 @@ from .const import (
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
     CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
-    CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD
+    CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
+    CONF_WEATHER_ENTITY,
 )
 from .poollab_ble import PoolLabBLEClient
 
@@ -122,6 +123,53 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         history.pop("bluetooth_connected", None)
 
         return history
+
+    def _get_weather_forecast_today(self, conf):
+        """Return normalized weather data for today's daily forecast."""
+        entity_id = conf.get(CONF_WEATHER_ENTITY)
+        if not entity_id:
+            return None
+
+        state = self.hass.states.get(entity_id)
+        if state is None:
+            return {"entity_id": entity_id, "available": False}
+
+        forecast = state.attributes.get("forecast")
+        if not isinstance(forecast, list) or not forecast:
+            return {"entity_id": entity_id, "available": True, "has_forecast": False}
+
+        today = dt_util.now().date()
+        selected = None
+        for item in forecast:
+            if not isinstance(item, dict):
+                continue
+            dt_raw = item.get("datetime")
+            if dt_raw:
+                parsed = dt_util.parse_datetime(dt_raw)
+                if parsed is not None and dt_util.as_local(parsed).date() == today:
+                    selected = item
+                    break
+            if selected is None:
+                selected = item
+
+        if selected is None:
+            return {"entity_id": entity_id, "available": True, "has_forecast": False}
+
+        precipitation_probability = selected.get("precipitation_probability")
+        precipitation_amount = selected.get("precipitation")
+        uv_index = selected.get("uv_index")
+
+        return {
+            "entity_id": entity_id,
+            "available": True,
+            "has_forecast": True,
+            "condition": selected.get("condition"),
+            "uv_index": float(uv_index) if uv_index is not None else None,
+            "precipitation_probability": float(precipitation_probability) if precipitation_probability is not None else None,
+            "precipitation_amount": float(precipitation_amount) if precipitation_amount is not None else None,
+            "wind_speed": float(selected.get("wind_speed")) if selected.get("wind_speed") is not None else None,
+            "temperature": float(selected.get("temperature")) if selected.get("temperature") is not None else None,
+        }
 
     def _parse_ts_aware(self, ts_str: str | None):
         """Helper to parse a timestamp string into an aware datetime object."""
@@ -253,11 +301,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     def _collect_last_activities(self) -> list[dict]:
         """Build a compact activity list from stored maintenance actions."""
+        visible_activity_types = {"chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"}
         items = self.maintenance_history.get("last_activities")
         if isinstance(items, list) and items:
             normalized = []
             for entry in items:
                 if not isinstance(entry, dict):
+                    continue
+                if entry.get("type") not in visible_activity_types:
                     continue
                 raw_ts = entry.get("raw_ts")
                 dt = self._parse_ts_aware(raw_ts)
@@ -278,7 +329,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Fallback für ältere gespeicherte Daten ohne Aktivitätsliste
         items = []
 
-        for key in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace", "set_covered", "set_usage"):
+        for key in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"):
             entry = self.maintenance_history.get(key)
             if not isinstance(entry, dict):
                 continue
@@ -336,6 +387,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         """Log maintenance action and send notifications."""
         now = dt_util.now()
         ts_formatted = now.strftime("%d.%m. %H:%M")
+        visible_activity_types = {"chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"}
 
         label = ""
         unit = ""
@@ -359,6 +411,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             action_text = f"{amount:g}{unit} {label}" if amount else label
 
         stored_amount = None if m_type in ("filter_clean", "filter_replace") else amount
+
+        if m_type in ("set_covered", "set_usage"):
+            self.maintenance_history[m_type] = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+            await self._store.async_save(self.maintenance_history)
+            await self.async_request_refresh()
+            return
 
         # Update history for chemicals and filter
         if m_type in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace", "set_covered", "set_usage"):
@@ -906,6 +964,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         dt_last_chlor_action = self._get_action_dt("chlor")
         dt_last_ph_plus_action = self._get_action_dt("ph_plus")
         dt_last_ph_minus_action = self._get_action_dt("ph_minus")
+        weather_today = self._get_weather_forecast_today(conf)
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
@@ -950,6 +1009,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "awaiting_retest_chlor": False,
                 "awaiting_retest_ph": False,
                 "awaiting_retest_since": None,
+                "weather_entity": conf.get(CONF_WEATHER_ENTITY),
+                "weather_available": weather_today.get("available") if isinstance(weather_today, dict) else False,
+                "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
+                "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
+                "weather_rain_amount_today": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
+                "weather_note": None,
+                "chlor_breakdown_uv_adj": 0.0,
                 "history": self.maintenance_history,
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
@@ -979,6 +1045,17 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Offenes Becken erhöht den Zielbedarf leicht.
         env_target_extra = 0.0 if self.pool_covered else 0.3
 
+        # UV ist ein direkterer Treiber fuer Chlorabbau als Bewoelkung.
+        # Die Zuschlaege bleiben bewusst konservativ.
+        uv_target_extra = 0.0
+        if weather_today and weather_today.get("has_forecast"):
+            uv_index = weather_today.get("uv_index")
+            if uv_index is not None:
+                if uv_index >= 8:
+                    uv_target_extra = 0.6
+                elif uv_index >= 6:
+                    uv_target_extra = 0.3
+
         # Nutzung wird ebenfalls als zusätzlicher Konzentrationsbedarf modelliert.
         bather_target_extra = 0.0
         if self.usage_mode == "normal":
@@ -998,7 +1075,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             elif float(c_ist) < 1.0:
                 shock_target = 2.0
 
-        base_target_with_conditions = float(c_ziel) + temp_target_extra + env_target_extra
+        base_target_with_conditions = float(c_ziel) + temp_target_extra + env_target_extra + uv_target_extra
         effective_target = base_target_with_conditions + bather_target_extra
         if shock_target > 0:
             effective_target = max(base_target_with_conditions, shock_target) + bather_target_extra
@@ -1018,6 +1095,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         chlor_base_amount_raw = c_diff * volume_m3 / wirkstoff
         chlor_breakdown_temp_adj_raw = temp_target_extra * volume_m3 / wirkstoff
         chlor_breakdown_env_adj_raw = env_target_extra * volume_m3 / wirkstoff
+        chlor_breakdown_uv_adj_raw = uv_target_extra * volume_m3 / wirkstoff
         chlor_breakdown_bather_adj_raw = bather_target_extra * volume_m3 / wirkstoff
         chlor_breakdown_shock_adj_raw = max(shock_target - base_target_with_conditions, 0.0) * volume_m3 / wirkstoff
         target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
@@ -1039,6 +1117,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Zusätzlicher Bedarf durch Abdeckung
         chlor_breakdown_env_adj = round(chlor_breakdown_env_adj_raw, 2)
+        chlor_breakdown_uv_adj = round(chlor_breakdown_uv_adj_raw, 2)
 
         # Zusätzlicher Bedarf durch Badelast
         chlor_breakdown_bather_adj = round(chlor_breakdown_bather_adj_raw, 2)
@@ -1048,6 +1127,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # Mindestdosis, falls angewendet
         chlor_breakdown_min_dose_applied = round(min_dose, 2) if (s_g > 0 and raw_chlor < min_dose) else 0.0
+
+        weather_note = None
+        if weather_today and weather_today.get("has_forecast"):
+            rain_probability = weather_today.get("precipitation_probability")
+            rain_amount = weather_today.get("precipitation_amount")
+            if (rain_amount is not None and rain_amount >= 10.0) or (rain_probability is not None and rain_probability >= 70.0):
+                weather_note = "Regen erwartet: Danach moeglichst erneut messen."
 
         # pH Berechnung
         ph_diff = ph_ziel - ph_ist if ph_ist is not None else 0
@@ -1196,6 +1282,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "chlor_breakdown_shock_adj": chlor_breakdown_shock_adj,
             "chlor_breakdown_temp_adj": chlor_breakdown_temp_adj,
             "chlor_breakdown_env_adj": chlor_breakdown_env_adj,
+            "chlor_breakdown_uv_adj": chlor_breakdown_uv_adj,
             "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
             "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
             "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
@@ -1208,6 +1295,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "awaiting_retest_chlor": awaiting_retest_chlor,
             "awaiting_retest_ph": awaiting_retest_ph,
             "awaiting_retest_since": awaiting_retest_since,
+            "weather_entity": conf.get(CONF_WEATHER_ENTITY),
+            "weather_available": weather_today.get("available") if isinstance(weather_today, dict) else False,
+            "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
+            "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
+            "weather_rain_amount_today": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
+            "weather_note": weather_note,
             "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,
             "usage_mode": self.usage_mode,

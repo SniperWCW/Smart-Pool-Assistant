@@ -1,5 +1,13 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.21] - 2026-06-18
+
+- **Wetter in der Lovelace-Karte**: Zwischen Empfehlung und weiteren Bereichen kann jetzt eine Vorhersage fuer heute und morgen aus einer konfigurierbaren `weather`-Entitaet angezeigt werden, inklusive Sonne/UV, Regen und Wind.
+- **Optionale Wetterquelle in der Integration**: Config Flow und Options Flow unterstuetzen jetzt eine `weather`-Entitaet direkt in der Integration, statt die Wetterlogik nur an die Kartenkonfiguration zu binden.
+- **Konservative Wetterlogik fuer Chlor**: Hoher `uv_index` erhoeht den Chlor-Zielbedarf leicht ueber einen separaten `UV-Zuschlag` im Breakdown.
+- **Regen als Nachmess-Hinweis**: Erwarteter starker Regen fuehrt zunaechst nicht zu harter Ueberdosierung, sondern zu einem expliziten Hinweis, danach moeglichst erneut zu messen.
+- **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `RELEASE_NOTES_V1.0.21.md` auf den aktuellen Stand gebracht.
+
 ## [1.0.20] - 2026-06-18
 
 - **Nutzungsmodus korrigiert**: `none`, `normal` und `party` beeinflussen die finale Chlorempfehlung jetzt auch bei aktivem Stoßchlor-Ziel. Zuvor war die Endmenge in solchen Fällen fälschlich identisch, obwohl sich nur die Breakdown-Zeilen änderten.

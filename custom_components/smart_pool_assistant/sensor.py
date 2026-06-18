@@ -120,6 +120,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_breakdown_shock_adj": data.get("chlor_breakdown_shock_adj"),
             "chlor_breakdown_temp_adj": data.get("chlor_breakdown_temp_adj"),
             "chlor_breakdown_env_adj": data.get("chlor_breakdown_env_adj"),
+            "chlor_breakdown_uv_adj": data.get("chlor_breakdown_uv_adj"),
             "chlor_breakdown_bather_adj": data.get("chlor_breakdown_bather_adj"),
             "chlor_breakdown_sum_raw": data.get("chlor_breakdown_sum_raw"),
             "chlor_breakdown_min_dose_applied": data.get("chlor_breakdown_min_dose_applied"),
@@ -135,6 +136,12 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "awaiting_retest_chlor": data.get("awaiting_retest_chlor"),
             "awaiting_retest_ph": data.get("awaiting_retest_ph"),
             "awaiting_retest_since": data.get("awaiting_retest_since"),
+            "weather_entity": data.get("weather_entity"),
+            "weather_available": data.get("weather_available"),
+            "weather_uv_today": data.get("weather_uv_today"),
+            "weather_rain_probability_today": data.get("weather_rain_probability_today"),
+            "weather_rain_amount_today": data.get("weather_rain_amount_today"),
+            "weather_note": data.get("weather_note"),
         }
 
     @property

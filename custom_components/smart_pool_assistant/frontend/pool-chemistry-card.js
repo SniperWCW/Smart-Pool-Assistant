@@ -145,6 +145,180 @@ class PoolChemistryCard extends HTMLElement {
     }
   }
 
+  _resolveWeatherEntity() {
+    if (!this._hass) return null;
+
+    const configured = this.config?.weather_entity;
+    if (configured && this._hass.states[configured]) {
+      return configured;
+    }
+
+    const fallback = this._lastAttr?.weather_entity;
+    if (fallback && this._hass.states[fallback]) {
+      return fallback;
+    }
+
+    return null;
+  }
+
+  _getWeatherConditionLabel(condition) {
+    const labels = {
+      clear: "Klar",
+      clear_night: "Klar",
+      cloudy: "Bewoelkt",
+      exceptional: "Extrem",
+      fog: "Nebel",
+      hail: "Hagel",
+      lightning: "Gewitter",
+      lightning_rainy: "Gewitterregen",
+      partlycloudy: "Sonne/Wolken",
+      pouring: "Starkregen",
+      rainy: "Regen",
+      snowy: "Schnee",
+      snowy_rainy: "Schneeregen",
+      sunny: "Sonnig",
+      windy: "Windig",
+      windy_variant: "Windig",
+    };
+
+    return labels[condition] || condition || "--";
+  }
+
+  _getWeatherIcon(condition) {
+    const icons = {
+      clear: "mdi:weather-sunny",
+      clear_night: "mdi:weather-night",
+      cloudy: "mdi:weather-cloudy",
+      exceptional: "mdi:weather-hurricane",
+      fog: "mdi:weather-fog",
+      hail: "mdi:weather-hail",
+      lightning: "mdi:weather-lightning",
+      lightning_rainy: "mdi:weather-lightning-rainy",
+      partlycloudy: "mdi:weather-partly-cloudy",
+      pouring: "mdi:weather-pouring",
+      rainy: "mdi:weather-rainy",
+      snowy: "mdi:weather-snowy",
+      snowy_rainy: "mdi:weather-snowy-rainy",
+      sunny: "mdi:weather-sunny",
+      windy: "mdi:weather-windy",
+      windy_variant: "mdi:weather-windy-variant",
+    };
+
+    return icons[condition] || "mdi:weather-partly-cloudy";
+  }
+
+  _formatWeatherValue(value, suffix = "") {
+    if (value === undefined || value === null || value === "") {
+      return "--";
+    }
+
+    const num = Number(value);
+    if (Number.isFinite(num)) {
+      return `${num.toFixed(0)}${suffix}`;
+    }
+
+    return `${value}${suffix}`;
+  }
+
+  _formatWeatherWind(value) {
+    if (value === undefined || value === null || value === "") {
+      return "--";
+    }
+
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      return `${value}`;
+    }
+
+    return num >= 20 ? `${num.toFixed(0)} km/h` : `${num.toFixed(1)} m/s`;
+  }
+
+  _getForecastDays(weatherState) {
+    const forecast = weatherState?.attributes?.forecast;
+    if (!Array.isArray(forecast) || forecast.length === 0) {
+      return [];
+    }
+
+    return forecast.slice(0, 2).map((entry, index) => {
+      const date = entry.datetime ? new Date(entry.datetime) : null;
+      const fallbackLabel = index === 0 ? "Heute" : "Morgen";
+      const label = date
+        ? date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })
+        : fallbackLabel;
+
+      return {
+        label: index === 0 ? `Heute · ${label}` : `Morgen · ${label}`,
+        condition: entry.condition,
+        precipitation: entry.precipitation_probability ?? entry.precipitation ?? null,
+        uv: entry.uv_index ?? null,
+        wind: entry.wind_speed ?? null,
+        temperature: entry.temperature ?? null,
+        templow: entry.templow ?? null,
+      };
+    });
+  }
+
+  _renderWeatherSection() {
+    const weatherEntityId = this._resolveWeatherEntity();
+    const container = this.querySelector('#weather-forecast-section');
+    if (!container) return;
+
+    if (!weatherEntityId) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    const weatherState = this._hass?.states?.[weatherEntityId];
+    const days = this._getForecastDays(weatherState);
+
+    if (!weatherState) {
+      container.style.display = 'block';
+      container.innerHTML = `
+        <div class="section-title">Wetter heute & morgen</div>
+        <div class="weather-empty">Wetter-Entitaet <b>${weatherEntityId}</b> nicht gefunden.</div>
+      `;
+      return;
+    }
+
+    if (days.length === 0) {
+      container.style.display = 'block';
+      container.innerHTML = `
+        <div class="section-title">Wetter heute & morgen</div>
+        <div class="weather-empty">
+          Keine Forecast-Daten im Attribut <code>forecast</code> gefunden.
+          Mit Tomorrow.io funktioniert das nur, wenn die Wetter-Entitaet die Tagesvorhersage direkt bereitstellt.
+        </div>
+      `;
+      return;
+    }
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div class="section-title">Wetter heute & morgen</div>
+      <div class="weather-grid">
+        ${days.map((day) => `
+          <div class="weather-card">
+            <div class="weather-head">
+              <div class="weather-day">${day.label}</div>
+              <ha-icon icon="${this._getWeatherIcon(day.condition)}"></ha-icon>
+            </div>
+            <div class="weather-condition">${this._getWeatherConditionLabel(day.condition)}</div>
+            <div class="weather-temp">
+              ${this._formatWeatherValue(day.temperature, "°")} / ${this._formatWeatherValue(day.templow, "°")}
+            </div>
+            <div class="weather-metrics">
+              <div class="weather-metric"><span>Sonne/UV</span><b>${this._formatWeatherValue(day.uv)}</b></div>
+              <div class="weather-metric"><span>Regen</span><b>${this._formatWeatherValue(day.precipitation, "%")}</b></div>
+              <div class="weather-metric"><span>Wind</span><b>${this._formatWeatherWind(day.wind)}</b></div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      ${this._lastAttr?.weather_note ? `<div class="weather-note">${this._lastAttr.weather_note}</div>` : ""}
+    `;
+  }
+
   set hass(hass) {
     this._hass = hass;
     if (!this.config || !hass) return;
@@ -201,6 +375,8 @@ class PoolChemistryCard extends HTMLElement {
                 </div>
               </div>
             </div>
+
+            <div id="weather-forecast-section" class="measurements-section" style="display: none;"></div>
 
             <div id="layzspa-container"></div>
 
@@ -374,6 +550,65 @@ class PoolChemistryCard extends HTMLElement {
             .fetch-status {
               margin-top: 0;
               white-space: normal;
+            }
+            .weather-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+              gap: 10px;
+            }
+            .weather-card {
+              border: 1px solid var(--divider-color);
+              border-radius: 10px;
+              padding: 10px;
+              background: var(--card-background-color);
+            }
+            .weather-head {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 8px;
+            }
+            .weather-head ha-icon {
+              color: var(--primary-color);
+              --mdc-icon-size: 24px;
+            }
+            .weather-day {
+              font-weight: 700;
+            }
+            .weather-condition {
+              margin-top: 4px;
+              font-size: 0.9em;
+              opacity: 0.85;
+            }
+            .weather-temp {
+              margin-top: 8px;
+              font-size: 1.1em;
+              font-weight: 700;
+            }
+            .weather-metrics {
+              margin-top: 10px;
+              display: grid;
+              gap: 6px;
+            }
+            .weather-metric {
+              display: flex;
+              justify-content: space-between;
+              gap: 12px;
+              font-size: 0.9em;
+            }
+            .weather-metric span {
+              opacity: 0.7;
+            }
+            .weather-empty {
+              font-size: 0.9em;
+              opacity: 0.8;
+              line-height: 1.4;
+            }
+            .weather-note {
+              margin-top: 10px;
+              font-size: 0.9em;
+              color: var(--warning-color, #FF9800);
+              font-weight: 600;
             }
             .history-table .table-row .table-label { min-width: 0; }
             .history-table .table-row .table-value { font-weight: 600; }
@@ -654,11 +889,10 @@ class PoolChemistryCard extends HTMLElement {
     const lastActivities = Array.isArray(attr.last_activities) && attr.last_activities.length
       ? attr.last_activities
       : (Array.isArray(hist.last_activities) ? hist.last_activities : []);
-    const hasMaintenance = lastActivities.length > 0 || !!hist.last_action;
+    const hasMaintenance = lastActivities.length > 0;
     if (hasMaintenance) {
       maintenanceSection.style.display = 'block';
-      this.querySelector('#maintenance-info').innerHTML = lastActivities.length
-        ? `
+      this.querySelector('#maintenance-info').innerHTML = `
           <div class="table-head">
             <div>Aktion</div>
             <div>Detail</div>
@@ -676,8 +910,7 @@ class PoolChemistryCard extends HTMLElement {
               </div>
             `;
           }).join('')}
-        `
-        : `<div class="table-row"><div class="table-label">Aktivität</div><div class="table-value">✅ ${(hist.last_action || '').replace(/^0\s+/, '')}</div><div class="table-meta">--</div></div>`;
+        `;
     } else {
       maintenanceSection.style.display = 'none';
     }
@@ -754,6 +987,7 @@ class PoolChemistryCard extends HTMLElement {
         <div class="table-meta">${fetchUi.meta}</div>
       </div>
     `;
+    this._renderWeatherSection();
     const fetchButton = this.querySelector('#btn-poollab-fetch');
     if (fetchButton) {
       fetchButton.onclick = () => this._pressPoolLabFetchButton();
@@ -814,6 +1048,7 @@ class PoolChemistryCard extends HTMLElement {
       const shockAdj = Number(attr.chlor_breakdown_shock_adj || 0);
       const tempAdj = Number(attr.chlor_breakdown_temp_adj || 0);
       const envAdj = Number(attr.chlor_breakdown_env_adj || 0);
+      const uvAdj = Number(attr.chlor_breakdown_uv_adj || 0);
       const batherAdj = Number(attr.chlor_breakdown_bather_adj || 0);
       const sumRaw = Number(attr.chlor_breakdown_sum_raw || 0);
       const minDoseApplied = Number(attr.chlor_breakdown_min_dose_applied || 0);
@@ -830,6 +1065,9 @@ class PoolChemistryCard extends HTMLElement {
       }
       if (envAdj !== 0) {
         breakdownHtml += `<div class="breakdown-item">Offenes Becken: <span>${envAdj > 0 ? '+' : ''}${envAdj.toFixed(2)}g</span></div>`;
+      }
+      if (uvAdj !== 0) {
+        breakdownHtml += `<div class="breakdown-item">UV-Zuschlag: <span>${uvAdj > 0 ? '+' : ''}${uvAdj.toFixed(2)}g</span></div>`;
       }
       if (batherAdj !== 0) {
         breakdownHtml += `<div class="breakdown-item">Nutzung: <span>${batherAdj > 0 ? '+' : ''}${batherAdj.toFixed(2)}g</span></div>`;
@@ -1163,6 +1401,7 @@ class PoolChemistryCardEditor extends HTMLElement {
       this.innerHTML = `
         <div class="card-config" style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
           <ha-entity-picker id="main-picker" label="Empfehlungs-Entität (Hauptsensor)" allow-custom-entity></ha-entity-picker>
+          <ha-entity-picker id="weather-picker" label="Wetter-Entitaet (optional)" allow-custom-entity></ha-entity-picker>
           <ha-entity-picker id="fetch-button-picker" label="PoolLab-Abruf-Button (optional)" allow-custom-entity></ha-entity-picker>
           <div style="font-size: 0.8em; opacity: 0.7;">Leer lassen = automatische Erkennung von <code>button.poollab_messwerte_abrufen</code>.</div>
           <hr style="width: 100%; border: 0.5px solid var(--divider-color);">
@@ -1175,6 +1414,7 @@ class PoolChemistryCardEditor extends HTMLElement {
       `;
 
       this.querySelector('#main-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
+      this.querySelector('#weather-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
       this.querySelector('#fetch-button-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
       this.querySelector('#lz-enabled-switch').addEventListener('change', (ev) => this._toggleLayzSpa(ev));
       this._initialized = true;
@@ -1186,6 +1426,14 @@ class PoolChemistryCardEditor extends HTMLElement {
       mainPicker.hass = this._hass;
       mainPicker.value = this._config.recommendation_entity;
       mainPicker.configValue = "recommendation_entity";
+    }
+
+    const weatherPicker = this.querySelector('#weather-picker');
+    if (weatherPicker) {
+      weatherPicker.hass = this._hass;
+      weatherPicker.value = this._config.weather_entity || "";
+      weatherPicker.configValue = "weather_entity";
+      weatherPicker.includeDomains = ["weather"];
     }
 
     const fetchButtonPicker = this.querySelector('#fetch-button-picker');
@@ -1249,5 +1497,6 @@ if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
     console.info("%c SMART-POOL-ASSISTANT %c 1.0.20 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
+
 
 

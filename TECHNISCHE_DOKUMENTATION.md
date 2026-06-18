@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-17  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-18 auf Basis von `manifest.json` Version `1.0.20`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, neuer volumenbezogener Chlorlogik und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-18 auf Basis von `manifest.json` Version `1.0.21`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, volumenbezogener Chlorlogik, optionaler Wetterintegration und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -123,7 +123,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],

@@ -23,3 +23,4 @@ CONF_FILTER_CLEAN_YELLOW_THRESHOLD = "filter_clean_yellow_threshold" # Days befo
 CONF_FILTER_CLEAN_RED_THRESHOLD = "filter_clean_red_threshold" # Days before interval
 CONF_FILTER_REPLACE_YELLOW_THRESHOLD = "filter_replace_yellow_threshold" # Days before interval
 CONF_FILTER_REPLACE_RED_THRESHOLD = "filter_replace_red_threshold" # Days before interval
+CONF_WEATHER_ENTITY = "weather_entity"
