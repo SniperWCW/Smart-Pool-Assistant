@@ -223,7 +223,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         conf = self.config
         entities = []
         # Nur Entitäten überwachen, die auch wirklich konfiguriert wurden
-        for key in [CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR]:
+        for key in [CONF_CHLOR_SENSOR, CONF_PH_SENSOR]:
             if eid := conf.get(key):
                 entities.append(eid)
 
@@ -288,7 +288,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     async def _handle_state_change(self, event):
         """Handle state changes of source entities."""
         new_state = event.data.get("new_state")
-        old_state = event.data.get("old_state")
 
         if new_state is None or new_state.state in ("unknown", "unavailable", "none", "null"):
             return
@@ -595,7 +594,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             temp_ist = m_temp.value
                             temp_source = "Bluetooth"
                             self.maintenance_history["last_ble_temp"] = m_temp.value
-                            ble_ts_list.append(m_temp.timestamp)
                         if m_cya := ble_data.measurements.get(11):
                             self.maintenance_history["cyanuric_acid"] = m_cya.value
 
@@ -678,8 +676,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             measurements = cloud_data["Accounts"][0].get("Measurements", [])
                             measurements.sort(key=lambda x: x.get("timestamp") or 0, reverse=True)
 
-                            # Neuesten Zeitstempel aus Cloud erfassen
-                            if measurements and (latest_ts := measurements[0].get("timestamp")):
+                            chemistry_measurements = [
+                                obs for obs in measurements
+                                if obs.get("parameter") in ("PL Chlorine Free", "PL pH")
+                            ]
+
+                            # Neuesten Zeitstempel nur aus Chemiewerten erfassen
+                            if chemistry_measurements and (latest_ts := chemistry_measurements[0].get("timestamp")):
                                 cloud_ts_iso = dt_util.utc_from_timestamp(latest_ts).isoformat()
                                 self.maintenance_history["last_api_measurement_raw"] = cloud_ts_iso
 
