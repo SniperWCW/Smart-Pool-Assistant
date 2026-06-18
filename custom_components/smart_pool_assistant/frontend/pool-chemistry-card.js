@@ -823,16 +823,16 @@ class PoolChemistryCard extends HTMLElement {
         <div class="breakdown-item">Basis (Ziel-Ist): <span>${base.toFixed(2)}g</span></div>
       `;
       if (shockAdj !== 0) {
-        breakdownHtml += `<div class="breakdown-item">Schock-Faktor: <span>${shockAdj > 0 ? '+' : ''}${shockAdj.toFixed(2)}g</span></div>`;
+        breakdownHtml += `<div class="breakdown-item">Stoßchlor-Ziel: <span>${shockAdj > 0 ? '+' : ''}${shockAdj.toFixed(2)}g</span></div>`;
       }
       if (tempAdj !== 0) {
-        breakdownHtml += `<div class="breakdown-item">Temperatur-Korrektur: <span>${tempAdj > 0 ? '+' : ''}${tempAdj.toFixed(2)}g</span></div>`;
+        breakdownHtml += `<div class="breakdown-item">Temperatur-Zuschlag: <span>${tempAdj > 0 ? '+' : ''}${tempAdj.toFixed(2)}g</span></div>`;
       }
       if (envAdj !== 0) {
-        breakdownHtml += `<div class="breakdown-item">Abdeckung: <span>${envAdj > 0 ? '+' : ''}${envAdj.toFixed(2)}g</span></div>`;
+        breakdownHtml += `<div class="breakdown-item">Offenes Becken: <span>${envAdj > 0 ? '+' : ''}${envAdj.toFixed(2)}g</span></div>`;
       }
       if (batherAdj !== 0) {
-        breakdownHtml += `<div class="breakdown-item">Nutzung (Badelast): <span>${batherAdj > 0 ? '+' : ''}${batherAdj.toFixed(2)}g</span></div>`;
+        breakdownHtml += `<div class="breakdown-item">Nutzung: <span>${batherAdj > 0 ? '+' : ''}${batherAdj.toFixed(2)}g</span></div>`;
       }
 
       breakdownHtml += `
@@ -841,8 +841,8 @@ class PoolChemistryCard extends HTMLElement {
 
       if (minDoseApplied > 0) {
         breakdownHtml += `<div class="breakdown-item">Mindestdosis angewendet: <span>+${(minDoseApplied - sumRaw).toFixed(2)}g</span></div>`;
-      } else if (finalDose !== sumRaw) { // Falls Maximaldosis angewendet wurde
-        breakdownHtml += `<div class="breakdown-item">Maximaldosis angewendet: <span>${(finalDose - sumRaw).toFixed(2)}g</span></div>`;
+      } else if (finalDose !== sumRaw) { // Falls die obere Stoßgrenze angewendet wurde
+        breakdownHtml += `<div class="breakdown-item">Stoßgrenze angewendet: <span>${(finalDose - sumRaw).toFixed(2)}g</span></div>`;
       }
 
       breakdownHtml += `
@@ -1247,7 +1247,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 1.0.16 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 1.0.19 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

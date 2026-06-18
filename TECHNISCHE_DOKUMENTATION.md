@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-17  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-18 auf Basis von `manifest.json` Version `1.0.16`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-18 auf Basis von `manifest.json` Version `1.0.19`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, neuer volumenbezogener Chlorlogik und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -123,7 +123,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.16",
+  "version": "1.0.19",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -677,51 +677,57 @@ Eingänge:
 
 ### Aktuelle Faktoren
 
-#### Temperaturfaktor
+Die Basisdosis wird aus `Ziel - Ist`, Volumen und Wirkstoffanteil berechnet.
+Alle Zusatzlogiken arbeiten als zusaetzliche Zielkonzentration in `mg/l`
+(Temperatur, offenes Becken, Nutzung, Stoßchlorung). Erst ganz am Ende wird
+die benoetigte Gesamtkonzentration ueber das konfigurierte Poolvolumen und den
+Wirkstoffanteil in Gramm Produkt umgerechnet.
+
+#### Temperatur-Zuschlag
 
 ```text
-> 32 °C  -> 1.5
-> 28 °C  -> 1.2
-sonst    -> 1.0
+> 32 °C  -> +0.7 mg/l
+> 28 °C  -> +0.3 mg/l
+sonst    -> +0.0 mg/l
 ```
 
-#### Shock-Faktor
+#### Stoßchlor-Ziel
 
 ```text
-chlor < 0.1 -> 3.0
-chlor < 0.3 -> 2.4
-chlor < 0.6 -> 1.8
-chlor < 1.0 -> 1.3
-sonst       -> 1.0
+chlor < 0.1 -> Ziel 5.0 mg/l
+chlor < 0.3 -> Ziel 4.0 mg/l
+chlor < 0.6 -> Ziel 3.0 mg/l
+chlor < 1.0 -> Ziel 2.0 mg/l
+sonst       -> kein Stoßziel
 ```
 
-#### Abdeckungsfaktor
+#### Abdeckungs-Zuschlag
 
 ```text
-abgedeckt -> 0.8
-offen     -> 1.2
+abgedeckt -> +0.0 mg/l
+offen     -> +0.3 mg/l
 ```
 
 #### Nutzungsmodus
 
 ```text
-none   -> +0.0 g
-normal -> +3.0 g
-party  -> +8.0 g
+none   -> +0.0 mg/l
+normal -> +0.5 mg/l
+party  -> +1.0 mg/l
 ```
 
 #### Mindestdosis
 
 ```text
-chlor < 0.3 -> 6.0 g
-chlor < 0.8 -> 3.0 g
-sonst       -> 2.0 g
+chlor < 0.3 -> 6.0 g pro m³
+chlor < 0.8 -> 3.0 g pro m³
+sonst       -> 2.0 g pro m³
 ```
 
 #### Maximaldosis
 
 ```text
-25.0 g
+maximales Ziel: 10.0 mg/l freies Chlor
 ```
 
 #### Zielwert-Sperre
@@ -740,7 +746,7 @@ chlor_dose = 0.0
 `chlor_pre` wird aktuell berechnet als:
 
 ```python
-round(max(chlor_dose * 0.3, 1.0), 1) if chlor_dose > 0 else 0.0
+round(max(chlor_dose * 0.3, 1.0 * pool_volume), 1) if chlor_dose > 0 else 0.0
 ```
 
 ### Breakdown-Werte

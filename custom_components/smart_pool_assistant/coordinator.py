@@ -963,65 +963,84 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if wirkstoff <= 0:
             wirkstoff = 0.56 # Schutz vor Division durch Null
 
-        # Nutzungs- und Abdeckungsfaktoren
-        # Wenn offen, erhöhen wir die Grundzehrung (UV-Verlust)
-        env_factor = 0.8 if self.pool_covered else 1.2
-
-        # Badelast-Zuschlag in Gramm (Absolutwerte)
-        bather_load_extra = 0.0
-        if self.usage_mode == "normal": bather_load_extra = 3.0
-        elif self.usage_mode == "party": bather_load_extra = 8.0
+        volume_m3 = max(float(volumen), 0.0)
 
         # Chlor Berechnung
         c_diff = max(float(c_ziel) - float(c_ist), 0) if c_ist is not None else 0
 
-        # Temperatur-Korrekturfaktor für Chlor (höhere Zehrung bei warmem Wasser)
-        temp_factor = 1.0
+        # Temperatur-Zuschlag als zusätzliche Zielkonzentration in mg/l.
+        temp_target_extra = 0.0
         if temp_ist is not None:
             if float(temp_ist) > 32:
-                temp_factor = 1.5
+                temp_target_extra = 0.7
             elif float(temp_ist) > 28:
-                temp_factor = 1.2
+                temp_target_extra = 0.3
 
-        # Stoßchlorung Faktor
-        shock_factor = 1.0
+        # Offenes Becken erhöht den Zielbedarf leicht.
+        env_target_extra = 0.0 if self.pool_covered else 0.3
+
+        # Nutzung wird ebenfalls als zusätzlicher Konzentrationsbedarf modelliert.
+        bather_target_extra = 0.0
+        if self.usage_mode == "normal":
+            bather_target_extra = 0.5
+        elif self.usage_mode == "party":
+            bather_target_extra = 1.0
+
+        # Stoßchlorung als volumenbezogener Zielwert in mg/l.
+        shock_target = 0.0
         if c_ist is not None:
-            if float(c_ist) < 0.1: shock_factor = 3.0
-            elif float(c_ist) < 0.3: shock_factor = 2.4
-            elif float(c_ist) < 0.6: shock_factor = 1.8
-            elif float(c_ist) < 1.0: shock_factor = 1.3
+            if float(c_ist) < 0.1:
+                shock_target = 5.0
+            elif float(c_ist) < 0.3:
+                shock_target = 4.0
+            elif float(c_ist) < 0.6:
+                shock_target = 3.0
+            elif float(c_ist) < 1.0:
+                shock_target = 2.0
 
-        # Mindestdosis
-        min_dose = 2.0
+        effective_target = float(c_ziel) + temp_target_extra + env_target_extra + bather_target_extra
+        if shock_target > 0:
+            effective_target = max(effective_target, shock_target)
+
+        # Mindestdosis in g pro m³.
+        min_dose = 2.0 * volume_m3
         if c_ist is not None:
-            if float(c_ist) < 0.3: min_dose = 6.0
-            elif float(c_ist) < 0.8: min_dose = 3.0
+            if float(c_ist) < 0.3:
+                min_dose = 6.0 * volume_m3
+            elif float(c_ist) < 0.8:
+                min_dose = 3.0 * volume_m3
 
-        chlor_base_amount_raw = (c_diff * volumen / wirkstoff)
-        raw_chlor = (chlor_base_amount_raw * shock_factor * env_factor * temp_factor) + bather_load_extra
+        # Obergrenze als maximale Stoßchlor-Konzentration.
+        max_target = 10.0
+        max_dose = max(max_target - float(c_ist or 0.0), 0.0) * volume_m3 / wirkstoff
+
+        chlor_base_amount_raw = c_diff * volume_m3 / wirkstoff
+        chlor_breakdown_temp_adj_raw = temp_target_extra * volume_m3 / wirkstoff
+        chlor_breakdown_env_adj_raw = env_target_extra * volume_m3 / wirkstoff
+        chlor_breakdown_bather_adj_raw = bather_target_extra * volume_m3 / wirkstoff
+        chlor_breakdown_shock_adj_raw = max(shock_target - (float(c_ziel) + temp_target_extra + env_target_extra + bather_target_extra), 0.0) * volume_m3 / wirkstoff
+        target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
+        raw_chlor = target_diff * volume_m3 / wirkstoff
         if c_ist is not None and c_ist >= c_ziel:
             s_g = 0.0
         else:
-            s_g = round(min(max(raw_chlor, min_dose), 25.0), 1) if c_ist is not None else 0.0
+            s_g = round(min(max(raw_chlor, min_dose), max_dose), 1) if c_ist is not None else 0.0
 
         # --- Werte für die Frontend-Anzeige der Berechnung ---
         # Basiswert (ohne Faktoren)
         chlor_breakdown_base = round(chlor_base_amount_raw, 2)
 
-        # Anpassung durch Schock-Faktor
-        chlor_after_shock = chlor_base_amount_raw * shock_factor
-        chlor_breakdown_shock_adj = round(chlor_after_shock - chlor_base_amount_raw, 2)
+        # Zusätzlicher Bedarf durch Stoßchlor-Ziel
+        chlor_breakdown_shock_adj = round(chlor_breakdown_shock_adj_raw, 2)
 
-        # Anpassung durch Temperatur
-        chlor_after_temp = chlor_after_shock * temp_factor
-        chlor_breakdown_temp_adj = round(chlor_after_temp - chlor_after_shock, 2)
+        # Zusätzlicher Bedarf durch Temperatur
+        chlor_breakdown_temp_adj = round(chlor_breakdown_temp_adj_raw, 2)
 
-        # Anpassung durch Abdeckung
-        chlor_after_env = chlor_after_temp * env_factor
-        chlor_breakdown_env_adj = round(chlor_after_env - chlor_after_temp, 2)
+        # Zusätzlicher Bedarf durch Abdeckung
+        chlor_breakdown_env_adj = round(chlor_breakdown_env_adj_raw, 2)
 
-        # Anpassung durch Badelast (direkter Zuschlag)
-        chlor_breakdown_bather_adj = round(bather_load_extra, 2)
+        # Zusätzlicher Bedarf durch Badelast
+        chlor_breakdown_bather_adj = round(chlor_breakdown_bather_adj_raw, 2)
 
         # Summe der Anpassungen (vor Mindest-/Maximaldosis)
         chlor_breakdown_sum_raw = round(raw_chlor, 2)
@@ -1151,7 +1170,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_source": ph_source,
             "temp_source": temp_source,
             "chlor_dose": s_g,
-            "chlor_pre": round(max(s_g * 0.3, 1.0), 1) if s_g > 0 else 0.0,
+            "chlor_pre": round(max(s_g * 0.3, 1.0 * volume_m3), 1) if s_g > 0 else 0.0,
             "ph_senker_total": ph_senker_ml,
             "ph_erhoeher_total": ph_erhoeher_g,
             "data_source": data_source,

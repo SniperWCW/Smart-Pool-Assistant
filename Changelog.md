@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.19] - 2026-06-18
+
+- **Chlorlogik neu aufgebaut**: Die Chlorberechnung arbeitet jetzt ueber volumenbezogene Zielkonzentrationen in `mg/l` und rechnet erst am Ende ueber das konfigurierte `pool_volume` in Gramm Produkt um.
+- **Plausiblere Whirlpool-Dosierung**: Feste Grammzuschlaege fuer kleine Becken entfallen. Temperatur, offenes Becken, Nutzung und Stoßchlorung werden jetzt fachlich konsistenter beruecksichtigt.
+- **Frontend-Breakdown angepasst**: Die Karte zeigt jetzt `Stoßchlor-Ziel`, `Temperatur-Zuschlag`, `Offenes Becken` und `Nutzung` statt der alten Faktor-Begriffe.
+- **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `RELEASE_NOTES_V1.0.19.md` auf den aktuellen Stand gebracht.
+
 ## [1.0.16] - 2026-06-18
 
 ### Neu

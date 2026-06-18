@@ -2,11 +2,11 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V1.0.16**
+**Aktueller Release-Stand: V1.0.19**
 
 ## Hauptfunktionen
 
-- Praezise Chlor-Berechnung mit Shock-Faktor, Temperatur-Korrektur, Abdeckungs-Status und Badelast.
+- Praezise Chlor-Berechnung ueber volumenbezogene Zielkonzentrationen mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
 - Direkte Bluetooth-Anbindung fuer **PoolLab 1.0** inklusive Batteriestatus und Nutzung ueber ESP Bluetooth Proxy.
 - Manueller PoolLab-Abruf ueber `button.poollab_messwerte_abrufen` statt zyklischem BLE-Polling.
@@ -74,11 +74,13 @@ Wichtige Konfigurationspunkte:
 
 Die Chlorempfehlung beruecksichtigt:
 
-1. Shock-Faktor bei sehr niedrigen Chlorwerten.
-2. Temperatur-Korrektur ab 28 C bzw. 32 C.
-3. Abdeckungs-Status.
-4. Nutzungsmodus (`none`, `normal`, `party`).
-5. Zielwert-Check, damit bei Zielerreichung oder Ueberdosierung `0 g` empfohlen wird.
+1. Basisbedarf aus `Ziel - Ist` in `mg/l`.
+2. Temperatur-Zuschlag ab 28 C bzw. 32 C.
+3. Zuschlag fuer offene Abdeckung.
+4. Nutzungsmodus (`none`, `normal`, `party`) als zusaetzlicher Konzentrationsbedarf.
+5. Stoßchlor-Ziele bei sehr niedrigen Chlorwerten.
+6. Umrechnung der benoetigten Gesamtkonzentration ueber das konfigurierte `Poolvolumen (m³)` und den Wirkstoffanteil in Gramm Produkt.
+7. Zielwert-Check, damit bei Zielerreichung oder Ueberdosierung `0 g` empfohlen wird.
 
 ### pH
 
