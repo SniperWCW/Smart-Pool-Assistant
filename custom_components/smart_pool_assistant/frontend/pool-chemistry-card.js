@@ -2,6 +2,8 @@ class PoolChemistryCard extends HTMLElement {
   constructor() {
     super();
     this._layzspa_expanded = false;
+    this._poollabFetchInFlight = false;
+    this._poollabFetchClientError = null;
   }
 
   setConfig(config) {
@@ -65,13 +67,23 @@ class PoolChemistryCard extends HTMLElement {
       };
     }
 
-    if (fetchResult === "running") {
+    if (this._poollabFetchInFlight || fetchResult === "running") {
       return {
         entityId: buttonEntity,
         disabled: true,
         label: "Abruf läuft...",
         status: "PoolLab wird gerade abgefragt.",
         meta: "läuft",
+      };
+    }
+
+    if (this._poollabFetchClientError) {
+      return {
+        entityId: buttonEntity,
+        disabled: false,
+        label: "Erneut abrufen",
+        status: this._poollabFetchClientError,
+        meta: "fehler",
       };
     }
 
@@ -119,28 +131,17 @@ class PoolChemistryCard extends HTMLElement {
 
     const entityId = this._resolvePoolLabFetchButtonEntity();
     if (!entityId) return;
-
-    const button = this.querySelector("#btn-poollab-fetch");
-    const status = this.querySelector("#poollab-fetch-status");
-
-    if (button) {
-      button.disabled = true;
-      button.textContent = "Abruf läuft...";
-    }
-    if (status) {
-      status.textContent = "PoolLab-Abruf wird gestartet...";
-    }
+    this._poollabFetchClientError = null;
+    this._poollabFetchInFlight = true;
+    this.hass = this._hass;
 
     try {
       await this._hass.callService("button", "press", { entity_id: entityId });
     } catch (err) {
-      if (button) {
-        button.disabled = false;
-        button.textContent = "Messwerte abrufen";
-      }
-      if (status) {
-        status.textContent = `Abruf fehlgeschlagen: ${err?.message || err}`;
-      }
+      this._poollabFetchClientError = `Abruf fehlgeschlagen: ${err?.message || err}`;
+    } finally {
+      this._poollabFetchInFlight = false;
+      this.hass = this._hass;
     }
   }
 
@@ -251,6 +252,7 @@ class PoolChemistryCard extends HTMLElement {
             .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
             .status-box.critical { background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; }
             .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
+            .status-box.waiting { background: rgba(3, 169, 244, 0.12); color: #03a9f4; border: 1px solid #03a9f4; }
             .recommendation-section { margin-bottom: 0; line-height: 1.5; }
             .rec-row { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
             @media (max-width: 350px) { .rec-row { flex-direction: column; align-items: center; text-align: center; } }
@@ -472,6 +474,11 @@ class PoolChemistryCard extends HTMLElement {
             .lz-temp-block { text-align: center; }
             .lz-temp-val { font-size: 1.2em; font-weight: bold; }
             .lz-temp-target { color: var(--primary-color); }
+            .lz-temp-adjust { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: -2px; }
+            .lz-temp-adjust-label { font-size: 0.8em; opacity: 0.75; min-width: 120px; text-align: center; }
+            .lz-temp-btn { height: 34px; min-width: 34px; border-radius: 999px; border: 1px solid rgba(3, 169, 244, 0.35); background: rgba(3, 169, 244, 0.14); color: var(--primary-color); font-size: 1.1em; font-weight: 700; cursor: pointer; }
+            .lz-temp-btn:hover { background: rgba(3, 169, 244, 0.22); }
+            .lz-temp-btn:disabled { opacity: 0.5; cursor: default; }
             .lz-rssi-excellent { color: #4CAF50; }
             .lz-rssi-good { color: #8BC34A; }
             .lz-rssi-fair { color: #FFC107; }
@@ -539,6 +546,9 @@ class PoolChemistryCard extends HTMLElement {
     // Aktualisiere nur die dynamischen Inhalte
     const statusBox = this.querySelector('#status-box');
     this._lastAttr = attr; // Store for toggle
+    const awaitingRetest = attr.awaiting_retest === true;
+    const chlorAwaitingRetest = attr.awaiting_retest_chlor === true;
+    const phAwaitingRetest = attr.awaiting_retest_ph === true;
 
     // Status Box Logik (Synchronisiert mit der Empfehlungs-Entität vom Coordinator)
     let statusText = rec.state || '✅ Alle Werte im Zielbereich';
@@ -549,7 +559,9 @@ class PoolChemistryCard extends HTMLElement {
         statusText = '⚠️ Warte auf Daten...';
     }
 
-    if (statusText.includes('⚠️') || statusText.includes('hoch') || statusText.includes('niedrig')) {
+    if (statusText.includes('⏳')) {
+        statusClass = 'waiting';
+    } else if (statusText.includes('⚠️') || statusText.includes('hoch') || statusText.includes('niedrig')) {
         // Wenn "hoch" oder "Stoß" vorkommt, nutzen wir Rot (critical), sonst Gelb (warning)
         statusClass = (statusText.includes('hoch') || statusText.includes('Stoß')) ? 'critical' : 'warning';
     }
@@ -568,6 +580,8 @@ class PoolChemistryCard extends HTMLElement {
       this.querySelector('#chlor-rec').innerHTML = isFromStorage
         ? "<i>Warte auf neue Messung (Werte aus Speicher)</i>"
         : "Warte auf Messwerte...";
+    } else if (chlorAwaitingRetest || awaitingRetest) {
+      this.querySelector('#chlor-rec').innerHTML = "<i>Warten auf erneute Messung nach Chlor-Zugabe.</i>";
     } else {
       this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
         ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
@@ -580,11 +594,40 @@ class PoolChemistryCard extends HTMLElement {
 
     let phText = isFromStorage ? "<i>Warte auf neue Messung...</i>" : "Warte auf Messwerte...";
     if (attr.ph_ist !== null && attr.ph_ist !== undefined && !isFromStorage) {
-      phText = "pH-Wert ist optimal.";
-      if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${Number(attr.ph_senker_total).toFixed(2)}ml</b> hinzufügen.`;
-      else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${Number(attr.ph_erhoeher_total).toFixed(2)}g</b> hinzufügen.`;
+      if (phAwaitingRetest || awaitingRetest) {
+        phText = "<i>Warten auf erneute Messung nach pH-Zugabe.</i>";
+      } else {
+        phText = "pH-Wert ist optimal.";
+        if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${Number(attr.ph_senker_total).toFixed(2)}ml</b> hinzufügen.`;
+        else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${Number(attr.ph_erhoeher_total).toFixed(2)}g</b> hinzufügen.`;
+      }
     }
     this.querySelector('#ph-rec').innerHTML = phText;
+
+    const chlorInput = this.querySelector('#input-chlor');
+    const chlorButton = this.querySelector('#btn-chlor');
+    if (chlorInput) {
+      chlorInput.disabled = chlorAwaitingRetest || awaitingRetest;
+      chlorInput.placeholder = (chlorAwaitingRetest || awaitingRetest) ? "Neue Messung abwarten" : "Menge g";
+    }
+    if (chlorButton) {
+      chlorButton.disabled = chlorAwaitingRetest || awaitingRetest;
+    }
+
+    const phPlusInput = this.querySelector('#input-ph_plus');
+    const phMinusInput = this.querySelector('#input-ph_minus');
+    const phButton = this.querySelector('#btn-ph');
+    if (phPlusInput) {
+      phPlusInput.disabled = phAwaitingRetest || awaitingRetest;
+      phPlusInput.placeholder = (phAwaitingRetest || awaitingRetest) ? "Neue Messung abwarten" : "Plus g";
+    }
+    if (phMinusInput) {
+      phMinusInput.disabled = phAwaitingRetest || awaitingRetest;
+      phMinusInput.placeholder = (phAwaitingRetest || awaitingRetest) ? "Neue Messung abwarten" : "Minus ml";
+    }
+    if (phButton) {
+      phButton.disabled = phAwaitingRetest || awaitingRetest;
+    }
 
     const phPlusHist = hist.ph_plus ? `Zuletzt PH+: ${Number(hist.ph_plus.amount).toFixed(2)}g (${hist.ph_plus.time})` : '';
     const phMinusHist = hist.ph_minus ? `Zuletzt PH-: ${Number(hist.ph_minus.amount).toFixed(2)}ml (${hist.ph_minus.time})` : '';
@@ -661,7 +704,7 @@ class PoolChemistryCard extends HTMLElement {
     const chlorSource = attr.chlor_source || '--';
     const phSource = attr.ph_source || '--';
     const tempSource = attr.temp_source || '--';
-    const bluetoothConnected = attr.bluetooth_connected === true;
+    const bluetoothConnected = this._poollabFetchInFlight || attr.bluetooth_connected === true;
     const bluetoothBadge = bluetoothConnected
       ? '<span class="bt-badge connected"><span class="bt-dot"></span>Bluetooth: Ja</span>'
       : '<span class="bt-badge disconnected"><span class="bt-dot"></span>Bluetooth: Nein</span>';
@@ -766,7 +809,7 @@ class PoolChemistryCard extends HTMLElement {
     const chlorBreakdownDetails = this.querySelector('.chlor-breakdown-details');
     const chlorBreakdownInfo = this.querySelector('#chlor-breakdown-info');
 
-    if (attr.chlor_dose > 0) { // Nur Details anzeigen, wenn Chlor empfohlen wird
+    if (attr.chlor_dose > 0 && !chlorAwaitingRetest && !awaitingRetest) { // Nur Details anzeigen, wenn Chlor empfohlen wird
       const base = Number(attr.chlor_breakdown_base || 0);
       const shockAdj = Number(attr.chlor_breakdown_shock_adj || 0);
       const tempAdj = Number(attr.chlor_breakdown_temp_adj || 0);
@@ -844,8 +887,10 @@ class PoolChemistryCard extends HTMLElement {
       return;
     }
 
+    const formatTemp = (value) => Number.isFinite(value) ? `${value.toFixed(1)}°C` : '--';
     const hass = this._hass;
     const get = (eid) => eid ? hass.states[eid] : null;
+    const tempControl = this._getLayzSpaTempControlInfo(cfg);
 
     const conn = get(cfg.connection);
     const isConnected = conn?.state === "on";
@@ -853,6 +898,8 @@ class PoolChemistryCard extends HTMLElement {
     const heater = get(cfg.heater);
     const bubbles = get(cfg.airbubbles);
     const rssi = this._getRSSIInfo(get(cfg.rssi)?.state);
+    const tempCurrentValue = parseFloat(get(cfg.temp_current)?.state);
+    const tempTargetValue = tempControl?.currentValue ?? parseFloat(get(cfg.temp_target)?.state);
 
     container.innerHTML = `
       <div class="layzspa-panel ${this._layzspa_expanded ? 'expanded' : ''}">
@@ -883,14 +930,21 @@ class PoolChemistryCard extends HTMLElement {
           <div class="lz-temp-row">
             <div class="lz-temp-block">
               <span class="lz-label">Aktuell</span>
-              <div class="lz-temp-val">${parseFloat(get(cfg.temp_current)?.state || 0).toFixed(1)}°C</div>
+              <div class="lz-temp-val">${formatTemp(tempCurrentValue)}</div>
             </div>
             <ha-icon icon="mdi:arrow-right-thin" style="color: rgba(255,255,255,0.2); --mdc-icon-size: 20px;"></ha-icon>
             <div class="lz-temp-block">
               <span class="lz-label">Ziel</span>
-              <div class="lz-temp-val lz-temp-target">${parseFloat(get(cfg.temp_target)?.state || 0).toFixed(1)}°C</div>
+              <div class="lz-temp-val lz-temp-target">${formatTemp(tempTargetValue)}</div>
             </div>
           </div>
+          ${tempControl ? `
+            <div class="lz-temp-adjust">
+              <button class="lz-temp-btn ${!isConnected ? 'lz-disabled' : ''}" id="lz-temp-down" ${!isConnected ? 'disabled' : ''}>-</button>
+              <div class="lz-temp-adjust-label">Zieltemperatur anpassen</div>
+              <button class="lz-temp-btn ${!isConnected ? 'lz-disabled' : ''}" id="lz-temp-up" ${!isConnected ? 'disabled' : ''}>+</button>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -905,6 +959,10 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#lz-pump').onclick = () => this._toggleLayzSpaEntity(cfg.pump);
     this.querySelector('#lz-heat').onclick = () => this._toggleLayzSpaEntity(cfg.heater);
     this.querySelector('#lz-bubbles').onclick = () => this._toggleLayzSpaEntity(cfg.airbubbles);
+    const tempDown = this.querySelector('#lz-temp-down');
+    const tempUp = this.querySelector('#lz-temp-up');
+    if (tempDown) tempDown.onclick = () => this._adjustLayzSpaTemperature(-1);
+    if (tempUp) tempUp.onclick = () => this._adjustLayzSpaTemperature(1);
   }
 
   _toggleLayzSpaEntity(entityId) {
@@ -912,6 +970,92 @@ class PoolChemistryCard extends HTMLElement {
     const state = this._hass.states[entityId].state;
     const domain = entityId.split(".")[0];
     this._hass.callService(domain, state === "on" ? "turn_off" : "turn_on", { entity_id: entityId });
+  }
+
+  _resolveLayzSpaTempControlEntity(cfg) {
+    if (!cfg || !this._hass) return null;
+
+    const preferred = cfg.temp_target_control;
+    if (preferred) {
+      const preferredState = this._hass.states[preferred];
+      const preferredDomain = preferred.split(".")[0];
+      if (preferredState && (preferredDomain === "number" || preferredDomain === "climate")) {
+        return preferred;
+      }
+    }
+
+    const fallback = cfg.temp_target;
+    if (fallback) {
+      const fallbackState = this._hass.states[fallback];
+      const fallbackDomain = fallback.split(".")[0];
+      if (fallbackState && (fallbackDomain === "number" || fallbackDomain === "climate")) {
+        return fallback;
+      }
+    }
+
+    return null;
+  }
+
+  _getLayzSpaTempControlInfo(cfg) {
+    const entityId = this._resolveLayzSpaTempControlEntity(cfg);
+    if (!entityId || !this._hass) return null;
+
+    const stateObj = this._hass.states[entityId];
+    if (!stateObj) return null;
+
+    const domain = entityId.split(".")[0];
+    const attrs = stateObj.attributes || {};
+    const currentValue = domain === "climate"
+      ? parseFloat(attrs.temperature)
+      : parseFloat(stateObj.state);
+    const step = parseFloat(domain === "climate" ? (attrs.target_temp_step ?? 1) : (attrs.step ?? 1));
+    const min = parseFloat(domain === "climate" ? attrs.min_temp : attrs.min);
+    const max = parseFloat(domain === "climate" ? attrs.max_temp : attrs.max);
+
+    if (!Number.isFinite(currentValue)) return null;
+
+    return {
+      entityId,
+      domain,
+      currentValue,
+      step: Number.isFinite(step) && step > 0 ? step : 1,
+      min,
+      max,
+    };
+  }
+
+  _getStepPrecision(step) {
+    if (!Number.isFinite(step)) return 0;
+    const stepText = String(step);
+    return stepText.includes(".") ? stepText.split(".")[1].length : 0;
+  }
+
+  async _adjustLayzSpaTemperature(direction) {
+    if (!this._hass || !this.config?.layzspa) return;
+
+    const info = this._getLayzSpaTempControlInfo(this.config.layzspa);
+    if (!info) return;
+
+    const precision = this._getStepPrecision(info.step);
+    let nextValue = info.currentValue + (direction * info.step);
+
+    if (Number.isFinite(info.min)) nextValue = Math.max(info.min, nextValue);
+    if (Number.isFinite(info.max)) nextValue = Math.min(info.max, nextValue);
+
+    nextValue = Number(nextValue.toFixed(precision));
+
+    if (info.domain === "climate") {
+      await this._hass.callService("climate", "set_temperature", {
+        entity_id: info.entityId,
+        temperature: nextValue,
+      });
+      return;
+    }
+
+    await this._hass.callService("number", "set_value", {
+      entity_id: info.entityId,
+      value: nextValue,
+    });
   }
 
   _getRSSIInfo(rssiValue) {
@@ -1067,6 +1211,7 @@ class PoolChemistryCardEditor extends HTMLElement {
         { key: "airbubbles", label: "Luftblasen (Switch)", domain: "switch" },
         { key: "temp_current", label: "Ist-Temperatur", domain: "sensor" },
         { key: "temp_target", label: "Ziel-Temperatur", domain: "sensor" },
+        { key: "temp_target_control", label: "Ziel-Temperatur Steuerung", domains: ["number", "climate"] },
       ];
 
     const lzPickersContainer = this.querySelector('#lz-pickers');
@@ -1083,7 +1228,7 @@ class PoolChemistryCardEditor extends HTMLElement {
             picker.setAttribute('data-key', p.key);
             picker.label = p.label;
             picker.configValue = `lz_${p.key}`;
-            picker.includeDomains = [p.domain];
+            picker.includeDomains = p.domains || [p.domain];
             picker.addEventListener('value-changed', (ev) => this._valueChanged(ev));
             lzPickersContainer.appendChild(picker);
           }
@@ -1102,7 +1247,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 1.0.8 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 1.0.16 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

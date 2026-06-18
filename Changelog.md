@@ -1,5 +1,20 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.16] - 2026-06-18
+
+### Neu
+- **Nachmess-Workflow in der Karte**: Nach bestaetigter Chlor-, pH-Minus- oder pH-Plus-Zugabe zeigt die Integration jetzt **Warten auf erneute Messung**, bis neue Werte eingelesen wurden.
+- **LayZSpa Zieltemperatur-Steuerung**: Die Karte kann die Zieltemperatur jetzt optional direkt per `+` / `-` ueber `number.*`- oder `climate.*`-Entitaeten anpassen.
+- **Markdown Release Notes**: Neue Datei `RELEASE_NOTES_V1.0.16.md` fuer den GitHub-Release.
+
+### Verbesserungen
+- **Live-BLE-Status**: Die Zeile **BT Verbindung** ist nur waehrend eines aktiven PoolLab-BLE-Abrufs gruen und springt nach dem Disconnect wieder auf rot.
+- **Dokumentation aktualisiert**: README und technische Doku spiegeln jetzt den aktuellen Ablauf fuer BLE, Cloud, Nachmessung und LayZSpa-Temperatursteuerung wider.
+
+### Fixes
+- **Keine sticky BLE-Anzeige mehr**: `bluetooth_connected` wird nicht mehr persistent als letzter Erfolgszustand gehalten.
+- **Fachlich sauberere Dosieranzeige**: Bereits protokollierte Chemiezugaben fuehren nicht mehr dazu, dass alte Empfehlungen weiter aktiv dargestellt werden.
+
 ## [1.0.15] - 2026-06-17
 
 ### Neu

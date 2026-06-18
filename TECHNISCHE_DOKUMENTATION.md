@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-17  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-17 auf Basis von `manifest.json` Version `1.0.15`, inklusive manueller PoolLab-Abruf-UI, BLE-Statusanzeige und wieder konfigurierbarem Cloud-Update-Intervall
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-18 auf Basis von `manifest.json` Version `1.0.16`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -123,7 +123,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -587,10 +587,10 @@ bluetooth_connected
 
 Wichtige Semantik im aktuellen Stand:
 
-- `true` bedeutet: der letzte manuelle BLE-Abruf konnte sich erfolgreich verbinden
-- `false` bedeutet: letzter Abruf fehlgeschlagen oder keine BLE-Konfiguration aktiv
+- `true` bedeutet: es laeuft genau jetzt ein aktiver manueller BLE-Abruf mit bestehender Verbindung
+- `false` bedeutet: aktuell keine BLE-Verbindung aktiv
 
-Das ist **kein Dauer-Connection-Status**. Die Integration hält die BLE-Verbindung nicht offen, sondern verbindet sich nur kurz für den One-shot-Abruf und trennt danach wieder.
+Das ist **kein Dauer-Connection-Status**. Die Integration haelt die BLE-Verbindung nicht offen, sondern verbindet sich nur kurz fuer den One-shot-Abruf und trennt danach wieder. Die Karte kombiniert dafuer den Backend-Wert mit ihrem lokalen In-Flight-Status, damit der Benutzer den Connect bereits waehrend des laufenden Abrufs als gruen sieht.
 
 ---
 
@@ -779,6 +779,15 @@ factor_up = ph_up_dosage / 10.0 / 0.1
 ## 14. Empfehlungstext und Warnlogik
 
 Die finale Empfehlung wird zentral im Coordinator erstellt.
+
+Vor den normalen Warnregeln greift zusaetzlich ein Nachmess-Schutz:
+
+```text
+wenn empfohlene Chemie bereits nach der letzten Messung protokolliert wurde
+-> "⏳ Warten auf erneute Messung"
+```
+
+Damit verhindert die Integration, dass bereits "verbrauchte" Messwerte weiter als aktive Handlungsempfehlung erscheinen.
 
 Aktuelle Warnregeln:
 
@@ -1007,6 +1016,10 @@ Wichtige aktuelle Attribute:
 - `last_poollab_fetch_requested_at`
 - `last_poollab_fetch_completed_at`
 - `next_poollab_fetch_allowed_at`
+- `awaiting_retest`
+- `awaiting_retest_chlor`
+- `awaiting_retest_ph`
+- `awaiting_retest_since`
 - `filter_clean_status`
 - `filter_replace_status`
 - `chlor_breakdown_*`
@@ -1070,6 +1083,7 @@ Die Karte:
 - zeigt Messquellen
 - zeigt BLE-Verbindungsstatus
 - integriert den PoolLab-Abrufbutton
+- zeigt einen Wartezustand nach bestaetigten Chemiezugaben
 - protokolliert Chemie- und Wartungsaktionen
 - zeigt Filterwartung
 - zeigt Berechnungsdetails
@@ -1112,7 +1126,7 @@ Die Karte zeigt passend dazu:
 Die Zeile **BT Verbindung** nutzt:
 
 ```javascript
-attr.bluetooth_connected === true
+this._poollabFetchInFlight || attr.bluetooth_connected === true
 ```
 
 Darstellung:
@@ -1120,15 +1134,32 @@ Darstellung:
 - grün: `Bluetooth: Ja`
 - rot: `Bluetooth: Nein`
 
+Die Anzeige ist damit bewusst live und springt nach dem Disconnect wieder zurueck.
+
+### Nachmess-Zustand in der Karte
+
+Die Karte wertet zusaetzlich diese Attribute aus:
+
+- `awaiting_retest`
+- `awaiting_retest_chlor`
+- `awaiting_retest_ph`
+
+Wenn sie aktiv sind:
+
+- wechselt die Statusbox auf `⏳ Warten auf erneute Messung`
+- die betroffenen Dosierfelder werden deaktiviert
+- alte Chlor- oder pH-Empfehlungen werden nicht weiter als aktive Handlungsanweisung dargestellt
+
 ### Card Editor
 
 Im Karten-Editor gibt es aktuell zusätzlich:
 
 ```text
 PoolLab-Abruf-Button (optional)
+Ziel-Temperatur Steuerung
 ```
 
-Damit kann die Karte explizit auf eine konkrete Button-Entität gebunden werden.
+Damit kann die Karte explizit auf eine konkrete Button-Entitaet gebunden werden. Fuer LayZSpa kann zusaetzlich eine `number.*`- oder `climate.*`-Entitaet fuer die Zieltemperatur-Steuerung hinterlegt werden.
 
 ### Messwertanzeige
 
@@ -1158,7 +1189,15 @@ angezeigt.
 
 ### LayZSpa
 
-Die LayZSpa-Sektion ist weiterhin optional und rein frontend-getrieben. Sie arbeitet mit vorhandenen Home Assistant Entitäten und nicht mit eigener Backend-Logik der Integration.
+Die LayZSpa-Sektion ist weiterhin optional und rein frontend-getrieben. Sie arbeitet mit vorhandenen Home Assistant Entitaeten und nicht mit eigener Backend-Logik der Integration.
+
+Aktueller Stand:
+
+- Anzeige von Ist- und Zieltemperatur
+- optionale Zieltemperatur-Steuerung unterhalb der Temperaturanzeige
+- Steuerung ueber `layzspa.temp_target_control`
+- unterstuetzt `number.*` und `climate.*`
+- Schrittweite sowie Min-/Max-Grenzen werden aus der Zielentitaet uebernommen
 
 ---
 
@@ -1291,7 +1330,9 @@ Die folgenden Punkte waren in älteren Dokumentationen teils anders beschrieben 
 - Das **Cloud-Intervall ist wieder konfigurierbar** und läuft weiterhin zyklisch.
 - Die Lovelace-Karte enthält jetzt einen **integrierten PoolLab-Abruf-Button**.
 - Die Karte kann optional eine eigene `fetch_button_entity` konfigurieren.
-- `bluetooth_connected` wird bis zur Karte durchgereicht und steuert die BT-Verbindungszeile.
+- `bluetooth_connected` ist jetzt ein Live-Status nur fuer den aktiven BLE-Abruf und keine persistente "letzter Erfolg"-Anzeige mehr.
+- Die Karte kennt jetzt einen expliziten Nachmess-Zustand nach Chemiezugaben.
+- Das LayZSpa-Panel kann optional die Zieltemperatur direkt verstellen.
 
 ---
 

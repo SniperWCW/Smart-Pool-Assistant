@@ -131,6 +131,10 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "last_poollab_fetch_requested_at": data.get("last_poollab_fetch_requested_at"),
             "last_poollab_fetch_completed_at": data.get("last_poollab_fetch_completed_at"),
             "next_poollab_fetch_allowed_at": data.get("next_poollab_fetch_allowed_at"),
+            "awaiting_retest": data.get("awaiting_retest"),
+            "awaiting_retest_chlor": data.get("awaiting_retest_chlor"),
+            "awaiting_retest_ph": data.get("awaiting_retest_ph"),
+            "awaiting_retest_since": data.get("awaiting_retest_since"),
         }
 
     @property

@@ -119,6 +119,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 entry["amount"] = None
                 history[key] = entry
 
+        history.pop("bluetooth_connected", None)
+
         return history
 
     def _parse_ts_aware(self, ts_str: str | None):
@@ -429,6 +431,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 return diff.days
         return None
 
+    def _get_action_dt(self, action_key: str):
+        """Return the aware timestamp of a stored maintenance action."""
+        action_data = self.maintenance_history.get(action_key)
+        if isinstance(action_data, dict):
+            return self._parse_ts_aware(action_data.get("raw_ts"))
+        return None
+
     async def _check_filter_notifications(self, conf: dict):
         """Check and send notifications for filter maintenance."""
         now = dt_util.now()
@@ -534,14 +543,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         manual_found = False
         ble_found = False
         cached_ble_found = False
-        ble_connected = bool(self.maintenance_history.get("bluetooth_connected", False))
+        ble_connected = False
         poollab_fetch_result = self.maintenance_history.get("last_poollab_fetch_result")
         poollab_fetch_error = self.maintenance_history.get("last_poollab_fetch_error")
         poollab_fetch_completed_at = self.maintenance_history.get("last_poollab_fetch_completed_at")
-
-        if not ble_address and ble_connected:
-            ble_connected = False
-            self.maintenance_history["bluetooth_connected"] = False
+        self.maintenance_history.pop("bluetooth_connected", None)
 
         c_ist = ph_ist = temp_ist = None
         chlor_source = ph_source = temp_source = None
@@ -566,8 +572,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         ble_data = await asyncio.wait_for(client.async_read_data(), timeout=40.0)
 
                         ble_found = True
-                        ble_connected = True
-                        self.maintenance_history["bluetooth_connected"] = True
                         poollab_fetch_result = "success"
                         poollab_fetch_error = None
                         poollab_fetch_completed_at = dt_util.now().isoformat()
@@ -621,24 +625,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             self.maintenance_history["last_ble_measurement_raw"] = dt_util.utc_from_timestamp(latest_ble_ts).isoformat()
 
                     except (asyncio.TimeoutError, asyncio.CancelledError):
-                        ble_connected = False
-                        self.maintenance_history["bluetooth_connected"] = False
                         poollab_fetch_result = "error"
                         poollab_fetch_error = "Bluetooth-Abfrage fuer PoolLab wurde abgebrochen oder hat das Timeout erreicht."
                         poollab_fetch_completed_at = dt_util.now().isoformat()
                         self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
                         _LOGGER.warning("Bluetooth-Abfrage fuer PoolLab zeitlich ueberschritten oder abgebrochen. Nutze Cache oder manuelle Daten.")
                 else:
-                    ble_connected = False
-                    self.maintenance_history["bluetooth_connected"] = False
                     poollab_fetch_result = "error"
                     poollab_fetch_error = f"PoolLab Bluetooth-Geraet nicht gefunden: {ble_address}"
                     poollab_fetch_completed_at = dt_util.now().isoformat()
                     self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
                     _LOGGER.warning("PoolLab Bluetooth device not found: %s", ble_address)
             except Exception as err:
-                ble_connected = False
-                self.maintenance_history["bluetooth_connected"] = False
                 poollab_fetch_result = "error"
                 poollab_fetch_error = f"{type(err).__name__}: {err}"
                 poollab_fetch_completed_at = dt_util.now().isoformat()
@@ -882,6 +880,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             last_meas_source,
             last_meas_raw,
         )
+        dt_last_meas = self._parse_ts_aware(last_meas_raw)
+        dt_last_chlor_action = self._get_action_dt("chlor")
+        dt_last_ph_plus_action = self._get_action_dt("ph_plus")
+        dt_last_ph_minus_action = self._get_action_dt("ph_minus")
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
@@ -922,6 +924,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "last_poollab_fetch_requested_at": self.maintenance_history.get("last_poollab_fetch_requested_at"),
                 "last_poollab_fetch_completed_at": poollab_fetch_completed_at,
                 "next_poollab_fetch_allowed_at": next_poollab_fetch_allowed_at,
+                "awaiting_retest": False,
+                "awaiting_retest_chlor": False,
+                "awaiting_retest_ph": False,
+                "awaiting_retest_since": None,
                 "history": self.maintenance_history,
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
@@ -1017,6 +1023,40 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
             ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
 
+        chlor_logged_after_measurement = bool(
+            dt_last_meas and dt_last_chlor_action and dt_last_chlor_action > dt_last_meas
+        )
+        ph_plus_logged_after_measurement = bool(
+            dt_last_meas and dt_last_ph_plus_action and dt_last_ph_plus_action > dt_last_meas
+        )
+        ph_minus_logged_after_measurement = bool(
+            dt_last_meas and dt_last_ph_minus_action and dt_last_ph_minus_action > dt_last_meas
+        )
+
+        awaiting_retest_chlor = s_g > 0 and chlor_logged_after_measurement
+        awaiting_retest_ph = (
+            (ph_senker_ml > 0 and ph_minus_logged_after_measurement)
+            or (ph_erhoeher_g > 0 and ph_plus_logged_after_measurement)
+        )
+
+        chemistry_actions_covered = []
+        relevant_action_dts = []
+        if s_g > 0:
+            chemistry_actions_covered.append(chlor_logged_after_measurement)
+            if dt_last_chlor_action:
+                relevant_action_dts.append(dt_last_chlor_action)
+        if ph_senker_ml > 0:
+            chemistry_actions_covered.append(ph_minus_logged_after_measurement)
+            if dt_last_ph_minus_action:
+                relevant_action_dts.append(dt_last_ph_minus_action)
+        if ph_erhoeher_g > 0:
+            chemistry_actions_covered.append(ph_plus_logged_after_measurement)
+            if dt_last_ph_plus_action:
+                relevant_action_dts.append(dt_last_ph_plus_action)
+
+        awaiting_retest = bool(chemistry_actions_covered) and all(chemistry_actions_covered)
+        awaiting_retest_since = max(relevant_action_dts).isoformat() if awaiting_retest and relevant_action_dts else None
+
         # Filter Wartung
         hours_since_filter_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
         days_since_filter_replace = self._get_time_since_last_action("filter_replace")
@@ -1067,7 +1107,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 warnings.append("Chlor nachdosieren")
 
         # Finaler Empfehlungstext
-        if not warnings:
+        if awaiting_retest:
+            recommendation = "⏳ Warten auf erneute Messung"
+        elif not warnings:
             recommendation = "✅ Alle Werte im Zielbereich"
         else:
             # Kombiniere Warnungen mit " & "
@@ -1120,6 +1162,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "last_poollab_fetch_requested_at": self.maintenance_history.get("last_poollab_fetch_requested_at"),
             "last_poollab_fetch_completed_at": poollab_fetch_completed_at,
             "next_poollab_fetch_allowed_at": next_poollab_fetch_allowed_at,
+            "awaiting_retest": awaiting_retest,
+            "awaiting_retest_chlor": awaiting_retest_chlor,
+            "awaiting_retest_ph": awaiting_retest_ph,
+            "awaiting_retest_since": awaiting_retest_since,
             "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,
             "usage_mode": self.usage_mode,
