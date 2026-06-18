@@ -998,9 +998,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             elif float(c_ist) < 1.0:
                 shock_target = 2.0
 
-        effective_target = float(c_ziel) + temp_target_extra + env_target_extra + bather_target_extra
+        base_target_with_conditions = float(c_ziel) + temp_target_extra + env_target_extra
+        effective_target = base_target_with_conditions + bather_target_extra
         if shock_target > 0:
-            effective_target = max(effective_target, shock_target)
+            effective_target = max(base_target_with_conditions, shock_target) + bather_target_extra
 
         # Mindestdosis in g pro m³.
         min_dose = 2.0 * volume_m3
@@ -1018,7 +1019,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         chlor_breakdown_temp_adj_raw = temp_target_extra * volume_m3 / wirkstoff
         chlor_breakdown_env_adj_raw = env_target_extra * volume_m3 / wirkstoff
         chlor_breakdown_bather_adj_raw = bather_target_extra * volume_m3 / wirkstoff
-        chlor_breakdown_shock_adj_raw = max(shock_target - (float(c_ziel) + temp_target_extra + env_target_extra + bather_target_extra), 0.0) * volume_m3 / wirkstoff
+        chlor_breakdown_shock_adj_raw = max(shock_target - base_target_with_conditions, 0.0) * volume_m3 / wirkstoff
         target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
         raw_chlor = target_diff * volume_m3 / wirkstoff
         if c_ist is not None and c_ist >= c_ziel:

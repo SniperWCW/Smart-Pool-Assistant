@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.20] - 2026-06-18
+
+- **Nutzungsmodus korrigiert**: `none`, `normal` und `party` beeinflussen die finale Chlorempfehlung jetzt auch bei aktivem Stoßchlor-Ziel. Zuvor war die Endmenge in solchen Fällen fälschlich identisch, obwohl sich nur die Breakdown-Zeilen änderten.
+- **Whirlpool-Fälle geprüft**: Für den gezeigten 0,916 m³-Fall ergibt die korrigierte Logik jetzt ca. `8,1 g` bei keiner Nutzung, `8,9 g` bei normaler Nutzung und `9,7 g` bei Party.
+- **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `RELEASE_NOTES_V1.0.20.md` auf den aktuellen Stand gebracht.
+
 ## [1.0.19] - 2026-06-18
 
 - **Chlorlogik neu aufgebaut**: Die Chlorberechnung arbeitet jetzt ueber volumenbezogene Zielkonzentrationen in `mg/l` und rechnet erst am Ende ueber das konfigurierte `pool_volume` in Gramm Produkt um.
