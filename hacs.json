@@ -1,0 +1,11 @@
+{
+  "name": "Smart Pool Assistant",
+  "country": "DE",
+  "homeassistant": "2025.1.0",
+  "render_readme": true,
+  "domains": [
+    "smart_pool_assistant"
+  ],
+  "icon": "https://raw.githubusercontent.com/SniperWCW/Smart-Pool-Assistant/main/custom_components/smart_pool_assistant/brand/icon.png",
+  "brand": "https://raw.githubusercontent.com/SniperWCW/Smart-Pool-Assistant/main/custom_components/smart_pool_assistant/brand/logo.png"
+}
