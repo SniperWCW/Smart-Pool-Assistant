@@ -131,6 +131,22 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             dt = dt.replace(tzinfo=dt_util.UTC)
         return dt
 
+    def _normalize_ble_measurement_ts(self, ts: int, fetched_at_iso: str | None) -> str:
+        """Use the actual BLE fetch completion time as authoritative measurement time."""
+        fetched_at_dt = self._parse_ts_aware(fetched_at_iso) if fetched_at_iso else None
+        ble_dt = dt_util.utc_from_timestamp(ts)
+
+        if fetched_at_dt:
+            if ble_dt != fetched_at_dt:
+                _LOGGER.debug(
+                    "Ignoring raw PoolLab BLE timestamp in favor of fetch completion time: ble=%s fetched_at=%s",
+                    ble_dt.isoformat(),
+                    fetched_at_dt.isoformat(),
+                )
+            return fetched_at_dt.isoformat()
+
+        return ble_dt.isoformat()
+
     @property
     def config(self):
         """Return combined config from data and options."""
@@ -620,7 +636,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         if ble_ts_list:
                             # Verwende den neuesten Zeitstempel der abgerufenen BLE-Messungen
                             latest_ble_ts = max(ble_ts_list)
-                            self.maintenance_history["last_ble_measurement_raw"] = dt_util.utc_from_timestamp(latest_ble_ts).isoformat()
+                            self.maintenance_history["last_ble_measurement_raw"] = self._normalize_ble_measurement_ts(
+                                latest_ble_ts,
+                                poollab_fetch_completed_at,
+                            )
 
                     except (asyncio.TimeoutError, asyncio.CancelledError):
                         poollab_fetch_result = "error"
