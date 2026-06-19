@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs- und Wartungslogik, optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.1`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs- und PoolLab-Cloud-Logik, optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -42,11 +42,11 @@ SmartPoolCoordinator
    ├── zyklischer Refresh (Cloud, manuelle Sensoren, Wartung, Persistenz)
    ├── manueller One-shot PoolLab-Abruf
    ├── BLE-Kommunikation
-   ├── Cloud-Abruf
+   ├── Cloud-Abruf ueber poollab_cloud.py
    ├── Zeitstempel- und Quellenlogik
    ├── Chemieberechnung ueber calculation.py
    ├── Filterwartung ueber maintenance.py
-   ├── Benachrichtigungen
+   ├── Benachrichtigungen ueber notifications.py
    └── zentrale Ausgabe in coordinator.data
    │
    ├── Sensor Platform
@@ -83,6 +83,8 @@ custom_components/smart_pool_assistant/
 ├── coordinator.py
 ├── manifest.json
 ├── maintenance.py
+├── notifications.py
+├── poollab_cloud.py
 ├── poollab_ble.py
 ├── sensor.py
 ├── services.yaml
@@ -98,6 +100,7 @@ Zusätzliche Projektdokumente im Root:
 README.md
 Changelog.md
 TECHNISCHE_DOKUMENTATION.md
+release_notes/
 ```
 
 ### Dateiübersicht
@@ -109,8 +112,10 @@ TECHNISCHE_DOKUMENTATION.md
 | `const.py` | zentrale Konstanten und Config-Keys |
 | `__init__.py` | Setup/Unload, Coordinator-Erzeugung, Service-Registrierung, Frontend-Registrierung |
 | `config_flow.py` | UI-Konfiguration, Bluetooth Discovery und Options Flow |
-| `coordinator.py` | Home-Assistant-Orchestrierung, Datenbeschaffung, Persistenz, Benachrichtigungen und PoolLab-Abruflogik |
+| `coordinator.py` | Home-Assistant-Orchestrierung, Datenbeschaffung, Persistenz, Quellpriorisierung und PoolLab-Abrufablauf |
 | `maintenance.py` | Wartungs-/History-Logik, Activity-Texte, Filterstatus und Zeitberechnung |
+| `notifications.py` | Persistent Notifications, Notify-Service-Versand, Follow-up-Hinweise und Filterwarnungen |
+| `poollab_cloud.py` | PoolLab-Cloud-GraphQL-Abruf und Normalisierung der Cloud-Messwerte |
 | `poollab_ble.py` | direkte BLE-Kommunikation mit dem PoolLab 1.0 |
 | `sensor.py` | Sensor-Entitäten auf Basis des Coordinators |
 | `button.py` | native Button-Entität für den manuellen PoolLab-Abruf |
@@ -127,7 +132,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -183,6 +188,7 @@ CONF_CHLOR_CONTENT = "chlor_content"
 CONF_PH_DOWN_DOSAGE = "ph_down_dosage"
 CONF_PH_UP_DOSAGE = "ph_up_dosage"
 CONF_NOTIFY_SERVICE = "notify_service"
+CONF_NOTIFY_SERVICE_2 = "notify_service_2"
 CONF_PERSISTENT_NOTIFICATION = "persistent_notification"
 CONF_FOLLOW_UP_TIME = "follow_up_time"
 ```
@@ -311,6 +317,7 @@ Das aktuelle Formular deckt folgende Bereiche ab:
 #### Benachrichtigung
 
 - `notify_service`
+- `notify_service_2`
 - `persistent_notification`
 - `follow_up_time`
 
@@ -915,7 +922,12 @@ Dann:
 
 ### Benachrichtigungen
 
-Die Filterbenachrichtigungen werden maximal einmal pro Tag pro Status versendet.
+Benachrichtigungen koennen an bis zu zwei konfigurierte `notify`-Dienste gesendet werden:
+
+- `notify_service`
+- `notify_service_2`
+
+Die Filterbenachrichtigungen werden maximal einmal pro Tag pro Status versendet. Wenn beide Notify-Ziele identisch gesetzt sind, wird nur einmal gesendet.
 
 ---
 

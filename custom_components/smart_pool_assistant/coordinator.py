@@ -13,7 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
-    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
+    CONF_FOLLOW_UP_TIME,
     CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
@@ -33,7 +33,13 @@ from .maintenance import (
     normalize_loaded_history,
     update_maintenance_history,
 )
+from .notifications import (
+    async_check_filter_notifications,
+    async_send_follow_up,
+    async_send_notification,
+)
 from .poollab_ble import PoolLabBLEClient
+from .poollab_cloud import async_fetch_poollab_cloud_measurements
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -311,20 +317,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         conf = self.config
         # Send Notification (Persistent & Service)
         if msg:
-            if conf.get(CONF_PERSISTENT_NOTIFICATION):
-                await self.hass.services.async_call("persistent_notification", "create", {
-                    "title": "Smart Pool Assistant",
-                    "message": msg,
-                    "notification_id": f"{DOMAIN}_maintenance"
-                })
-
-            service = conf.get(CONF_NOTIFY_SERVICE)
-            if service:
-                domain, service_name = service.split(".")
-                await self.hass.services.async_call(domain, service_name, {
-                    "title": "Smart Pool Assistant",
-                    "message": msg
-                })
+            await async_send_notification(self.hass, conf, msg, "maintenance")
 
         # Follow-up Timer (only for chemicals)
         if m_type in ("chlor", "ph_plus", "ph_minus"):
@@ -334,29 +327,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         await self.async_request_refresh()
 
-    async def _send_notification(self, message: str, notification_id: str):
-        """Helper to send notifications."""
-        conf = self.config
-        if conf.get(CONF_PERSISTENT_NOTIFICATION):
-            await self.hass.services.async_call("persistent_notification", "create", {
-                "title": "Smart Pool Assistant",
-                "message": message,
-                "notification_id": f"{DOMAIN}_{notification_id}"
-            })
-        service = conf.get(CONF_NOTIFY_SERVICE)
-        if service:
-            domain, service_name = service.split(".")
-            await self.hass.services.async_call(domain, service_name, {
-                "title": "Smart Pool Assistant",
-                "message": message
-            })
-
     async def _send_follow_up(self, _):
-        conf = self.config
-        service = conf.get(CONF_NOTIFY_SERVICE)
-        if service:
-            domain, service_name = service.split(".")
-            await self._send_notification("Die Einwirkzeit ist um. Bitte Pool-Werte erneut prüfen!", "follow_up")
+        await async_send_follow_up(self.hass, self.config)
 
     def _get_time_since_last_action(self, action_key: str, in_hours: bool = False) -> int | None:
         """Calculate time since last action (hours or days)."""
@@ -365,58 +337,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     def _get_action_dt(self, action_key: str):
         """Return the aware timestamp of a stored maintenance action."""
         return get_action_dt(self.maintenance_history, action_key, self._parse_ts_aware)
-
-    async def _check_filter_notifications(self, conf: dict):
-        """Check and send notifications for filter maintenance."""
-        now = dt_util.now()
-
-        # Filter Clean
-        hours_since_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
-        if hours_since_clean is not None:
-            clean_interval = conf.get(CONF_FILTER_CLEAN_INTERVAL, 24)
-            clean_yellow = conf.get(CONF_FILTER_CLEAN_YELLOW_THRESHOLD, 4)
-            clean_red = conf.get(CONF_FILTER_CLEAN_RED_THRESHOLD, 0)
-
-            # Yellow notification
-            if hours_since_clean > 0 and (clean_interval - clean_yellow) <= hours_since_clean < clean_interval:
-                last_notified = self.maintenance_history.get("last_notified_clean_yellow")
-                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1: # Notify once a day
-                    await self._send_notification(f"Filterreinigung bald fällig! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_yellow")
-                    self.maintenance_history["last_notified_clean_yellow"] = now.isoformat()
-
-            # Red notification for cleaning
-            if hours_since_clean >= (clean_interval + clean_red):
-                last_notified = self.maintenance_history.get("last_notified_clean_red")
-                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
-                    await self._send_notification(f"Filterreinigung ÜBERFÄLLIG! Vor {hours_since_clean} Stunden gereinigt. Empfohlen alle {clean_interval} Stunden.", "filter_clean_red")
-                    self.maintenance_history["last_notified_clean_red"] = now.isoformat()
-
-        # Filter Replace
-        days_since_replace = self._get_time_since_last_action("filter_replace")
-        if days_since_replace is not None:
-            replace_interval = conf.get(CONF_FILTER_REPLACE_INTERVAL, 180)
-            replace_yellow = conf.get(CONF_FILTER_REPLACE_YELLOW_THRESHOLD, 30)
-            replace_red = conf.get(CONF_FILTER_REPLACE_RED_THRESHOLD, 0)
-
-            # Yellow notification for replacement
-            if days_since_replace > 0 and (replace_interval - replace_yellow) <= days_since_replace < replace_interval:
-                last_notified = self.maintenance_history.get("last_notified_replace_yellow")
-                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
-                    await self._send_notification(
-                        f"Filterwechsel bald fällig! Vor {days_since_replace} Tagen gewechselt. Empfohlen alle {replace_interval} Tage.",
-                        "filter_replace_yellow"
-                    )
-                    self.maintenance_history["last_notified_replace_yellow"] = now.isoformat()
-
-            # Red notification for replacement
-            if days_since_replace >= (replace_interval + replace_red):
-                last_notified = self.maintenance_history.get("last_notified_replace_red")
-                if not last_notified or (now - dt_util.parse_datetime(last_notified)).days >= 1:
-                    await self._send_notification(
-                        f"Filterwechsel ÜBERFÄLLIG! Vor {days_since_replace} Tagen gewechselt. Empfohlen alle {replace_interval} Tage.",
-                        "filter_replace_red"
-                    )
-                    self.maintenance_history["last_notified_replace_red"] = now.isoformat()
 
     async def _async_update_data(self):
         def get_state_info(entity_id: str):
@@ -574,77 +494,30 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             try:
                 _LOGGER.debug("Fetching data from PoolLab Cloud")
                 session = async_get_clientsession(self.hass)
+                cloud_result = await async_fetch_poollab_cloud_measurements(session, api_key)
 
-                # GraphQL Query für die Cloud API
-                payload = {
-                    "query": "query { CloudAccount { Accounts { Measurements { parameter value timestamp } } } }"
-                }
-                headers = {"Authorization": api_key}
+                if cloud_result.measurement_raw:
+                    self.maintenance_history["last_api_measurement_raw"] = cloud_result.measurement_raw
+                if cloud_result.last_measurements:
+                    last_api_measurements = cloud_result.last_measurements
+                    self.maintenance_history["last_api_measurements"] = last_api_measurements
 
-                async with session.post(
-                    "https://backend.labcom.cloud/graphql",
-                    json=payload,
-                    headers=headers,
-                    timeout=10
-                ) as resp:
-                    if resp.status == 200:
-                        result = await resp.json()
-                        cloud_data = result.get("data", {}).get("CloudAccount")
-                        if cloud_data and cloud_data.get("Accounts"):
-                            # Wir nehmen den ersten Account und sortieren Messwerte nach Zeitstempel (absteigend)
-                            measurements = cloud_data["Accounts"][0].get("Measurements", [])
-                            measurements.sort(key=lambda x: x.get("timestamp") or 0, reverse=True)
+                if c_ist is None and cloud_result.chlor is not None:
+                    c_ist = cloud_result.chlor
+                    chlor_source = "Cloud"
+                if ph_ist is None and cloud_result.ph is not None:
+                    ph_ist = cloud_result.ph
+                    ph_source = "Cloud"
+                if temp_ist is None and cloud_result.temperature is not None:
+                    temp_ist = cloud_result.temperature
+                    temp_source = "Cloud"
 
-                            chemistry_measurements = [
-                                obs for obs in measurements
-                                if obs.get("parameter") in ("PL Chlorine Free", "PL pH")
-                            ]
-
-                            # Neuesten Zeitstempel nur aus Chemiewerten erfassen
-                            if chemistry_measurements and (latest_ts := chemistry_measurements[0].get("timestamp")):
-                                cloud_ts_iso = dt_util.utc_from_timestamp(latest_ts).isoformat()
-                                self.maintenance_history["last_api_measurement_raw"] = cloud_ts_iso
-
-                            # Sammle die letzten 4 Messwerte für die Anzeige/Fehlersuche
-                            last_api_measurements = []
-                            for obs in measurements[:4]:
-                                p_ts = obs.get("timestamp")
-                                last_api_measurements.append({
-                                    "parameter": obs.get("parameter"),
-                                    "value": obs.get("value"),
-                                    "timestamp": dt_util.utc_from_timestamp(p_ts).isoformat() if p_ts else None
-                                })
-                            self.maintenance_history["last_api_measurements"] = last_api_measurements
-
-                            for obs in measurements:
-                                p_name = obs.get("parameter")
-                                p_val_raw = obs.get("value")
-                                if p_val_raw is None: continue
-                                try:
-                                    # Sicherheitshalber in Float konvertieren, falls die API Strings liefert
-                                    p_val = float(p_val_raw)
-                                except (ValueError, TypeError):
-                                    _LOGGER.debug("Could not parse value for %s: %s", p_name, p_val_raw)
-                                    continue
-
-                                if p_name == "PL Chlorine Free" and c_ist is None and p_val is not None:
-                                    c_ist = p_val
-                                    chlor_source = "Cloud"
-                                if p_name == "PL pH" and ph_ist is None and p_val is not None:
-                                    ph_ist = p_val
-                                    ph_source = "Cloud"
-                                if p_name == "PL Temperature" and temp_ist is None and p_val is not None:
-                                    temp_ist = p_val
-                                    temp_source = "Cloud"
-                                if c_ist is not None and ph_ist is not None:
-                                    break
-
-                            if c_ist is not None or ph_ist is not None:
-                                cloud_found = True
-                                if perform_remote_fetch:
-                                    poollab_fetch_result = "success"
-                                    poollab_fetch_error = None
-                                    poollab_fetch_completed_at = dt_util.now().isoformat()
+                if cloud_result.found:
+                    cloud_found = True
+                    if perform_remote_fetch:
+                        poollab_fetch_result = "success"
+                        poollab_fetch_error = None
+                        poollab_fetch_completed_at = dt_util.now().isoformat()
             except Exception as err:
                 if perform_remote_fetch:
                     poollab_fetch_result = "error"
@@ -923,8 +796,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             filter_replace_yellow_threshold, filter_replace_red_threshold
         )
 
-        # Check and send filter notifications
-        await self._check_filter_notifications(conf)
+        await async_check_filter_notifications(self.hass, conf, self.maintenance_history)
 
         recommendation = build_recommendation(
             awaiting_retest,

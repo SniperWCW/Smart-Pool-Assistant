@@ -18,7 +18,7 @@ from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
-    CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
+    CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
     , CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
@@ -152,6 +152,7 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="g", step=1.0)
         ),
         vol.Optional(CONF_NOTIFY_SERVICE, default=defaults.get(CONF_NOTIFY_SERVICE, "")): notify_selector,
+        vol.Optional(CONF_NOTIFY_SERVICE_2, default=defaults.get(CONF_NOTIFY_SERVICE_2, "")): notify_selector,
         vol.Optional(CONF_PERSISTENT_NOTIFICATION, default=defaults.get(CONF_PERSISTENT_NOTIFICATION, False)): selector.BooleanSelector(),
         vol.Optional(CONF_FOLLOW_UP_TIME, default=defaults.get(CONF_FOLLOW_UP_TIME, 60)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1)

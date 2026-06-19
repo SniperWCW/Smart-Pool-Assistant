@@ -13,6 +13,7 @@ CONF_CHLOR_CONTENT = "chlor_content" # Wirkstoffanteil (z.B. 0.56)
 CONF_PH_DOWN_DOSAGE = "ph_down_dosage" # ml pro 10m3 für 0.2 pH
 CONF_PH_UP_DOSAGE = "ph_up_dosage"     # g pro 10m3 für 0.1 pH
 CONF_NOTIFY_SERVICE = "notify_service"
+CONF_NOTIFY_SERVICE_2 = "notify_service_2"
 CONF_PERSISTENT_NOTIFICATION = "persistent_notification"
 CONF_FOLLOW_UP_TIME = "follow_up_time"
 
