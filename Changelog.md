@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [1.1.5] - 2026-06-19
+
+- **Wetter einklappbar**: Die Wettersektion der Lovelace-Karte ist jetzt als ein- und ausklappbares Panel umgesetzt, aehnlich zum LayzSpa-Bereich.
+- **Kompakte Wetter-Kopfzeile**: In der Kopfzeile werden die heutigen Wetterdaten jetzt in einer Reihe mit Komma-Trennung angezeigt, z. B. Zustand, Temperatur, UV, Regen und Wind.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.5.md` auf den aktuellen Stand gebracht.
+
 ## [1.1.4] - 2026-06-19
 
 - **Optionaler UV-Sensor**: Im Config Flow und Options Flow kann jetzt zusaetzlich ein separater `sensor` fuer den UV-Index hinterlegt werden, z. B. `sensor.tomorrow_io_home_uv_index`.

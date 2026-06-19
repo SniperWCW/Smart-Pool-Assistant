@@ -415,6 +415,7 @@ class PoolChemistryCard extends HTMLElement {
     if (!hasCoordinatorForecast && !hasAttributeForecast && !cachedForecast.length) {
       this._ensureDailyForecast(weatherEntityId);
     }
+
     let days = this._getForecastDays(weatherState, cachedForecast);
     if (days.length === 0) {
       const coordinatorWeatherDay = this._getCoordinatorWeatherDay(weatherState);
@@ -423,30 +424,55 @@ class PoolChemistryCard extends HTMLElement {
       }
     }
 
-    if (!weatherState) {
+    const renderPanel = (summary, innerHtml) => {
       container.style.display = 'block';
       container.innerHTML = `
-        <div class="section-title">Wetter heute & morgen</div>
-        <div class="weather-empty">Wetter-Entitaet <b>${weatherEntityId}</b> nicht gefunden.</div>
+        <div class="weather-panel ${this._weather_expanded ? 'expanded' : ''}">
+          <div class="weather-header" id="weather-header">
+            <div class="weather-title"><ha-icon icon="mdi:weather-partly-cloudy"></ha-icon> Wetter</div>
+            ${summary ? `<div class="weather-summary">${summary}</div>` : '<div class="weather-summary"></div>'}
+            <ha-icon icon="${this._weather_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+          </div>
+          <div class="weather-content">
+            ${innerHtml}
+          </div>
+        </div>
       `;
+      const weatherHeader = this.querySelector('#weather-header');
+      if (weatherHeader) {
+        weatherHeader.onclick = () => {
+          this._weather_expanded = !this._weather_expanded;
+          this._renderWeatherSection();
+        };
+      }
+    };
+
+    if (!weatherState) {
+      renderPanel("", `<div class="weather-empty">Wetter-Entitaet <b>${weatherEntityId}</b> nicht gefunden.</div>`);
       return;
     }
 
     if (days.length === 0) {
-      container.style.display = 'block';
-      container.innerHTML = `
-        <div class="section-title">Wetter heute & morgen</div>
+      renderPanel("", `
         <div class="weather-empty">
           ${this._weatherForecastInFlight[weatherEntityId]
             ? 'Lade Tagesvorhersage...'
             : 'Keine Tagesvorhersage gefunden. Die Karte prueft zuerst <code>attributes.forecast</code> und laedt dann den Home-Assistant-Forecast-Endpunkt fuer <code>daily</code> nach.'}
         </div>
-      `;
+      `);
       return;
     }
 
-    container.style.display = 'block';
-    container.innerHTML = `
+    const today = days[0] || null;
+    const summaryParts = [];
+    if (today?.condition) summaryParts.push(this._getWeatherConditionLabel(today.condition));
+    if (today?.temperature !== null && today?.temperature !== undefined) summaryParts.push(this._formatWeatherValue(today.temperature, "°"));
+    if (today?.uv !== null && today?.uv !== undefined) summaryParts.push(`UV ${this._formatWeatherValue(today.uv)}`);
+    if (today?.precipitation !== null && today?.precipitation !== undefined) summaryParts.push(`Regen ${this._formatWeatherValue(today.precipitation, "%")}`);
+    if (today?.wind !== null && today?.wind !== undefined) summaryParts.push(`Wind ${this._formatWeatherWind(today.wind, today.windUnit)}`);
+    const weatherSummary = summaryParts.join(", ") || "Heute";
+
+    renderPanel(weatherSummary, `
       <div class="section-title">Wetter heute & morgen</div>
       <div class="weather-grid">
         ${days.map((day) => `
@@ -468,7 +494,7 @@ class PoolChemistryCard extends HTMLElement {
         `).join("")}
       </div>
       ${this._lastAttr?.weather_note ? `<div class="weather-note">${this._lastAttr.weather_note}</div>` : ""}
-    `;
+    `);
   }
 
   set hass(hass) {
@@ -708,6 +734,12 @@ class PoolChemistryCard extends HTMLElement {
               grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
               gap: 10px;
             }
+            .weather-panel { border: 1px solid var(--divider-color); border-radius: 8px; overflow: hidden; background: var(--card-background-color); }
+            .weather-header { padding: 10px 12px; background: var(--secondary-background-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+            .weather-title { display: flex; align-items: center; gap: 8px; font-weight: bold; flex: 0 0 auto; }
+            .weather-summary { flex: 1; min-width: 0; text-align: right; font-size: 0.9em; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .weather-content { display: none; padding: 12px; border-top: 1px solid var(--divider-color); }
+            .weather-panel.expanded .weather-content { display: block; }
             .weather-card {
               border: 1px solid var(--divider-color);
               border-radius: 10px;

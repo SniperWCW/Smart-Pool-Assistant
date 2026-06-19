@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.4`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.5`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1194,6 +1194,8 @@ Damit kann die Karte explizit auf eine konkrete Button-Entitaet gebunden werden.
 ### Wetter-Forecast in der Karte
 
 Wenn eine `weather`-Entitaet konfiguriert ist, rendert die Karte einen Block fuer heute und morgen.
+
+Die Wettersektion ist als einklappbares Panel umgesetzt. In der Kopfzeile steht eine kompakte Zusammenfassung fuer heute, kommasepariert aus Zustand, Temperatur, UV, Regen und Wind, sofern die jeweiligen Werte verfuegbar sind.
 
 Abrufreihenfolge:
 

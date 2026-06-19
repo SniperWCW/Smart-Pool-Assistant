@@ -2,7 +2,7 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V1.1.4**
+**Aktueller Release-Stand: V1.1.5**
 
 ## Hauptfunktionen
 
@@ -11,6 +11,7 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und 
 - Optionale Wetterintegration ueber eine Home-Assistant-`weather`-Entitaet mit Vorhersage fuer heute und morgen, inklusive Backend-Forecast-Fallback fuer Provider wie Tomorrow.io.
 - Optionaler separater `UV`-Sensor fuer Provider, die den UV-Index nicht im Daily-Forecast liefern.
 - Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und faellt erst danach auf heutige Coordinator-Wetterwerte zurueck.
+- Die Wettersektion ist jetzt einklappbar und zeigt in der Kopfzeile eine kompakte Heute-Zusammenfassung.
 - Konservativer Wetter-Einfluss auf Chlor: hoher UV-Index kann den Zielbedarf leicht erhoehen, Regen erzeugt einen Nachmess-Hinweis.
 - Direkte Bluetooth-Anbindung fuer **PoolLab 1.0** inklusive Batteriestatus und Nutzung ueber ESP Bluetooth Proxy.
 - Manueller PoolLab-Abruf ueber `button.poollab_messwerte_abrufen` statt zyklischem BLE-Polling.
