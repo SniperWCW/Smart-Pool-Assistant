@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [1.1.4] - 2026-06-19
+
+- **Optionaler UV-Sensor**: Im Config Flow und Options Flow kann jetzt zusaetzlich ein separater `sensor` fuer den UV-Index hinterlegt werden, z. B. `sensor.tomorrow_io_home_uv_index`.
+- **UV priorisiert aus eigener Entity**: `weather.py` verwendet fuer `weather_uv_today` bevorzugt den konfigurierten UV-Sensor und faellt erst danach auf Forecast-Daten zurueck.
+- **Wetterattribute erweitert**: `weather_uv_sensor` wird zusaetzlich bis in die Sensorattribute durchgereicht.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.4.md` auf den aktuellen Stand gebracht.
+
 ## [1.1.3] - 2026-06-19
 
 - **Tomorrow.io-Forecast ins Backend verlagert**: Die Integration holt Daily-Forecasts nun in `weather.py` ueber Home Assistants Wetter-Service und normalisiert sie zentral fuer Coordinator und Karte.

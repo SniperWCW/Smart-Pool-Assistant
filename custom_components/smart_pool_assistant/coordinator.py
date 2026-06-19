@@ -17,7 +17,7 @@ from .const import (
     CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
-    CONF_WEATHER_ENTITY,
+    CONF_WEATHER_ENTITY, CONF_UV_SENSOR,
 )
 from .calculation import (
     build_recommendation,
@@ -656,6 +656,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "awaiting_retest_ph": False,
                 "awaiting_retest_since": None,
                 "weather_entity": conf.get(CONF_WEATHER_ENTITY),
+                "weather_uv_sensor": conf.get(CONF_UV_SENSOR),
                 "weather_available": weather_data.get("available") if isinstance(weather_data, dict) else False,
                 "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
                 "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
@@ -796,6 +797,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "awaiting_retest_ph": awaiting_retest_ph,
             "awaiting_retest_since": awaiting_retest_since,
             "weather_entity": conf.get(CONF_WEATHER_ENTITY),
+            "weather_uv_sensor": conf.get(CONF_UV_SENSOR),
             "weather_available": weather_data.get("available") if isinstance(weather_data, dict) else False,
             "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
             "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,

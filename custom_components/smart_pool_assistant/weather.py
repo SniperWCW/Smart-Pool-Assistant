@@ -6,7 +6,7 @@ import logging
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_WEATHER_ENTITY
+from .const import CONF_UV_SENSOR, CONF_WEATHER_ENTITY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ async def async_get_weather_data(hass: HomeAssistant, conf: dict, limit: int = 2
         **base,
         "has_forecast": len(normalized_days) > 0,
         "forecast_days": normalized_days,
-        "today": today,
+        "today": _apply_uv_sensor(hass, conf, today),
     }
 
 
@@ -125,6 +125,28 @@ def _select_today_forecast(days: list[dict]) -> dict | None:
             selected = item
 
     return selected
+
+
+def _apply_uv_sensor(hass: HomeAssistant, conf: dict, today: dict | None) -> dict | None:
+    """Override UV index from an optional dedicated sensor when configured."""
+    if today is None:
+        return None
+
+    uv_sensor = conf.get(CONF_UV_SENSOR)
+    if not uv_sensor:
+        return today
+
+    state = hass.states.get(uv_sensor)
+    if state is None:
+        return today
+
+    uv_value = _to_float(state.state)
+    if uv_value is None:
+        uv_value = _to_float(state.attributes.get("state"))
+    if uv_value is None:
+        return today
+
+    return {**today, "uv_index": uv_value}
 
 
 def _to_float(value) -> float | None:
