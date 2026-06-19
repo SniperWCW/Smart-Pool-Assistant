@@ -939,11 +939,14 @@ class PoolChemistryCard extends HTMLElement {
                 display: none;
               }
               .metrics-table .table-row {
-                grid-template-columns: minmax(90px, 1fr) minmax(100px, 1fr);
-                gap: 6px 12px;
+                grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.2fr);
+                gap: 6px 14px;
+                align-items: start;
+                padding: 10px 0;
               }
               .metrics-table .table-label {
                 grid-column: 1;
+                grid-row: 1 / span 3;
               }
               .metrics-table .table-value {
                 grid-column: 2;
@@ -954,6 +957,30 @@ class PoolChemistryCard extends HTMLElement {
               .metrics-table .table-meta {
                 grid-column: 2;
                 text-align: left;
+              }
+              .metrics-table .table-value,
+              .metrics-table .table-target,
+              .metrics-table .table-meta {
+                display: grid;
+                grid-template-columns: 54px minmax(0, 1fr);
+                gap: 8px;
+                align-items: baseline;
+              }
+              .metrics-table .table-value::before,
+              .metrics-table .table-target::before,
+              .metrics-table .table-meta::before {
+                content: attr(data-label);
+                font-size: 0.72em;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                opacity: 0.55;
+              }
+              .metrics-table .table-source,
+              .metrics-table .table-sub,
+              .metrics-table .bt-badge,
+              .metrics-table .fetch-btn {
+                min-width: 0;
               }
             }
             .weather-grid {
@@ -1065,15 +1092,36 @@ class PoolChemistryCard extends HTMLElement {
             .info-row-container > * { flex: 1; min-width: 250px; margin-top: 0 !important; }
 
             @media (max-width: 640px) {
-              .table-head,
-              .table-row {
+              .weather-header {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 4px 10px;
+              }
+              .weather-title {
+                min-width: 0;
+              }
+              .weather-summary {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                text-align: left;
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip;
+                line-height: 1.35;
+              }
+              .weather-header > ha-icon:last-child {
+                grid-column: 2;
+                grid-row: 1;
+              }
+              .history-table .table-head,
+              .history-table .table-row {
                 grid-template-columns: 1fr;
                 gap: 4px;
               }
-              .table-meta {
+              .history-table .table-meta {
                 text-align: left;
               }
-              .table-head {
+              .history-table .table-head {
                 display: none;
               }
             }
@@ -1388,35 +1436,35 @@ class PoolChemistryCard extends HTMLElement {
       </div>
       <div class="table-row">
         <div class="table-label">Chlor</div>
-        <div class="table-value"><span class="${chlorColor}">${c_ist} mg/l</span></div>
-        <div class="table-target">${c_target} mg/l</div>
-        <div class="table-meta">${sourceWithTime(chlorSource)}</div>
+        <div class="table-value" data-label="Ist"><span class="${chlorColor}">${c_ist} mg/l</span></div>
+        <div class="table-target" data-label="Ziel">${c_target} mg/l</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(chlorSource)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">pH-Wert</div>
-        <div class="table-value"><span class="${phColor}">${ph_ist}</span></div>
-        <div class="table-target">${ph_target}</div>
-        <div class="table-meta">${sourceWithTime(phSource)}</div>
+        <div class="table-value" data-label="Ist"><span class="${phColor}">${ph_ist}</span></div>
+        <div class="table-target" data-label="Ziel">${ph_target}</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(phSource)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">Temperatur</div>
-        <div class="table-value">${t_ist}°C</div>
-        <div class="table-target">--</div>
-        <div class="table-meta">${sourceWithTime(tempSource)}</div>
+        <div class="table-value" data-label="Ist">${t_ist}°C</div>
+        <div class="table-target" data-label="Ziel">--</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(tempSource)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">BT Verbindung</div>
-        <div class="table-value">${bluetoothBadge}</div>
-        <div class="table-target">${lastMeasurement && attr.last_measurement_source === "Bluetooth" ? lastMeasurement : "--"}</div>
-        <div class="table-meta">${bluetoothConnected ? 'aktiv' : 'inaktiv'}</div>
+        <div class="table-value" data-label="Status">${bluetoothBadge}</div>
+        <div class="table-target" data-label="Messung">${lastMeasurement && attr.last_measurement_source === "Bluetooth" ? lastMeasurement : "--"}</div>
+        <div class="table-meta" data-label="Quelle">${bluetoothConnected ? 'aktiv' : 'inaktiv'}</div>
       </div>
       <div class="table-row">
         <div class="table-label">PoolLab Abruf</div>
-        <div class="table-value table-action">
+        <div class="table-value table-action" data-label="Aktion">
           <button id="btn-poollab-fetch" class="fetch-btn" ${fetchUi.disabled ? "disabled" : ""}>${fetchUi.label}</button>
         </div>
-        <div id="poollab-fetch-status" class="table-target fetch-status">${fetchUi.status}</div>
-        <div class="table-meta">${fetchUi.meta}</div>
+        <div id="poollab-fetch-status" class="table-target fetch-status" data-label="Status">${fetchUi.status}</div>
+        <div class="table-meta" data-label="Quelle">${fetchUi.meta}</div>
       </div>
     `;
     this._renderWeatherSection();
@@ -1895,7 +1943,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.0.1 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.0.2 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

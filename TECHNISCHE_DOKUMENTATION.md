@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `2.0.1`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, Badeampel, vier-spaltiger Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `2.0.2`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1134,6 +1134,8 @@ Chemiewerte zeigen Ist- und Zielwerte getrennt. Die Quellen-Spalte kann passende
 
 - `BT Verbindung`
 - `PoolLab Abruf`
+
+Auf schmalen Displays blendet die Karte den Tabellenkopf aus und zeigt die Werte je Messwert mit kompakten Labels (`Ist`, `Ziel`, `Quelle`). Dadurch bleiben Zielwerte und Quellen auch auf dem Handy eindeutig zuordenbar.
 
 Die Karte ermittelt den Button standardmäßig automatisch:
 

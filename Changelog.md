@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.0.2] - 2026-06-19
+
+- **Mobile Messwerttabelle korrigiert**: Auf schmalen Displays werden Ist-, Ziel- und Quellenwerte jetzt mit kompakten Labels dargestellt, statt unklar untereinander zu laufen.
+- **Wetter-Kopfzeile mobil verbessert**: Die kompakte Wetterzusammenfassung bricht auf dem Handy sauber um und wird nicht mehr unguenstig abgeschnitten.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.2.md` auf den aktuellen Stand gebracht.
+
 ## [2.0.1] - 2026-06-19
 
 - **Badeampel in der Lovelace-Karte**: Neben der Empfehlung zeigt die Karte jetzt `Baden empfohlen`, `Baden möglich` oder `Nicht empfohlen` anhand von Chemie-, Nachmess-, Temperatur- und Wetterdaten.
