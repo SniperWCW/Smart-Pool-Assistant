@@ -4,6 +4,8 @@ class PoolChemistryCard extends HTMLElement {
     this._layzspa_expanded = false;
     this._poollabFetchInFlight = false;
     this._poollabFetchClientError = null;
+    this._weatherForecastCache = {};
+    this._weatherForecastInFlight = {};
   }
 
   setConfig(config) {
@@ -220,7 +222,7 @@ class PoolChemistryCard extends HTMLElement {
     return `${value}${suffix}`;
   }
 
-  _formatWeatherWind(value) {
+  _formatWeatherWind(value, unit = null) {
     if (value === undefined || value === null || value === "") {
       return "--";
     }
@@ -230,11 +232,111 @@ class PoolChemistryCard extends HTMLElement {
       return `${value}`;
     }
 
+    const normalizedUnit = `${unit || ""}`.trim().toLowerCase();
+    if (normalizedUnit.includes("km")) {
+      return `${num.toFixed(0)} km/h`;
+    }
+
+    if (normalizedUnit.includes("m/s")) {
+      return `${num.toFixed(1)} m/s`;
+    }
+
     return num >= 20 ? `${num.toFixed(0)} km/h` : `${num.toFixed(1)} m/s`;
   }
 
-  _getForecastDays(weatherState) {
-    const forecast = weatherState?.attributes?.forecast;
+  _normalizeForecastResponse(response, entityId) {
+    if (!response) return [];
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (Array.isArray(response.forecast)) {
+      return response.forecast;
+    }
+
+    const entityResponse = entityId ? response[entityId] : null;
+    if (Array.isArray(entityResponse?.forecast)) {
+      return entityResponse.forecast;
+    }
+
+    return [];
+  }
+
+  async _fetchDailyForecast(entityId) {
+    if (!this._hass || !entityId) return [];
+
+    if (typeof this._hass.callWS === "function") {
+      try {
+        const response = await this._hass.callWS({
+          type: "weather/forecast",
+          entity_id: entityId,
+          forecast_type: "daily",
+        });
+        const forecast = this._normalizeForecastResponse(response, entityId);
+        if (forecast.length > 0) return forecast;
+      } catch (_err) {}
+    }
+
+    if (typeof this._hass.callService === "function") {
+      try {
+        const response = await this._hass.callService(
+          "weather",
+          "get_forecasts",
+          { type: "daily" },
+          { entity_id: entityId },
+          true,
+        );
+        const forecast = this._normalizeForecastResponse(response, entityId);
+        if (forecast.length > 0) return forecast;
+      } catch (_err) {}
+
+      try {
+        const response = await this._hass.callService(
+          "weather",
+          "get_forecasts",
+          { entity_id: entityId, type: "daily" },
+          undefined,
+          true,
+        );
+        return this._normalizeForecastResponse(response, entityId);
+      } catch (_err) {}
+    }
+
+    return [];
+  }
+
+  _ensureDailyForecast(entityId) {
+    if (!entityId || this._weatherForecastInFlight[entityId]) {
+      return;
+    }
+
+    this._weatherForecastInFlight[entityId] = true;
+    this._fetchDailyForecast(entityId)
+      .then((forecast) => {
+        this._weatherForecastCache[entityId] = {
+          forecast,
+          fetchedAt: Date.now(),
+        };
+      })
+      .catch(() => {
+        this._weatherForecastCache[entityId] = {
+          forecast: [],
+          fetchedAt: Date.now(),
+        };
+      })
+      .finally(() => {
+        this._weatherForecastInFlight[entityId] = false;
+        if (this._hass) {
+          this._renderWeatherSection();
+        }
+      });
+  }
+
+  _getForecastDays(weatherState, fallbackForecast = null) {
+    const forecast = Array.isArray(weatherState?.attributes?.forecast) && weatherState.attributes.forecast.length > 0
+      ? weatherState.attributes.forecast
+      : fallbackForecast;
     if (!Array.isArray(forecast) || forecast.length === 0) {
       return [];
     }
@@ -252,6 +354,7 @@ class PoolChemistryCard extends HTMLElement {
         precipitation: entry.precipitation_probability ?? entry.precipitation ?? null,
         uv: entry.uv_index ?? null,
         wind: entry.wind_speed ?? null,
+        windUnit: weatherState?.attributes?.wind_speed_unit ?? null,
         temperature: entry.temperature ?? null,
         templow: entry.templow ?? null,
       };
@@ -270,7 +373,12 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     const weatherState = this._hass?.states?.[weatherEntityId];
-    const days = this._getForecastDays(weatherState);
+    const cachedForecast = this._weatherForecastCache[weatherEntityId]?.forecast || [];
+    const hasAttributeForecast = Array.isArray(weatherState?.attributes?.forecast) && weatherState.attributes.forecast.length > 0;
+    if (!hasAttributeForecast && !cachedForecast.length) {
+      this._ensureDailyForecast(weatherEntityId);
+    }
+    const days = this._getForecastDays(weatherState, cachedForecast);
 
     if (!weatherState) {
       container.style.display = 'block';
@@ -286,8 +394,9 @@ class PoolChemistryCard extends HTMLElement {
       container.innerHTML = `
         <div class="section-title">Wetter heute & morgen</div>
         <div class="weather-empty">
-          Keine Forecast-Daten im Attribut <code>forecast</code> gefunden.
-          Mit Tomorrow.io funktioniert das nur, wenn die Wetter-Entitaet die Tagesvorhersage direkt bereitstellt.
+          ${this._weatherForecastInFlight[weatherEntityId]
+            ? 'Lade Tagesvorhersage...'
+            : 'Keine Tagesvorhersage gefunden. Die Karte prueft zuerst <code>attributes.forecast</code> und laedt dann <code>weather.get_forecasts</code> mit <code>type: daily</code> nach.'}
         </div>
       `;
       return;
@@ -310,7 +419,7 @@ class PoolChemistryCard extends HTMLElement {
             <div class="weather-metrics">
               <div class="weather-metric"><span>Sonne/UV</span><b>${this._formatWeatherValue(day.uv)}</b></div>
               <div class="weather-metric"><span>Regen</span><b>${this._formatWeatherValue(day.precipitation, "%")}</b></div>
-              <div class="weather-metric"><span>Wind</span><b>${this._formatWeatherWind(day.wind)}</b></div>
+              <div class="weather-metric"><span>Wind</span><b>${this._formatWeatherWind(day.wind, day.windUnit)}</b></div>
             </div>
           </div>
         `).join("")}

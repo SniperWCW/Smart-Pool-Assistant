@@ -3,8 +3,8 @@
 **Projekt:** Smart Pool Assistant  
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
-**Dokumentationsstand:** 2026-06-17  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-18 auf Basis von `manifest.json` Version `1.0.21`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, volumenbezogener Chlorlogik, optionaler Wetterintegration und LayZSpa-Zieltemperatur-Steuerung
+**Dokumentationsstand:** 2026-06-19  
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.0.22`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, volumenbezogener Chlorlogik, optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -123,7 +123,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1095,6 +1095,7 @@ Die Karte:
 - zeigt Berechnungsdetails
 - zeigt letzte Aktivitäten
 - zeigt Cloud-Messhistorie
+- zeigt optional Wetter heute und morgen aus einer `weather`-Entitaet
 - unterstützt optional ein LayZSpa-Panel
 
 ### Neue PoolLab-Abruf-UI
@@ -1166,6 +1167,26 @@ Ziel-Temperatur Steuerung
 ```
 
 Damit kann die Karte explizit auf eine konkrete Button-Entitaet gebunden werden. Fuer LayZSpa kann zusaetzlich eine `number.*`- oder `climate.*`-Entitaet fuer die Zieltemperatur-Steuerung hinterlegt werden.
+
+### Wetter-Forecast in der Karte
+
+Wenn eine `weather`-Entitaet konfiguriert ist, rendert die Karte einen Block fuer heute und morgen.
+
+Abrufreihenfolge:
+
+1. Direktes `attributes.forecast` der Wetter-Entitaet
+2. Falls leer: Nachladen ueber Home Assistants Forecast-Schnittstelle mit `daily`
+
+Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur ueber den Forecast-Service bzw. Forecast-Endpunkt bereitstellen. Ein typischer Fall ist `Tomorrow.io`.
+
+Fuer die Darstellung nutzt die Karte aktuell vor allem:
+
+- `condition`
+- `temperature`
+- `templow`
+- `precipitation_probability`
+- `wind_speed`
+- `wind_speed_unit`
 
 ### Messwertanzeige
 
