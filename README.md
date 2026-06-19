@@ -2,7 +2,7 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.0.0**
+**Aktueller Release-Stand: V2.0.1**
 
 ## Hauptfunktionen
 
@@ -13,6 +13,8 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und 
 - Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und faellt erst danach auf heutige Coordinator-Wetterwerte zurueck.
 - Die Wettersektion ist jetzt einklappbar und zeigt in der Kopfzeile eine kompakte Heute-Zusammenfassung.
 - Optimierte Lovelace-Karte: rendert nur noch bei relevanten Entity-Aenderungen neu.
+- Badeampel in der Lovelace-Karte: `Baden empfohlen`, `Baden möglich` oder `Nicht empfohlen` anhand von Chemie-, Nachmess-, Temperatur- und Wetterdaten.
+- Uebersichtlichere Messwertetabelle mit getrennten Spalten fuer `Messwert`, `Ist`, `Ziel` und `Quelle`.
 - Konservativer Wetter-Einfluss auf Chlor: hoher UV-Index kann den Zielbedarf leicht erhoehen, Regen erzeugt einen Nachmess-Hinweis.
 - Direkte Bluetooth-Anbindung fuer **PoolLab 1.0** inklusive Batteriestatus und Nutzung ueber ESP Bluetooth Proxy.
 - Manueller PoolLab-Abruf ueber `button.poollab_messwerte_abrufen` statt zyklischem BLE-Polling.
@@ -119,6 +121,10 @@ layzspa:
 ```
 
 `temp_target_control` ist optional und kann auf eine `number.*`- oder `climate.*`-Entitaet zeigen. Wenn gesetzt, blendet die Karte unterhalb der Temperaturanzeige eine direkte Zieltemperatur-Steuerung ein.
+
+Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, Stosschlor oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden moeglich ist, aber Werte oder Wetter nicht ideal sind. Gruen bedeutet, dass keine Warn- oder Sperrgruende vorliegen.
+
+Im visuellen Karten-Editor bleiben nur die LayZSpa-Optionen editierbar. Wetter-Entitaet und UV-Sensor werden in der Integration konfiguriert; Empfehlungssensor und PoolLab-Abruf-Button werden von der Karte fest bzw. automatisch verwendet.
 
 ## Entitaeten
 

@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `2.0.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `2.0.1`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, Badeampel, vier-spaltiger Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1108,6 +1108,7 @@ recommendation_entity: sensor.pool_empfehlung
 Die Karte:
 
 - zeigt die zentrale Empfehlung
+- zeigt eine Badeampel neben der Empfehlung
 - zeigt Messwerte und Zielwerte
 - zeigt Messquellen
 - zeigt BLE-Verbindungsstatus
@@ -1123,16 +1124,21 @@ Die Karte:
 
 ### Neue PoolLab-Abruf-UI
 
-Die Messwertetabelle enthält aktuell zwei relevante Zeilen:
+Die Messwertetabelle nutzt die Spalten:
+
+```text
+Messwert | Ist | Ziel | Quelle
+```
+
+Chemiewerte zeigen Ist- und Zielwerte getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Zusaetzlich enthaelt die Tabelle zwei relevante Status-/Aktionszeilen:
 
 - `BT Verbindung`
 - `PoolLab Abruf`
 
 Die Karte ermittelt den Button standardmäßig automatisch:
 
-1. `config.fetch_button_entity`, falls gesetzt
-2. `button.poollab_messwerte_abrufen`
-3. erste passende Fallback-Entität mit diesem Prefix
+1. `button.poollab_messwerte_abrufen`
+2. erste passende Fallback-Entität mit diesem Prefix
 
 ### Statuslogik des Karten-Buttons
 
@@ -1166,6 +1172,18 @@ Darstellung:
 
 Die Anzeige ist damit bewusst live und springt nach dem Disconnect wieder zurueck.
 
+### Badeampel
+
+Die Karte berechnet aus den vorhandenen Empfehlungssensor-Attributen eine einfache Badeampel:
+
+```text
+🟢 Baden empfohlen
+🟡 Baden möglich
+🔴 Nicht empfohlen
+```
+
+Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, Stosschlor, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser, Regen-/Windhinweisen oder hoher UV-Belastung. Gruen wird nur angezeigt, wenn keine roten oder gelben Gruende vorliegen.
+
 ### Nachmess-Zustand in der Karte
 
 Die Karte wertet zusaetzlich diese Attribute aus:
@@ -1182,14 +1200,13 @@ Wenn sie aktiv sind:
 
 ### Card Editor
 
-Im Karten-Editor gibt es aktuell zusätzlich:
+Im Karten-Editor gibt es aktuell nur noch die optionalen LayZSpa-Felder:
 
 ```text
-PoolLab-Abruf-Button (optional)
 Ziel-Temperatur Steuerung
 ```
 
-Damit kann die Karte explizit auf eine konkrete Button-Entitaet gebunden werden. Fuer LayZSpa kann zusaetzlich eine `number.*`- oder `climate.*`-Entitaet fuer die Zieltemperatur-Steuerung hinterlegt werden.
+Der Empfehlungssensor, die Wetter-Entitaet und der PoolLab-Abruf-Button werden nicht im Karten-Editor geaendert. Fuer LayZSpa kann zusaetzlich eine `number.*`- oder `climate.*`-Entitaet fuer die Zieltemperatur-Steuerung hinterlegt werden.
 
 ### Wetter-Forecast in der Karte
 
@@ -1385,7 +1402,7 @@ Die folgenden Punkte waren in älteren Dokumentationen teils anders beschrieben 
 - BLE wird **nicht mehr zyklisch** gelesen.
 - Das **Cloud-Intervall ist wieder konfigurierbar** und läuft weiterhin zyklisch.
 - Die Lovelace-Karte enthält jetzt einen **integrierten PoolLab-Abruf-Button**.
-- Die Karte kann optional eine eigene `fetch_button_entity` konfigurieren.
+- Der Karten-Editor bietet keine eigene `fetch_button_entity` mehr an; die Karte nutzt den automatisch erkannten PoolLab-Abruf-Button.
 - `bluetooth_connected` ist jetzt ein Live-Status nur fuer den aktiven BLE-Abruf und keine persistente "letzter Erfolg"-Anzeige mehr.
 - Die Karte kennt jetzt einen expliziten Nachmess-Zustand nach Chemiezugaben.
 - Das LayZSpa-Panel kann optional die Zieltemperatur direkt verstellen.

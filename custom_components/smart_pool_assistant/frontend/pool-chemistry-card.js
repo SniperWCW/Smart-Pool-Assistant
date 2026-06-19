@@ -124,7 +124,7 @@ class PoolChemistryCard extends HTMLElement {
         entityId: null,
         disabled: true,
         label: "Nicht gefunden",
-        status: "Kein PoolLab-Abruf-Button erkannt. Optional im Karten-Editor setzen.",
+        status: "Kein PoolLab-Abruf-Button erkannt.",
         meta: "fehlt",
       };
     }
@@ -566,6 +566,87 @@ class PoolChemistryCard extends HTMLElement {
     `);
   }
 
+  _getBathingAdvice(attr) {
+    const issues = [];
+    const warnings = [];
+    const isFromStorage = attr.data_source === "Speicher";
+    const chlor = Number(attr.chlor_ist);
+    const chlorTarget = Number(attr.chlor_target);
+    const ph = Number(attr.ph_ist);
+    const phTarget = Number(attr.ph_target);
+    const temp = Number(attr.temp_ist);
+    const uv = Number(attr.weather_uv_today);
+    const rainProbability = Number(attr.weather_rain_probability_today);
+    const rainAmount = Number(attr.weather_rain_amount_today);
+    const wind = Number(attr.weather_wind_speed_today);
+    const condition = attr.weather_condition_today;
+
+    if (attr.awaiting_retest || attr.awaiting_retest_chlor || attr.awaiting_retest_ph) {
+      issues.push("Nachmessung abwarten");
+    }
+    if (isFromStorage || !Number.isFinite(chlor) || !Number.isFinite(ph)) {
+      issues.push("aktuelle Chlor-/pH-Messung fehlt");
+    }
+    if (attr.is_shock === true) {
+      issues.push("Stoßchlor aktiv");
+    }
+
+    if (Number.isFinite(chlor) && Number.isFinite(chlorTarget)) {
+      const chlorDiff = chlor - chlorTarget;
+      if (chlor <= 0.3) issues.push("Chlor sehr niedrig");
+      else if (chlor >= 5 || chlorDiff > 0.9) issues.push("Chlor deutlich zu hoch");
+      else if (chlorDiff < -0.3) warnings.push("Chlor niedrig");
+      else if (chlorDiff > 0.3) warnings.push("Chlor erhöht");
+    }
+
+    if (Number.isFinite(ph) && Number.isFinite(phTarget)) {
+      const phDiff = ph - phTarget;
+      if (ph < 6.8 || ph > 7.8 || Math.abs(phDiff) > 0.4) issues.push("pH deutlich außerhalb");
+      else if (Math.abs(phDiff) > 0.15) warnings.push("pH nicht ideal");
+    }
+
+    if (Number.isFinite(temp)) {
+      if (temp >= 40) issues.push("Temperatur sehr hoch");
+      else if (temp > 32) warnings.push("warmes Wasser");
+    }
+
+    if (["lightning", "lightning-rainy", "lightning_rainy", "exceptional"].includes(condition)) {
+      issues.push("Wetter unsicher");
+    } else if (["pouring", "rainy"].includes(condition)) {
+      warnings.push("Regen erwartet");
+    }
+    if (Number.isFinite(wind)) {
+      if (wind >= 50) issues.push("starker Wind");
+      else if (wind >= 30) warnings.push("windig");
+    }
+    if (Number.isFinite(rainProbability) && rainProbability >= 60) warnings.push("Regenrisiko");
+    if (Number.isFinite(rainAmount) && rainAmount >= 5) warnings.push("Regenmenge");
+    if (Number.isFinite(uv) && uv >= 8 && !attr.pool_covered) warnings.push("hohe UV-Belastung");
+
+    if (issues.length > 0) {
+      return {
+        className: "critical",
+        icon: "🔴",
+        title: "Nicht empfohlen",
+        detail: issues.slice(0, 2).join(", "),
+      };
+    }
+    if (warnings.length > 0) {
+      return {
+        className: "warning",
+        icon: "🟡",
+        title: "Baden möglich",
+        detail: warnings.slice(0, 2).join(", "),
+      };
+    }
+    return {
+      className: "ok",
+      icon: "🟢",
+      title: "Baden empfohlen",
+      detail: "Werte im grünen Bereich",
+    };
+  }
+
   set hass(hass) {
     this._hass = hass;
     if (!this.config || !hass) return;
@@ -601,7 +682,10 @@ class PoolChemistryCard extends HTMLElement {
       this.innerHTML = `
         <ha-card header="💧 Smart Pool Assistant">
           <div class="card-content">
-            <div id="status-box"></div>
+            <div class="top-status-grid">
+              <div id="status-box"></div>
+              <div id="bathing-box"></div>
+            </div>
             <div class="recommendation-section">
               <div class="rec-row">
                 <ha-icon icon="mdi:pill"></ha-icon>
@@ -680,11 +764,38 @@ class PoolChemistryCard extends HTMLElement {
             <div id="footer-info" class="footer"></div>
           </div>
           <style>
-            .status-box { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center; font-size: 1.1em; }
+            .top-status-grid {
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+              gap: 10px;
+              margin-bottom: 16px;
+            }
+            .status-box { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; font-size: 1.1em; }
             .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
             .status-box.critical { background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; }
             .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
             .status-box.waiting { background: rgba(3, 169, 244, 0.12); color: #03a9f4; border: 1px solid #03a9f4; }
+            .bathing-box {
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              gap: 3px;
+            }
+            .bathing-title {
+              font-size: 1em;
+              line-height: 1.2;
+            }
+            .bathing-detail {
+              font-size: 0.78em;
+              font-weight: 500;
+              opacity: 0.78;
+              line-height: 1.25;
+            }
+            @media (max-width: 620px) {
+              .top-status-grid {
+                grid-template-columns: 1fr;
+              }
+            }
             .recommendation-section { margin-bottom: 0; line-height: 1.5; }
             .rec-row { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
             @media (max-width: 350px) { .rec-row { flex-direction: column; align-items: center; text-align: center; } }
@@ -732,10 +843,18 @@ class PoolChemistryCard extends HTMLElement {
               gap: 0;
               font-size: 0.9em;
             }
-            .table-head,
-            .table-row {
+            .history-table .table-head,
+            .history-table .table-row {
               display: grid;
               grid-template-columns: minmax(120px, 1.1fr) minmax(140px, 1.2fr) minmax(90px, 0.8fr);
+              gap: 12px;
+              align-items: center;
+              padding: 7px 0;
+            }
+            .metrics-table .table-head,
+            .metrics-table .table-row {
+              display: grid;
+              grid-template-columns: minmax(90px, 1fr) minmax(85px, 0.9fr) minmax(85px, 0.9fr) minmax(110px, 1fr);
               gap: 12px;
               align-items: center;
               padding: 7px 0;
@@ -762,6 +881,10 @@ class PoolChemistryCard extends HTMLElement {
               font-weight: 700;
               line-height: 1.25;
             }
+            .table-target {
+              line-height: 1.25;
+              opacity: 0.9;
+            }
             .table-sub {
               display: block;
               margin-top: 2px;
@@ -772,7 +895,11 @@ class PoolChemistryCard extends HTMLElement {
             .table-meta {
               text-align: right;
               opacity: 0.78;
-              white-space: nowrap;
+              white-space: normal;
+              line-height: 1.25;
+            }
+            .table-source {
+              font-weight: 600;
             }
             .table-value small {
               font-size: 0.82em;
@@ -806,6 +933,28 @@ class PoolChemistryCard extends HTMLElement {
             .fetch-status {
               margin-top: 0;
               white-space: normal;
+            }
+            @media (max-width: 560px) {
+              .metrics-table .table-head {
+                display: none;
+              }
+              .metrics-table .table-row {
+                grid-template-columns: minmax(90px, 1fr) minmax(100px, 1fr);
+                gap: 6px 12px;
+              }
+              .metrics-table .table-label {
+                grid-column: 1;
+              }
+              .metrics-table .table-value {
+                grid-column: 2;
+              }
+              .metrics-table .table-target {
+                grid-column: 2;
+              }
+              .metrics-table .table-meta {
+                grid-column: 2;
+                text-align: left;
+              }
             }
             .weather-grid {
               display: grid;
@@ -1065,6 +1214,14 @@ class PoolChemistryCard extends HTMLElement {
     statusBox.className = `status-box ${statusClass}`;
     statusBox.textContent = statusText;
 
+    const bathingBox = this.querySelector('#bathing-box');
+    const bathingAdvice = this._getBathingAdvice(attr);
+    bathingBox.className = `status-box bathing-box ${bathingAdvice.className}`;
+    bathingBox.innerHTML = `
+      <div class="bathing-title">${bathingAdvice.icon} ${bathingAdvice.title}</div>
+      <div class="bathing-detail">${bathingAdvice.detail}</div>
+    `;
+
     // LayzSpa Panel Rendering
     this._updateLayzSpaPanel();
 
@@ -1198,6 +1355,15 @@ class PoolChemistryCard extends HTMLElement {
     const chlorSource = attr.chlor_source || '--';
     const phSource = attr.ph_source || '--';
     const tempSource = attr.temp_source || '--';
+    const lastMeasurement = attr.last_measurement && attr.last_measurement !== "Noch keine Messung"
+      ? attr.last_measurement
+      : "";
+    const sourceWithTime = (source) => {
+      const time = lastMeasurement && attr.last_measurement_source === source
+        ? `<span class="table-sub">${lastMeasurement}</span>`
+        : "";
+      return `<span class="table-source">${source}</span>${time}`;
+    };
     const bluetoothConnected = this._poollabFetchInFlight || attr.bluetooth_connected === true;
     const bluetoothBadge = bluetoothConnected
       ? '<span class="bt-badge connected"><span class="bt-dot"></span>Bluetooth: Ja</span>'
@@ -1216,35 +1382,40 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#measurements-table').innerHTML = `
       <div class="table-head">
         <div>Messwert</div>
-        <div>Ist / Ziel</div>
+        <div>Ist</div>
+        <div>Ziel</div>
         <div>Quelle</div>
       </div>
       <div class="table-row">
         <div class="table-label">Chlor</div>
-        <div class="table-value"><span class="${chlorColor}">${c_ist} mg/l</span><span class="table-sub">Ziel: ${c_target} mg/l</span></div>
-        <div class="table-meta">${chlorSource}</div>
+        <div class="table-value"><span class="${chlorColor}">${c_ist} mg/l</span></div>
+        <div class="table-target">${c_target} mg/l</div>
+        <div class="table-meta">${sourceWithTime(chlorSource)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">pH-Wert</div>
-        <div class="table-value"><span class="${phColor}">${ph_ist}</span><span class="table-sub">Ziel: ${ph_target}</span></div>
-        <div class="table-meta">${phSource}</div>
+        <div class="table-value"><span class="${phColor}">${ph_ist}</span></div>
+        <div class="table-target">${ph_target}</div>
+        <div class="table-meta">${sourceWithTime(phSource)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">Temperatur</div>
         <div class="table-value">${t_ist}°C</div>
-        <div class="table-meta">${tempSource}</div>
+        <div class="table-target">--</div>
+        <div class="table-meta">${sourceWithTime(tempSource)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">BT Verbindung</div>
         <div class="table-value">${bluetoothBadge}</div>
+        <div class="table-target">${lastMeasurement && attr.last_measurement_source === "Bluetooth" ? lastMeasurement : "--"}</div>
         <div class="table-meta">${bluetoothConnected ? 'aktiv' : 'inaktiv'}</div>
       </div>
       <div class="table-row">
         <div class="table-label">PoolLab Abruf</div>
         <div class="table-value table-action">
           <button id="btn-poollab-fetch" class="fetch-btn" ${fetchUi.disabled ? "disabled" : ""}>${fetchUi.label}</button>
-          <span id="poollab-fetch-status" class="table-sub fetch-status">${fetchUi.status}</span>
         </div>
+        <div id="poollab-fetch-status" class="table-target fetch-status">${fetchUi.status}</div>
         <div class="table-meta">${fetchUi.meta}</div>
       </div>
     `;
@@ -1661,11 +1832,6 @@ class PoolChemistryCardEditor extends HTMLElement {
     if (!this._initialized) {
       this.innerHTML = `
         <div class="card-config" style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
-          <ha-entity-picker id="main-picker" label="Empfehlungs-Entität (Hauptsensor)" allow-custom-entity></ha-entity-picker>
-          <ha-entity-picker id="weather-picker" label="Wetter-Entitaet (optional)" allow-custom-entity></ha-entity-picker>
-          <ha-entity-picker id="fetch-button-picker" label="PoolLab-Abruf-Button (optional)" allow-custom-entity></ha-entity-picker>
-          <div style="font-size: 0.8em; opacity: 0.7;">Leer lassen = automatische Erkennung von <code>button.poollab_messwerte_abrufen</code>.</div>
-          <hr style="width: 100%; border: 0.5px solid var(--divider-color);">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <span>Whirlpool-Steuerung (LayzSpa) aktivieren</span>
             <ha-switch id="lz-enabled-switch"></ha-switch>
@@ -1674,35 +1840,8 @@ class PoolChemistryCardEditor extends HTMLElement {
         </div>
       `;
 
-      this.querySelector('#main-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
-      this.querySelector('#weather-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
-      this.querySelector('#fetch-button-picker').addEventListener('value-changed', (ev) => this._valueChanged(ev));
       this.querySelector('#lz-enabled-switch').addEventListener('change', (ev) => this._toggleLayzSpa(ev));
       this._initialized = true;
-    }
-
-    // Update Haupt-Picker
-    const mainPicker = this.querySelector('#main-picker');
-    if (mainPicker) {
-      mainPicker.hass = this._hass;
-      mainPicker.value = this._config.recommendation_entity;
-      mainPicker.configValue = "recommendation_entity";
-    }
-
-    const weatherPicker = this.querySelector('#weather-picker');
-    if (weatherPicker) {
-      weatherPicker.hass = this._hass;
-      weatherPicker.value = this._config.weather_entity || "";
-      weatherPicker.configValue = "weather_entity";
-      weatherPicker.includeDomains = ["weather"];
-    }
-
-    const fetchButtonPicker = this.querySelector('#fetch-button-picker');
-    if (fetchButtonPicker) {
-      fetchButtonPicker.hass = this._hass;
-      fetchButtonPicker.value = this._config.fetch_button_entity || "";
-      fetchButtonPicker.configValue = "fetch_button_entity";
-      fetchButtonPicker.includeDomains = ["button"];
     }
 
     // Update LayzSpa Switch
@@ -1756,7 +1895,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.0.0 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.0.1 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
