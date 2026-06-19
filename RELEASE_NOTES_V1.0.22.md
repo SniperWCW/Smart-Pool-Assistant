@@ -11,8 +11,8 @@
 ### Wetteranzeige
 
 - Die Lovelace-Karte prueft weiterhin zuerst `attributes.forecast` der konfigurierten `weather`-Entitaet.
-- Wenn dort keine Tagesvorhersage vorhanden ist, versucht die Karte die Daten zusaetzlich ueber Home Assistants Weather-Forecast-API nachzuladen.
-- Dadurch funktionieren Entitaeten wie `weather.tomorrow_io_home_daily` auch dann, wenn die Forecast-Daten nur ueber `weather.get_forecasts` bzw. den internen Forecast-Endpunkt bereitgestellt werden.
+- Wenn dort keine Tagesvorhersage vorhanden ist, versucht die Karte die Daten zusaetzlich ueber Home Assistants Forecast-Endpunkt nachzuladen.
+- Dadurch funktionieren Entitaeten wie `weather.tomorrow_io_home_daily` auch dann, wenn die Forecast-Daten nicht direkt als Attribut an der Entity haengen.
 
 ### Einheiten
 

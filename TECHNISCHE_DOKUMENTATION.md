@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.0.22`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, volumenbezogener Chlorlogik, optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.0.23`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, volumenbezogener Chlorlogik, optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -123,7 +123,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1175,9 +1175,9 @@ Wenn eine `weather`-Entitaet konfiguriert ist, rendert die Karte einen Block fue
 Abrufreihenfolge:
 
 1. Direktes `attributes.forecast` der Wetter-Entitaet
-2. Falls leer: Nachladen ueber Home Assistants Forecast-Schnittstelle mit `daily`
+2. Falls leer: Nachladen ueber Home Assistants Forecast-Endpunkt mit `daily`
 
-Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur ueber den Forecast-Service bzw. Forecast-Endpunkt bereitstellen. Ein typischer Fall ist `Tomorrow.io`.
+Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch ueber den Forecast-Endpunkt bereitstellen. Ein typischer Fall ist `Tomorrow.io`.
 
 Fuer die Darstellung nutzt die Karte aktuell vor allem:
 

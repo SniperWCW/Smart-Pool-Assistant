@@ -6,6 +6,7 @@ class PoolChemistryCard extends HTMLElement {
     this._poollabFetchClientError = null;
     this._weatherForecastCache = {};
     this._weatherForecastInFlight = {};
+    this._weatherForecastRetryDelayMs = 5 * 60 * 1000;
   }
 
   setConfig(config) {
@@ -277,38 +278,20 @@ class PoolChemistryCard extends HTMLElement {
         if (forecast.length > 0) return forecast;
       } catch (_err) {}
     }
-
-    if (typeof this._hass.callService === "function") {
-      try {
-        const response = await this._hass.callService(
-          "weather",
-          "get_forecasts",
-          { type: "daily" },
-          { entity_id: entityId },
-          true,
-        );
-        const forecast = this._normalizeForecastResponse(response, entityId);
-        if (forecast.length > 0) return forecast;
-      } catch (_err) {}
-
-      try {
-        const response = await this._hass.callService(
-          "weather",
-          "get_forecasts",
-          { entity_id: entityId, type: "daily" },
-          undefined,
-          true,
-        );
-        return this._normalizeForecastResponse(response, entityId);
-      } catch (_err) {}
-    }
-
     return [];
   }
 
   _ensureDailyForecast(entityId) {
     if (!entityId || this._weatherForecastInFlight[entityId]) {
       return;
+    }
+
+    const cached = this._weatherForecastCache[entityId];
+    if (cached && !cached.forecast?.length && Number.isFinite(cached.fetchedAt)) {
+      const ageMs = Date.now() - cached.fetchedAt;
+      if (ageMs < this._weatherForecastRetryDelayMs) {
+        return;
+      }
     }
 
     this._weatherForecastInFlight[entityId] = true;
@@ -396,7 +379,7 @@ class PoolChemistryCard extends HTMLElement {
         <div class="weather-empty">
           ${this._weatherForecastInFlight[weatherEntityId]
             ? 'Lade Tagesvorhersage...'
-            : 'Keine Tagesvorhersage gefunden. Die Karte prueft zuerst <code>attributes.forecast</code> und laedt dann <code>weather.get_forecasts</code> mit <code>type: daily</code> nach.'}
+            : 'Keine Tagesvorhersage gefunden. Die Karte prueft zuerst <code>attributes.forecast</code> und laedt dann den Home-Assistant-Forecast-Endpunkt fuer <code>daily</code> nach.'}
         </div>
       `;
       return;

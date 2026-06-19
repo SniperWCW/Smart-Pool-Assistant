@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [1.0.23] - 2026-06-19
+
+- **Forecast-Logspam behoben**: Die Lovelace-Karte ruft Wetter-Forecasts im Frontend nicht mehr ueber den problematischen `weather.get_forecasts`-Servicepfad ab, der im Dashboard-Kontext WebSocket-Fehler mit `return_response=True` ausloesen konnte.
+- **Stabileres Forecast-Nachladen**: Fuer Tagesvorhersagen wird nur noch der Forecast-Endpunkt verwendet. Wenn kein Ergebnis zurueckkommt, verhindert ein Retry-Cooldown sofortige Endlosschleifen und Log-Spam.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `RELEASE_NOTES_V1.0.23.md` auf den aktuellen Stand gebracht.
+
 ## [1.0.22] - 2026-06-19
 
 - **Tomorrow.io-Forecast-Fallback in der Karte**: Die Lovelace-Karte liest Tagesvorhersagen jetzt nicht mehr nur aus `attributes.forecast`, sondern laedt bei Bedarf aktiv `daily`-Forecasts ueber Home Assistants Weather-Forecast-API nach.
