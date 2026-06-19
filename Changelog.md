@@ -1,5 +1,14 @@
 # Changelog - Smart Pool Assistant
 
+## [1.1.2] - 2026-06-19
+
+- **Wetterlogik ausgelagert**: Die Backend-Normalisierung der Wetter-Entity liegt nun in `weather.py`.
+- **BLE-Messwertauswahl ausgelagert**: PoolLab-BLE-Type-ID-Auswertung fuer Chlor, pH, Temperatur und Cyanursaeure liegt nun in `poollab_ble_source.py`.
+- **Wetterkarte robuster**: Die Lovelace-Karte verarbeitet mehr Forecast-Antwortformate und nutzt als Fallback die Coordinator-Wetterattribute, wenn kein Daily-Forecast geliefert wird.
+- **Wetterattribute erweitert**: `weather_condition_today`, `weather_temperature_today` und `weather_wind_speed_today` werden nun an die Empfehlungssensor-Attribute durchgereicht.
+- **Frontend-Cachebuster korrigiert**: Die Lovelace-Ressource nutzt nun die Manifest-Version statt der Config-Entry-Version.
+- **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.2.md` auf den aktuellen Stand gebracht.
+
 ## [1.1.1] - 2026-06-19
 
 - **Cloud-Logik ausgelagert**: PoolLab-Cloud-GraphQL-Abruf und Messwert-Normalisierung liegen nun in `poollab_cloud.py`.

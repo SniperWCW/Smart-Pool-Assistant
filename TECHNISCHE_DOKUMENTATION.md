@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.1`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs- und PoolLab-Cloud-Logik, optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.2`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -41,7 +41,7 @@ SmartPoolCoordinator
    │
    ├── zyklischer Refresh (Cloud, manuelle Sensoren, Wartung, Persistenz)
    ├── manueller One-shot PoolLab-Abruf
-   ├── BLE-Kommunikation
+   ├── BLE-Kommunikation und BLE-Auswertung ueber poollab_ble.py / poollab_ble_source.py
    ├── Cloud-Abruf ueber poollab_cloud.py
    ├── Zeitstempel- und Quellenlogik
    ├── Chemieberechnung ueber calculation.py
@@ -86,10 +86,12 @@ custom_components/smart_pool_assistant/
 ├── notifications.py
 ├── poollab_cloud.py
 ├── poollab_ble.py
+├── poollab_ble_source.py
 ├── sensor.py
 ├── services.yaml
 ├── strings.json
 ├── translations/
+├── weather.py
 └── frontend/
     └── pool-chemistry-card.js
 ```
@@ -117,10 +119,12 @@ release_notes/
 | `notifications.py` | Persistent Notifications, Notify-Service-Versand, Follow-up-Hinweise und Filterwarnungen |
 | `poollab_cloud.py` | PoolLab-Cloud-GraphQL-Abruf und Normalisierung der Cloud-Messwerte |
 | `poollab_ble.py` | direkte BLE-Kommunikation mit dem PoolLab 1.0 |
+| `poollab_ble_source.py` | Auswahl der relevanten PoolLab-BLE-Messwerte und Type-ID-Mapping |
 | `sensor.py` | Sensor-Entitäten auf Basis des Coordinators |
 | `button.py` | native Button-Entität für den manuellen PoolLab-Abruf |
 | `services.yaml` | Service-Definition für `smart_pool_assistant.log_maintenance` |
 | `frontend/pool-chemistry-card.js` | Custom Lovelace Card inkl. Aktionen, Statusanzeige und optionalem LayZSpa-Panel |
+| `weather.py` | Normalisierung der Wetter-Entity fuer Backend-Logik und Frontend-Fallback |
 
 ---
 
@@ -132,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -919,6 +923,9 @@ Dann:
 - `days_since_filter_replace`
 - `filter_replace_status`
 - `filter_replace_interval`
+- `weather_condition_today`
+- `weather_temperature_today`
+- `weather_wind_speed_today`
 
 ### Benachrichtigungen
 
@@ -1192,8 +1199,11 @@ Abrufreihenfolge:
 
 1. Direktes `attributes.forecast` der Wetter-Entitaet
 2. Falls leer: Nachladen ueber Home Assistants Forecast-Endpunkt mit `daily`
+3. Falls weiterhin leer: Fallback auf Coordinator-Attribute fuer das heutige Wetter
 
-Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch ueber den Forecast-Endpunkt bereitstellen. Ein typischer Fall ist `Tomorrow.io`.
+Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch ueber den Forecast-Endpunkt bereitstellen. Wenn auch dieser Endpunkt keinen Daily-Forecast liefert, zeigt die Karte zumindest die heutigen Wetterdaten aus dem Coordinator bzw. aus den aktuellen Weather-Entity-Attributen.
+
+Die Frontend-Ressource wird mit der Manifest-Version als Cachebuster registriert, damit Kartenfixes nach einem Update zuverlaessig neu geladen werden.
 
 Fuer die Darstellung nutzt die Karte aktuell vor allem:
 
@@ -1391,7 +1401,7 @@ Die folgenden Punkte waren in älteren Dokumentationen teils anders beschrieben 
 | neue Config-Optionen | `const.py`, `config_flow.py` |
 | neue UI-Felder | `frontend/pool-chemistry-card.js` |
 | neue Wartungsaktionen | `services.yaml`, `__init__.py`, `coordinator.py` |
-| neue PoolLab-Parameter | `poollab_ble.py`, Mapping in `coordinator.py` |
+| neue PoolLab-Parameter | `poollab_ble.py`, Mapping in `poollab_ble_source.py` |
 
 ### Technische Schulden / sinnvolle nächste Schritte
 

@@ -39,7 +39,9 @@ from .notifications import (
     async_send_notification,
 )
 from .poollab_ble import PoolLabBLEClient
+from .poollab_ble_source import select_poollab_ble_measurements
 from .poollab_cloud import async_fetch_poollab_cloud_measurements
+from .weather import get_weather_forecast_today
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,50 +89,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     def _get_weather_forecast_today(self, conf):
         """Return normalized weather data for today's daily forecast."""
-        entity_id = conf.get(CONF_WEATHER_ENTITY)
-        if not entity_id:
-            return None
-
-        state = self.hass.states.get(entity_id)
-        if state is None:
-            return {"entity_id": entity_id, "available": False}
-
-        forecast = state.attributes.get("forecast")
-        if not isinstance(forecast, list) or not forecast:
-            return {"entity_id": entity_id, "available": True, "has_forecast": False}
-
-        today = dt_util.now().date()
-        selected = None
-        for item in forecast:
-            if not isinstance(item, dict):
-                continue
-            dt_raw = item.get("datetime")
-            if dt_raw:
-                parsed = dt_util.parse_datetime(dt_raw)
-                if parsed is not None and dt_util.as_local(parsed).date() == today:
-                    selected = item
-                    break
-            if selected is None:
-                selected = item
-
-        if selected is None:
-            return {"entity_id": entity_id, "available": True, "has_forecast": False}
-
-        precipitation_probability = selected.get("precipitation_probability")
-        precipitation_amount = selected.get("precipitation")
-        uv_index = selected.get("uv_index")
-
-        return {
-            "entity_id": entity_id,
-            "available": True,
-            "has_forecast": True,
-            "condition": selected.get("condition"),
-            "uv_index": float(uv_index) if uv_index is not None else None,
-            "precipitation_probability": float(precipitation_probability) if precipitation_probability is not None else None,
-            "precipitation_amount": float(precipitation_amount) if precipitation_amount is not None else None,
-            "wind_speed": float(selected.get("wind_speed")) if selected.get("wind_speed") is not None else None,
-            "temperature": float(selected.get("temperature")) if selected.get("temperature") is not None else None,
-        }
+        return get_weather_forecast_today(self.hass, conf)
 
     def _parse_ts_aware(self, ts_str: str | None):
         """Helper to parse a timestamp string into an aware datetime object."""
@@ -356,13 +315,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except ValueError:
                 return None, None
 
-        def get_ble_measurement(ble_data, type_ids: tuple[int, ...]):
-            """Return the first BLE measurement matching one of the supported type IDs."""
-            for type_id in type_ids:
-                if measurement := ble_data.measurements.get(type_id):
-                    return measurement
-            return None
-
         # 1. Bestehende Daten laden
         # Immer einen aktuellen Zeitstempel für den "letzten Lauf" parat haben
         now_iso = dt_util.now().isoformat()
@@ -411,55 +363,36 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         poollab_fetch_error = None
                         poollab_fetch_completed_at = dt_util.now().isoformat()
                         self._set_poollab_cooldown(_BLE_SUCCESS_COOLDOWN)
-                        # Speichere Batteriestatus in der Historie
-                        self.maintenance_history["ble_battery"] = ble_data.battery
-
-                        ble_ts_list = []
-                        # Erweiterte Mappings gemäß BLE-Doku: mehrere OEM-/Test-Varianten möglich
-                        if m_c := get_ble_measurement(ble_data, (1, 8, 3)):
-                            c_ist = m_c.value
-                            chlor_source = "Bluetooth"
-                            self.maintenance_history["last_ble_c"] = m_c.value
-                            ble_ts_list.append(m_c.timestamp)
-                        if m_ph := get_ble_measurement(ble_data, (9, 27, 28, 29, 30, 31, 32, 33, 34, 36, 48)):
-                            ph_ist = m_ph.value
-                            ph_source = "Bluetooth"
-                            self.maintenance_history["last_ble_ph"] = m_ph.value
-                            ble_ts_list.append(m_ph.timestamp)
-                        if m_temp := ble_data.measurements.get(4):
-                            temp_ist = m_temp.value
-                            temp_source = "Bluetooth"
-                            self.maintenance_history["last_ble_temp"] = m_temp.value
-                        if m_cya := ble_data.measurements.get(11):
-                            self.maintenance_history["cyanuric_acid"] = m_cya.value
-
-                        _LOGGER.debug(
-                            "BLE selection result: available_types=%s chlor=%s ph=%s temp=%s cya=%s",
-                            sorted(ble_data.measurements.keys()),
-                            getattr(m_c, "measure_type", None),
-                            getattr(m_ph, "measure_type", None),
-                            getattr(m_temp, "measure_type", None),
-                            getattr(m_cya, "measure_type", None),
+                        ble_selection = select_poollab_ble_measurements(
+                            ble_data,
+                            poollab_fetch_completed_at,
+                            self._normalize_ble_measurement_ts,
                         )
+                        self.maintenance_history["ble_battery"] = ble_selection.battery
+
+                        if ble_selection.chlor is not None:
+                            c_ist = ble_selection.chlor
+                            chlor_source = "Bluetooth"
+                            self.maintenance_history["last_ble_c"] = ble_selection.chlor
+                        if ble_selection.ph is not None:
+                            ph_ist = ble_selection.ph
+                            ph_source = "Bluetooth"
+                            self.maintenance_history["last_ble_ph"] = ble_selection.ph
+                        if ble_selection.temperature is not None:
+                            temp_ist = ble_selection.temperature
+                            temp_source = "Bluetooth"
+                            self.maintenance_history["last_ble_temp"] = ble_selection.temperature
+                        if ble_selection.cyanuric_acid is not None:
+                            self.maintenance_history["cyanuric_acid"] = ble_selection.cyanuric_acid
+
                         _LOGGER.debug(
                             "BLE source assignment: chlor=%s ph=%s temp=%s",
                             chlor_source,
                             ph_source,
                             temp_source,
                         )
-                        if m_ph is None:
-                            _LOGGER.debug(
-                                "No pH measurement selected from BLE response. Available measurement types were: %s",
-                                sorted(ble_data.measurements.keys()),
-                            )
-
-                        if ble_ts_list:
-                            # Verwende den neuesten Zeitstempel der abgerufenen BLE-Messungen
-                            latest_ble_ts = max(ble_ts_list)
-                            self.maintenance_history["last_ble_measurement_raw"] = self._normalize_ble_measurement_ts(
-                                latest_ble_ts,
-                                poollab_fetch_completed_at,
-                            )
+                        if ble_selection.measurement_raw:
+                            self.maintenance_history["last_ble_measurement_raw"] = ble_selection.measurement_raw
 
                     except (asyncio.TimeoutError, asyncio.CancelledError):
                         poollab_fetch_result = "error"
@@ -729,6 +662,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
                 "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
                 "weather_rain_amount_today": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
+                "weather_condition_today": weather_today.get("condition") if isinstance(weather_today, dict) else None,
+                "weather_temperature_today": weather_today.get("temperature") if isinstance(weather_today, dict) else None,
+                "weather_wind_speed_today": weather_today.get("wind_speed") if isinstance(weather_today, dict) else None,
                 "weather_note": None,
                 "chlor_breakdown_uv_adj": 0.0,
                 "history": self.maintenance_history,
@@ -864,6 +800,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
             "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
             "weather_rain_amount_today": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
+            "weather_condition_today": weather_today.get("condition") if isinstance(weather_today, dict) else None,
+            "weather_temperature_today": weather_today.get("temperature") if isinstance(weather_today, dict) else None,
+            "weather_wind_speed_today": weather_today.get("wind_speed") if isinstance(weather_today, dict) else None,
             "weather_note": weather_note,
             "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,

@@ -256,6 +256,10 @@ class PoolChemistryCard extends HTMLElement {
       return response.forecast;
     }
 
+    if (Array.isArray(response.result?.forecast)) {
+      return response.result.forecast;
+    }
+
     const entityResponse = entityId ? response[entityId] : null;
     if (Array.isArray(entityResponse?.forecast)) {
       return entityResponse.forecast;
@@ -271,6 +275,16 @@ class PoolChemistryCard extends HTMLElement {
       try {
         const response = await this._hass.callWS({
           type: "weather/forecast",
+          entity_id: entityId,
+          forecast_type: "daily",
+        });
+        const forecast = this._normalizeForecastResponse(response, entityId);
+        if (forecast.length > 0) return forecast;
+      } catch (_err) {}
+
+      try {
+        const response = await this._hass.callWS({
+          type: "weather/get_forecast",
           entity_id: entityId,
           forecast_type: "daily",
         });
@@ -334,14 +348,48 @@ class PoolChemistryCard extends HTMLElement {
       return {
         label: index === 0 ? `Heute · ${label}` : `Morgen · ${label}`,
         condition: entry.condition,
-        precipitation: entry.precipitation_probability ?? entry.precipitation ?? null,
-        uv: entry.uv_index ?? null,
-        wind: entry.wind_speed ?? null,
+        precipitation: entry.precipitation_probability ?? entry.precipitation ?? entry.native_precipitation ?? null,
+        uv: entry.uv_index ?? entry.uv ?? null,
+        wind: entry.wind_speed ?? entry.native_wind_speed ?? null,
         windUnit: weatherState?.attributes?.wind_speed_unit ?? null,
-        temperature: entry.temperature ?? null,
-        templow: entry.templow ?? null,
+        temperature: entry.temperature ?? entry.native_temperature ?? null,
+        templow: entry.templow ?? entry.native_templow ?? entry.low_temperature ?? null,
       };
     });
+  }
+
+  _getCoordinatorWeatherDay(weatherState) {
+    const attr = this._lastAttr || {};
+    const condition = attr.weather_condition_today || (
+      weatherState?.state && !["unknown", "unavailable"].includes(weatherState.state)
+        ? weatherState.state
+        : null
+    );
+    const temperature = attr.weather_temperature_today ?? weatherState?.attributes?.temperature ?? null;
+    const wind = attr.weather_wind_speed_today ?? weatherState?.attributes?.wind_speed ?? null;
+    const precipitation = attr.weather_rain_probability_today ?? attr.weather_rain_amount_today ?? null;
+    const uv = attr.weather_uv_today ?? null;
+
+    if (
+      condition === null &&
+      temperature === null &&
+      wind === null &&
+      precipitation === null &&
+      uv === null
+    ) {
+      return null;
+    }
+
+    return {
+      label: "Heute",
+      condition,
+      precipitation,
+      uv,
+      wind,
+      windUnit: weatherState?.attributes?.wind_speed_unit ?? null,
+      temperature,
+      templow: null,
+    };
   }
 
   _renderWeatherSection() {
@@ -361,7 +409,13 @@ class PoolChemistryCard extends HTMLElement {
     if (!hasAttributeForecast && !cachedForecast.length) {
       this._ensureDailyForecast(weatherEntityId);
     }
-    const days = this._getForecastDays(weatherState, cachedForecast);
+    let days = this._getForecastDays(weatherState, cachedForecast);
+    if (days.length === 0) {
+      const coordinatorWeatherDay = this._getCoordinatorWeatherDay(weatherState);
+      if (coordinatorWeatherDay) {
+        days = [coordinatorWeatherDay];
+      }
+    }
 
     if (!weatherState) {
       container.style.display = 'block';

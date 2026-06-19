@@ -141,6 +141,9 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "weather_uv_today": data.get("weather_uv_today"),
             "weather_rain_probability_today": data.get("weather_rain_probability_today"),
             "weather_rain_amount_today": data.get("weather_rain_amount_today"),
+            "weather_condition_today": data.get("weather_condition_today"),
+            "weather_temperature_today": data.get("weather_temperature_today"),
+            "weather_wind_speed_today": data.get("weather_wind_speed_today"),
             "weather_note": data.get("weather_note"),
         }
 

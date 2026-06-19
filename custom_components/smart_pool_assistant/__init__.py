@@ -1,6 +1,7 @@
 """The Smart Pool Assistant integration."""
 from __future__ import annotations
 
+import json
 import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -13,6 +14,16 @@ from .coordinator import SmartPoolCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 _LOGGER = logging.getLogger(__name__)
+
+
+def _manifest_version(hass: HomeAssistant) -> str:
+    """Return the integration manifest version for frontend cache busting."""
+    manifest_path = hass.config.path("custom_components/smart_pool_assistant/manifest.json")
+    try:
+        with open(manifest_path, encoding="utf-8") as manifest_file:
+            return json.load(manifest_file).get("version", "1")
+    except (OSError, ValueError):
+        return "1"
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Smart Pool Assistant component."""
@@ -63,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Sagt dem Frontend, dass es die JS-Datei laden soll (Cache-Busting inkludiert)
             if "frontend" in hass.config.components:
                 from homeassistant.components.frontend import add_extra_js_url
-                add_extra_js_url(hass, f"{url_path}?v={entry.version}")
+                add_extra_js_url(hass, f"{url_path}?v={_manifest_version(hass)}")
             
             hass.data[DOMAIN]["static_path_registered"] = True
         except RuntimeError:
