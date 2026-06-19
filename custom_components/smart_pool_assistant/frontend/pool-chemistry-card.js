@@ -7,10 +7,14 @@ class PoolChemistryCard extends HTMLElement {
     this._weatherForecastCache = {};
     this._weatherForecastInFlight = {};
     this._weatherForecastRetryDelayMs = 5 * 60 * 1000;
+    this._renderSignature = null;
+    this._poolLabFetchButtonEntityCache = null;
   }
 
   setConfig(config) {
     this.config = config;
+    this._renderSignature = null;
+    this._poolLabFetchButtonEntityCache = null;
   }
 
   static getConfigElement() {
@@ -41,11 +45,66 @@ class PoolChemistryCard extends HTMLElement {
       return "button.poollab_messwerte_abrufen";
     }
 
+    if (this._poolLabFetchButtonEntityCache && this._hass.states[this._poolLabFetchButtonEntityCache]) {
+      return this._poolLabFetchButtonEntityCache;
+    }
+
     const candidates = Object.keys(this._hass.states)
       .filter((entityId) => entityId.startsWith("button.poollab_messwerte_abrufen"))
       .sort((a, b) => a.localeCompare(b));
 
-    return candidates[0] || null;
+    this._poolLabFetchButtonEntityCache = candidates[0] || null;
+    return this._poolLabFetchButtonEntityCache;
+  }
+
+  _getEntityVersion(entityId) {
+    if (!entityId || !this._hass) return `${entityId || ""}:missing`;
+    const state = this._hass.states[entityId];
+    if (!state) return `${entityId}:missing`;
+    return `${entityId}:${state.state}:${state.last_updated || state.last_changed || ""}`;
+  }
+
+  _getLayzSpaEntityIds() {
+    const cfg = this.config?.layzspa;
+    if (!cfg) return [];
+
+    return [
+      cfg.connection,
+      cfg.ip,
+      cfg.rssi,
+      cfg.pump,
+      cfg.heater,
+      cfg.airbubbles,
+      cfg.temp_current,
+      cfg.temp_target,
+      cfg.temp_target_control,
+    ].filter(Boolean);
+  }
+
+  _createRenderSignature(rec, attr) {
+    const weatherEntity = this._resolveWeatherEntity();
+    const fetchButtonEntity = this._resolvePoolLabFetchButtonEntity();
+    const entityVersions = [
+      this._getEntityVersion(this.config.recommendation_entity),
+      this._getEntityVersion(weatherEntity),
+      this._getEntityVersion(fetchButtonEntity),
+      ...this._getLayzSpaEntityIds().map((entityId) => this._getEntityVersion(entityId)),
+    ];
+
+    return JSON.stringify({
+      rec: `${rec.state}:${rec.last_updated || rec.last_changed || ""}`,
+      entities: entityVersions,
+      weatherEntity: weatherEntity || "",
+      fetchButtonEntity: fetchButtonEntity || "",
+      localPoolLab: `${this._poollabFetchInFlight}:${this._poollabFetchClientError || ""}`,
+      weatherFallback: attr.weather_entity || "",
+      config: {
+        recommendation_entity: this.config.recommendation_entity || "",
+        weather_entity: this.config.weather_entity || "",
+        fetch_button_entity: this.config.fetch_button_entity || "",
+        layzspa: this.config.layzspa || null,
+      },
+    });
   }
 
   _getPoolLabFetchUi(attr) {
@@ -354,9 +413,11 @@ class PoolChemistryCard extends HTMLElement {
         label: index === 0 ? `Heute · ${label}` : `Morgen · ${label}`,
         condition: entry.condition,
         precipitation: entry.precipitation_probability ?? entry.precipitation ?? entry.native_precipitation ?? null,
-        uv: entry.uv_index ?? entry.uv ?? null,
+        uv: index === 0
+          ? (this._lastAttr?.weather_uv_today ?? entry.uv_index ?? entry.uv ?? null)
+          : (entry.uv_index ?? entry.uv ?? null),
         wind: entry.wind_speed ?? entry.native_wind_speed ?? null,
-          windUnit: entry.wind_speed_unit ?? this._lastAttr?.weather_wind_speed_unit ?? weatherState?.attributes?.wind_speed_unit ?? null,
+        windUnit: entry.wind_speed_unit ?? this._lastAttr?.weather_wind_speed_unit ?? weatherState?.attributes?.wind_speed_unit ?? null,
         temperature: entry.temperature ?? entry.native_temperature ?? null,
         templow: entry.templow ?? entry.native_templow ?? entry.low_temperature ?? null,
       };
@@ -395,6 +456,14 @@ class PoolChemistryCard extends HTMLElement {
       temperature,
       templow: null,
     };
+  }
+
+  _getUvColorClass(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '';
+    if (num >= 8) return 'status-critical';
+    if (num >= 6) return 'status-warning';
+    return 'status-ok';
   }
 
   _renderWeatherSection() {
@@ -486,7 +555,7 @@ class PoolChemistryCard extends HTMLElement {
               ${this._formatWeatherValue(day.temperature, "°")} / ${this._formatWeatherValue(day.templow, "°")}
             </div>
             <div class="weather-metrics">
-              <div class="weather-metric"><span>Sonne/UV</span><b>${this._formatWeatherValue(day.uv)}</b></div>
+              <div class="weather-metric"><span>Sonne/UV</span><b class="${this._getUvColorClass(day.uv)}">${this._formatWeatherValue(day.uv)}</b></div>
               <div class="weather-metric"><span>Regen</span><b>${this._formatWeatherValue(day.precipitation, "%")}</b></div>
               <div class="weather-metric"><span>Wind</span><b>${this._formatWeatherWind(day.wind, day.windUnit)}</b></div>
             </div>
@@ -503,6 +572,8 @@ class PoolChemistryCard extends HTMLElement {
 
     const rec = hass.states[this.config.recommendation_entity];
     if (!rec) {
+      this.content = null;
+      this._renderSignature = null;
       this.innerHTML = `
         <ha-card>
           <div style="padding: 16px; color: var(--error-color); text-align: center;">
@@ -515,6 +586,13 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     const attr = rec.attributes;
+    this._lastAttr = attr; // Store for toggles and weather fallback.
+    const renderSignature = this._createRenderSignature(rec, attr);
+    if (this.content && this._renderSignature === renderSignature) {
+      return;
+    }
+    this._renderSignature = renderSignature;
+
     const hist = attr.history || {};
     const isShock = attr.is_shock === true;
 
@@ -964,7 +1042,6 @@ class PoolChemistryCard extends HTMLElement {
 
     // Aktualisiere nur die dynamischen Inhalte
     const statusBox = this.querySelector('#status-box');
-    this._lastAttr = attr; // Store for toggle
     const awaitingRetest = attr.awaiting_retest === true;
     const chlorAwaitingRetest = attr.awaiting_retest_chlor === true;
     const phAwaitingRetest = attr.awaiting_retest_ph === true;
@@ -1679,7 +1756,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 1.0.20 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.0.0 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

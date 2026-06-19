@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [2.0.0] - 2026-06-19
+
+- **Stabiler Abschluss der grossen Umbauten**: Der Stand buendelt die Refactorings der Berechnungs-, Wartungs-, Benachrichtigungs-, PoolLab-Cloud-, PoolLab-BLE- und Wetterlogik als neue Major-Version.
+- **Optimierte Lovelace-Karte**: Die Karte rendert nicht mehr bei jedem beliebigen Home-Assistant-State-Update neu, sondern nur noch bei relevanten Aenderungen an Empfehlung, Wetter, PoolLab oder LayzSpa-Entitaeten.
+- **PoolLab-Button-Erkennung beschleunigt**: Die automatisch erkannte PoolLab-Abruf-Button-Entitaet wird gecacht und muss nicht wiederholt ueber alle States gesucht werden.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.0.md` auf den aktuellen Stand gebracht.
+
 ## [1.1.5] - 2026-06-19
 
 - **Wetter einklappbar**: Die Wettersektion der Lovelace-Karte ist jetzt als ein- und ausklappbares Panel umgesetzt, aehnlich zum LayzSpa-Bereich.
