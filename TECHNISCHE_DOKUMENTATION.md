@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.2`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `1.1.3`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback und LayZSpa-Zieltemperatur-Steuerung
 
 ---
 
@@ -124,7 +124,7 @@ release_notes/
 | `button.py` | native Button-Entität für den manuellen PoolLab-Abruf |
 | `services.yaml` | Service-Definition für `smart_pool_assistant.log_maintenance` |
 | `frontend/pool-chemistry-card.js` | Custom Lovelace Card inkl. Aktionen, Statusanzeige und optionalem LayZSpa-Panel |
-| `weather.py` | Normalisierung der Wetter-Entity fuer Backend-Logik und Frontend-Fallback |
+| `weather.py` | Backend-Abruf und Normalisierung der Wetter-Entity fuer Chemie-Logik und Wetterkarte |
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1198,10 +1198,10 @@ Wenn eine `weather`-Entitaet konfiguriert ist, rendert die Karte einen Block fue
 Abrufreihenfolge:
 
 1. Direktes `attributes.forecast` der Wetter-Entitaet
-2. Falls leer: Nachladen ueber Home Assistants Forecast-Endpunkt mit `daily`
+2. Falls leer: Backend-Abruf ueber Home Assistants Wetter-Service mit `type: daily`
 3. Falls weiterhin leer: Fallback auf Coordinator-Attribute fuer das heutige Wetter
 
-Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch ueber den Forecast-Endpunkt bereitstellen. Wenn auch dieser Endpunkt keinen Daily-Forecast liefert, zeigt die Karte zumindest die heutigen Wetterdaten aus dem Coordinator bzw. aus den aktuellen Weather-Entity-Attributen.
+Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch ueber den Wetter-Service bereitstellen. Die normalisierten Forecast-Tage werden vom Coordinator als `weather_forecast_days` an den Empfehlungssensor und von dort an die Karte weitergereicht. Wenn auch dort kein Daily-Forecast verfuegbar ist, zeigt die Karte zumindest die heutigen Wetterdaten aus dem Coordinator bzw. aus den aktuellen Weather-Entity-Attributen.
 
 Die Frontend-Ressource wird mit der Manifest-Version als Cachebuster registriert, damit Kartenfixes nach einem Update zuverlaessig neu geladen werden.
 

@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [1.1.3] - 2026-06-19
+
+- **Tomorrow.io-Forecast ins Backend verlagert**: Die Integration holt Daily-Forecasts nun in `weather.py` ueber Home Assistants Wetter-Service und normalisiert sie zentral fuer Coordinator und Karte.
+- **Karte zeigt wieder heute und morgen**: Die Lovelace-Karte nutzt bevorzugt `weather_forecast_days` aus dem Empfehlungssensor statt sich allein auf direkte Forecast-Attribute der Weather-Entity zu verlassen.
+- **Stabilere Wetterattribute**: `weather_wind_speed_unit` und die normalisierten Forecast-Tagesdaten werden nun bis in die Sensorattribute durchgereicht.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.3.md` auf den aktuellen Stand gebracht.
+
 ## [1.1.2] - 2026-06-19
 
 - **Wetterlogik ausgelagert**: Die Backend-Normalisierung der Wetter-Entity liegt nun in `weather.py`.

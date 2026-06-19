@@ -41,7 +41,7 @@ from .notifications import (
 from .poollab_ble import PoolLabBLEClient
 from .poollab_ble_source import select_poollab_ble_measurements
 from .poollab_cloud import async_fetch_poollab_cloud_measurements
-from .weather import get_weather_forecast_today
+from .weather import async_get_weather_data
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -86,10 +86,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     def _normalize_loaded_history(self, stored: dict) -> dict:
         """Fix legacy history entries in-place after loading from storage."""
         return normalize_loaded_history(stored, self.pool_covered, self.usage_mode)
-
-    def _get_weather_forecast_today(self, conf):
-        """Return normalized weather data for today's daily forecast."""
-        return get_weather_forecast_today(self.hass, conf)
 
     def _parse_ts_aware(self, ts_str: str | None):
         """Helper to parse a timestamp string into an aware datetime object."""
@@ -612,7 +608,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         dt_last_chlor_action = self._get_action_dt("chlor")
         dt_last_ph_plus_action = self._get_action_dt("ph_plus")
         dt_last_ph_minus_action = self._get_action_dt("ph_minus")
-        weather_today = self._get_weather_forecast_today(conf)
+        weather_data = await async_get_weather_data(self.hass, conf, limit=2)
+        weather_today = weather_data.get("today") if isinstance(weather_data, dict) else None
+        weather_forecast_days = weather_data.get("forecast_days") if isinstance(weather_data, dict) else []
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
@@ -658,13 +656,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "awaiting_retest_ph": False,
                 "awaiting_retest_since": None,
                 "weather_entity": conf.get(CONF_WEATHER_ENTITY),
-                "weather_available": weather_today.get("available") if isinstance(weather_today, dict) else False,
+                "weather_available": weather_data.get("available") if isinstance(weather_data, dict) else False,
                 "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
                 "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
                 "weather_rain_amount_today": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
                 "weather_condition_today": weather_today.get("condition") if isinstance(weather_today, dict) else None,
                 "weather_temperature_today": weather_today.get("temperature") if isinstance(weather_today, dict) else None,
                 "weather_wind_speed_today": weather_today.get("wind_speed") if isinstance(weather_today, dict) else None,
+                "weather_wind_speed_unit": weather_today.get("wind_speed_unit") if isinstance(weather_today, dict) else None,
+                "weather_forecast_days": weather_forecast_days,
                 "weather_note": None,
                 "chlor_breakdown_uv_adj": 0.0,
                 "history": self.maintenance_history,
@@ -796,13 +796,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "awaiting_retest_ph": awaiting_retest_ph,
             "awaiting_retest_since": awaiting_retest_since,
             "weather_entity": conf.get(CONF_WEATHER_ENTITY),
-            "weather_available": weather_today.get("available") if isinstance(weather_today, dict) else False,
+            "weather_available": weather_data.get("available") if isinstance(weather_data, dict) else False,
             "weather_uv_today": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
             "weather_rain_probability_today": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
             "weather_rain_amount_today": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
             "weather_condition_today": weather_today.get("condition") if isinstance(weather_today, dict) else None,
             "weather_temperature_today": weather_today.get("temperature") if isinstance(weather_today, dict) else None,
             "weather_wind_speed_today": weather_today.get("wind_speed") if isinstance(weather_today, dict) else None,
+            "weather_wind_speed_unit": weather_today.get("wind_speed_unit") if isinstance(weather_today, dict) else None,
+            "weather_forecast_days": weather_forecast_days,
             "weather_note": weather_note,
             "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,

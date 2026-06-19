@@ -331,9 +331,14 @@ class PoolChemistryCard extends HTMLElement {
   }
 
   _getForecastDays(weatherState, fallbackForecast = null) {
-    const forecast = Array.isArray(weatherState?.attributes?.forecast) && weatherState.attributes.forecast.length > 0
-      ? weatherState.attributes.forecast
-      : fallbackForecast;
+    const coordinatorForecast = Array.isArray(this._lastAttr?.weather_forecast_days) && this._lastAttr.weather_forecast_days.length > 0
+      ? this._lastAttr.weather_forecast_days
+      : null;
+    const forecast = coordinatorForecast || (
+      Array.isArray(weatherState?.attributes?.forecast) && weatherState.attributes.forecast.length > 0
+        ? weatherState.attributes.forecast
+        : fallbackForecast
+    );
     if (!Array.isArray(forecast) || forecast.length === 0) {
       return [];
     }
@@ -351,7 +356,7 @@ class PoolChemistryCard extends HTMLElement {
         precipitation: entry.precipitation_probability ?? entry.precipitation ?? entry.native_precipitation ?? null,
         uv: entry.uv_index ?? entry.uv ?? null,
         wind: entry.wind_speed ?? entry.native_wind_speed ?? null,
-        windUnit: weatherState?.attributes?.wind_speed_unit ?? null,
+          windUnit: entry.wind_speed_unit ?? this._lastAttr?.weather_wind_speed_unit ?? weatherState?.attributes?.wind_speed_unit ?? null,
         temperature: entry.temperature ?? entry.native_temperature ?? null,
         templow: entry.templow ?? entry.native_templow ?? entry.low_temperature ?? null,
       };
@@ -386,7 +391,7 @@ class PoolChemistryCard extends HTMLElement {
       precipitation,
       uv,
       wind,
-      windUnit: weatherState?.attributes?.wind_speed_unit ?? null,
+      windUnit: attr.weather_wind_speed_unit ?? weatherState?.attributes?.wind_speed_unit ?? null,
       temperature,
       templow: null,
     };
@@ -405,8 +410,9 @@ class PoolChemistryCard extends HTMLElement {
 
     const weatherState = this._hass?.states?.[weatherEntityId];
     const cachedForecast = this._weatherForecastCache[weatherEntityId]?.forecast || [];
+    const hasCoordinatorForecast = Array.isArray(this._lastAttr?.weather_forecast_days) && this._lastAttr.weather_forecast_days.length > 0;
     const hasAttributeForecast = Array.isArray(weatherState?.attributes?.forecast) && weatherState.attributes.forecast.length > 0;
-    if (!hasAttributeForecast && !cachedForecast.length) {
+    if (!hasCoordinatorForecast && !hasAttributeForecast && !cachedForecast.length) {
       this._ensureDailyForecast(weatherEntityId);
     }
     let days = this._getForecastDays(weatherState, cachedForecast);
