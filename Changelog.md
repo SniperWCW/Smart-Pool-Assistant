@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [1.1.0] - 2026-06-19
+
+- **Refactoring-Start fuer 1.1.x**: Wartungs-/History-Logik wurde aus `coordinator.py` in `maintenance.py` ausgelagert.
+- **Berechnungslogik ausgelagert**: Chlor-, pH-, Nachmess- und Empfehlungslogik liegt nun in `calculation.py`, damit sie kuenftig gezielter getestet und angepasst werden kann.
+- **Coordinator entlastet**: `coordinator.py` bleibt fuer Home-Assistant-Orchestrierung, Datenbeschaffung, Persistenz und Zusammenfuehrung verantwortlich.
+- **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `RELEASE_NOTES_V1.1.0.md` auf den aktuellen Stand gebracht.
+
 ## [1.0.23] - 2026-06-19
 
 - **Forecast-Logspam behoben**: Die Lovelace-Karte ruft Wetter-Forecasts im Frontend nicht mehr ueber den problematischen `weather.get_forecasts`-Servicepfad ab, der im Dashboard-Kontext WebSocket-Fehler mit `return_response=True` ausloesen konnte.

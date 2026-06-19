@@ -13,13 +13,25 @@ from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
-    CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
-    CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
     CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
     CONF_WEATHER_ENTITY,
+)
+from .calculation import (
+    build_recommendation,
+    calculate_pool_chemistry,
+    calculate_retest_status,
+)
+from .maintenance import (
+    activity_text,
+    collect_last_activities,
+    get_action_dt,
+    get_filter_status,
+    get_time_since_last_action,
+    normalize_loaded_history,
+    update_maintenance_history,
 )
 from .poollab_ble import PoolLabBLEClient
 
@@ -61,68 +73,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     def _activity_text(self, m_type: str | None, amount: float | int | None) -> str:
         """Return a human readable activity label."""
-        if m_type == "chlor":
-            return f"{amount:g}g Chlor hinzugefügt" if amount is not None else "Chlor hinzugefügt"
-        if m_type == "ph_plus":
-            return f"{amount:g}g PH-Plus hinzugefügt" if amount is not None else "PH-Plus hinzugefügt"
-        if m_type == "ph_minus":
-            return f"{amount:g}ml PH-Minus hinzugefügt" if amount is not None else "PH-Minus hinzugefügt"
-        if m_type == "filter_clean":
-            return "Filter gereinigt"
-        if m_type == "filter_replace":
-            return "Filter getauscht"
-        if m_type == "set_covered":
-            return "Abdeckung: " + ("Abgedeckt" if self.pool_covered else "Offen")
-        if m_type == "set_usage":
-            mode_labels = {"none": "Keine", "normal": "Normal", "party": "Party"}
-            return f"Nutzungsmodus: {mode_labels.get(self.usage_mode, self.usage_mode)}"
-        return ""
+        return activity_text(m_type, amount, self.pool_covered, self.usage_mode)
 
     def _normalize_loaded_history(self, stored: dict) -> dict:
         """Fix legacy history entries in-place after loading from storage."""
-        if not isinstance(stored, dict):
-            return {}
-
-        history = dict(stored)
-        activities = history.get("last_activities")
-        if isinstance(activities, list):
-            normalized: list[dict] = []
-            changed = False
-
-            for entry in activities:
-                if not isinstance(entry, dict):
-                    continue
-
-                item = dict(entry)
-                m_type = item.get("type")
-
-                if m_type in ("filter_clean", "filter_replace"):
-                    expected_text = self._activity_text(m_type, None)
-                    if item.get("text") != expected_text:
-                        item["text"] = expected_text
-                        changed = True
-                    if item.get("amount") == 0:
-                        item["amount"] = None
-                        changed = True
-                elif not item.get("text"):
-                    item["text"] = self._activity_text(m_type, item.get("amount")) or "--"
-                    changed = True
-
-                normalized.append(item)
-
-            if changed:
-                history["last_activities"] = normalized
-
-        for key in ("filter_clean", "filter_replace"):
-            entry = history.get(key)
-            if isinstance(entry, dict) and entry.get("amount") == 0:
-                entry = dict(entry)
-                entry["amount"] = None
-                history[key] = entry
-
-        history.pop("bluetooth_connected", None)
-
-        return history
+        return normalize_loaded_history(stored, self.pool_covered, self.usage_mode)
 
     def _get_weather_forecast_today(self, conf):
         """Return normalized weather data for today's daily forecast."""
@@ -301,56 +256,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     def _collect_last_activities(self) -> list[dict]:
         """Build a compact activity list from stored maintenance actions."""
-        visible_activity_types = {"chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"}
-        items = self.maintenance_history.get("last_activities")
-        if isinstance(items, list) and items:
-            normalized = []
-            for entry in items:
-                if not isinstance(entry, dict):
-                    continue
-                if entry.get("type") not in visible_activity_types:
-                    continue
-                raw_ts = entry.get("raw_ts")
-                dt = self._parse_ts_aware(raw_ts)
-                if not dt:
-                    continue
-                normalized.append({
-                    "type": entry.get("type"),
-                    "text": entry.get("text") or self._activity_text(entry.get("type"), entry.get("amount")) or "--",
-                    "time": entry.get("time"),
-                    "raw_ts": raw_ts,
-                    "_dt": dt,
-                })
-            normalized.sort(key=lambda item: item["_dt"], reverse=True)
-            for item in normalized:
-                item.pop("_dt", None)
-            return normalized[:5]
-
-        # Fallback für ältere gespeicherte Daten ohne Aktivitätsliste
-        items = []
-
-        for key in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"):
-            entry = self.maintenance_history.get(key)
-            if not isinstance(entry, dict):
-                continue
-
-            raw_ts = entry.get("raw_ts")
-            dt = self._parse_ts_aware(raw_ts)
-            if not dt:
-                continue
-
-            items.append({
-                "type": key,
-                "text": format_activity({"type": key, **entry}),
-                "time": entry.get("time"),
-                "raw_ts": raw_ts,
-                "_dt": dt,
-            })
-
-        items.sort(key=lambda item: item["_dt"], reverse=True)
-        for item in items:
-            item.pop("_dt", None)
-        return items[:5]
+        return collect_last_activities(
+            self.maintenance_history,
+            self._parse_ts_aware,
+            self.pool_covered,
+            self.usage_mode,
+        )
 
     async def _handle_state_change(self, event):
         """Handle state changes of source entities."""
@@ -386,59 +297,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     async def async_log_maintenance(self, m_type: str, amount: float):
         """Log maintenance action and send notifications."""
         now = dt_util.now()
-        ts_formatted = now.strftime("%d.%m. %H:%M")
-        visible_activity_types = {"chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace"}
-
-        label = ""
-        unit = ""
-        msg = None
-
-        if m_type == "chlor": label, unit = "Chlor", "g"
-        elif m_type == "ph_plus": label, unit = "PH-Plus", "g"
-        elif m_type == "ph_minus": label, unit = "PH-Minus", "ml"
-        elif m_type == "filter_clean": label, unit = "Filter gereinigt", ""
-        elif m_type == "filter_replace": label, unit = "Filter getauscht", ""
-        elif m_type == "set_covered":
-            self.pool_covered = amount > 0
-            self.maintenance_history["pool_covered"] = self.pool_covered
-        elif m_type == "set_usage":
-            modes = ["none", "normal", "party"]
-            self.usage_mode = modes[int(amount)] if int(amount) < len(modes) else "none"
-            self.maintenance_history["usage_mode"] = self.usage_mode
-
-        action_text = self._activity_text(m_type, amount) if m_type else ""
-        if not action_text:
-            action_text = f"{amount:g}{unit} {label}" if amount else label
-
-        stored_amount = None if m_type in ("filter_clean", "filter_replace") else amount
-
-        if m_type in ("set_covered", "set_usage"):
-            self.maintenance_history[m_type] = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
-            await self._store.async_save(self.maintenance_history)
-            await self.async_request_refresh()
-            return
-
-        # Update history for chemicals and filter
-        if m_type in ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace", "set_covered", "set_usage"):
-            self.maintenance_history[m_type] = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
-            self.maintenance_history["last_action"] = f"{action_text} am {ts_formatted}"
-            activities = self.maintenance_history.get("last_activities", [])
-            activities = activities if isinstance(activities, list) else []
-            activities.insert(0, {
-                "type": m_type,
-                "text": action_text,
-                "amount": stored_amount,
-                "time": ts_formatted,
-                "raw_ts": now.isoformat(),
-            })
-            self.maintenance_history["last_activities"] = activities[:5]
-            # Wording für Wartung vs. Chemie anpassen
-            if m_type == "filter_clean":
-                msg = "Pool-Wartung: Filter gereinigt."
-            elif m_type == "filter_replace":
-                msg = "Pool-Wartung: Filter getauscht."
-            else:
-                msg = f"Pool-Pflege: {action_text}."
+        self.pool_covered, self.usage_mode, msg = update_maintenance_history(
+            self.maintenance_history,
+            m_type,
+            amount,
+            now,
+            self.pool_covered,
+            self.usage_mode,
+        )
 
         await self._store.async_save(self.maintenance_history)
 
@@ -494,22 +360,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
     def _get_time_since_last_action(self, action_key: str, in_hours: bool = False) -> int | None:
         """Calculate time since last action (hours or days)."""
-        last_action_data = self.maintenance_history.get(action_key)
-        if last_action_data and last_action_data.get("raw_ts"):
-            last_ts = dt_util.parse_datetime(last_action_data["raw_ts"])
-            if last_ts:
-                diff = dt_util.now() - last_ts
-                if in_hours:
-                    return int(diff.total_seconds() // 3600)
-                return diff.days
-        return None
+        return get_time_since_last_action(self.maintenance_history, action_key, in_hours)
 
     def _get_action_dt(self, action_key: str):
         """Return the aware timestamp of a stored maintenance action."""
-        action_data = self.maintenance_history.get(action_key)
-        if isinstance(action_data, dict):
-            return self._parse_ts_aware(action_data.get("raw_ts"))
-        return None
+        return get_action_dt(self.maintenance_history, action_key, self._parse_ts_aware)
 
     async def _check_filter_notifications(self, conf: dict):
         """Check and send notifications for filter maintenance."""
@@ -587,19 +442,6 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 if measurement := ble_data.measurements.get(type_id):
                     return measurement
             return None
-
-        def get_filter_status(time_since: int | None, interval: int, yellow_threshold: int, red_threshold: int) -> str:
-            """Determine filter status based on time since last action and thresholds."""
-            if time_since is None:
-                return "unknown"
-
-            time_until_due = interval - time_since
-            if time_until_due <= red_threshold:
-                return "critical"
-            if time_until_due <= yellow_threshold:
-                return "warning"
-
-            return "ok"
 
         # 1. Bestehende Daten laden
         # Immer einen aktuellen Zeitstempel für den "letzten Lauf" parat haben
@@ -1020,170 +862,45 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
 
-        # Konfiguration laden
-        volumen = conf.get(CONF_POOL_VOLUME, 1.0)
-        c_ziel = conf.get(CONF_CHLOR_TARGET, 1.5)
-        ph_ziel = conf.get(CONF_PH_TARGET, 7.2)
-        wirkstoff = conf.get(CONF_CHLOR_CONTENT, 0.56)
-
-        if wirkstoff <= 0:
-            wirkstoff = 0.56 # Schutz vor Division durch Null
-
-        volume_m3 = max(float(volumen), 0.0)
-
-        # Chlor Berechnung
-        c_diff = max(float(c_ziel) - float(c_ist), 0) if c_ist is not None else 0
-
-        # Temperatur-Zuschlag als zusätzliche Zielkonzentration in mg/l.
-        temp_target_extra = 0.0
-        if temp_ist is not None:
-            if float(temp_ist) > 32:
-                temp_target_extra = 0.7
-            elif float(temp_ist) > 28:
-                temp_target_extra = 0.3
-
-        # Offenes Becken erhöht den Zielbedarf leicht.
-        env_target_extra = 0.0 if self.pool_covered else 0.3
-
-        # UV ist ein direkterer Treiber fuer Chlorabbau als Bewoelkung.
-        # Die Zuschlaege bleiben bewusst konservativ.
-        uv_target_extra = 0.0
-        if weather_today and weather_today.get("has_forecast"):
-            uv_index = weather_today.get("uv_index")
-            if uv_index is not None:
-                if uv_index >= 8:
-                    uv_target_extra = 0.6
-                elif uv_index >= 6:
-                    uv_target_extra = 0.3
-
-        # Nutzung wird ebenfalls als zusätzlicher Konzentrationsbedarf modelliert.
-        bather_target_extra = 0.0
-        if self.usage_mode == "normal":
-            bather_target_extra = 0.5
-        elif self.usage_mode == "party":
-            bather_target_extra = 1.0
-
-        # Stoßchlorung als volumenbezogener Zielwert in mg/l.
-        shock_target = 0.0
-        if c_ist is not None:
-            if float(c_ist) < 0.1:
-                shock_target = 5.0
-            elif float(c_ist) < 0.3:
-                shock_target = 4.0
-            elif float(c_ist) < 0.6:
-                shock_target = 3.0
-            elif float(c_ist) < 1.0:
-                shock_target = 2.0
-
-        base_target_with_conditions = float(c_ziel) + temp_target_extra + env_target_extra + uv_target_extra
-        effective_target = base_target_with_conditions + bather_target_extra
-        if shock_target > 0:
-            effective_target = max(base_target_with_conditions, shock_target) + bather_target_extra
-
-        # Mindestdosis in g pro m³.
-        min_dose = 2.0 * volume_m3
-        if c_ist is not None:
-            if float(c_ist) < 0.3:
-                min_dose = 6.0 * volume_m3
-            elif float(c_ist) < 0.8:
-                min_dose = 3.0 * volume_m3
-
-        # Obergrenze als maximale Stoßchlor-Konzentration.
-        max_target = 10.0
-        max_dose = max(max_target - float(c_ist or 0.0), 0.0) * volume_m3 / wirkstoff
-
-        chlor_base_amount_raw = c_diff * volume_m3 / wirkstoff
-        chlor_breakdown_temp_adj_raw = temp_target_extra * volume_m3 / wirkstoff
-        chlor_breakdown_env_adj_raw = env_target_extra * volume_m3 / wirkstoff
-        chlor_breakdown_uv_adj_raw = uv_target_extra * volume_m3 / wirkstoff
-        chlor_breakdown_bather_adj_raw = bather_target_extra * volume_m3 / wirkstoff
-        chlor_breakdown_shock_adj_raw = max(shock_target - base_target_with_conditions, 0.0) * volume_m3 / wirkstoff
-        target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
-        raw_chlor = target_diff * volume_m3 / wirkstoff
-        if c_ist is not None and c_ist >= c_ziel:
-            s_g = 0.0
-        else:
-            s_g = round(min(max(raw_chlor, min_dose), max_dose), 1) if c_ist is not None else 0.0
-
-        # --- Werte für die Frontend-Anzeige der Berechnung ---
-        # Basiswert (ohne Faktoren)
-        chlor_breakdown_base = round(chlor_base_amount_raw, 2)
-
-        # Zusätzlicher Bedarf durch Stoßchlor-Ziel
-        chlor_breakdown_shock_adj = round(chlor_breakdown_shock_adj_raw, 2)
-
-        # Zusätzlicher Bedarf durch Temperatur
-        chlor_breakdown_temp_adj = round(chlor_breakdown_temp_adj_raw, 2)
-
-        # Zusätzlicher Bedarf durch Abdeckung
-        chlor_breakdown_env_adj = round(chlor_breakdown_env_adj_raw, 2)
-        chlor_breakdown_uv_adj = round(chlor_breakdown_uv_adj_raw, 2)
-
-        # Zusätzlicher Bedarf durch Badelast
-        chlor_breakdown_bather_adj = round(chlor_breakdown_bather_adj_raw, 2)
-
-        # Summe der Anpassungen (vor Mindest-/Maximaldosis)
-        chlor_breakdown_sum_raw = round(raw_chlor, 2)
-
-        # Mindestdosis, falls angewendet
-        chlor_breakdown_min_dose_applied = round(min_dose, 2) if (s_g > 0 and raw_chlor < min_dose) else 0.0
-
-        weather_note = None
-        if weather_today and weather_today.get("has_forecast"):
-            rain_probability = weather_today.get("precipitation_probability")
-            rain_amount = weather_today.get("precipitation_amount")
-            if (rain_amount is not None and rain_amount >= 10.0) or (rain_probability is not None and rain_probability >= 70.0):
-                weather_note = "Regen erwartet: Danach moeglichst erneut messen."
-
-        # pH Berechnung
-        ph_diff = ph_ziel - ph_ist if ph_ist is not None else 0
-        ph_diff_abs = abs(ph_diff)
-
-        ph_senker_ml = 0.0
-        ph_erhoeher_g = 0.0
-
-        if ph_diff < 0: # pH zu hoch -> senken
-            # Berechnung: ml = Differenz * (Dosierung / 10m3 / 0.2 pH-Schritt) * Poolvolumen
-            factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
-            ph_senker_ml = round(ph_diff_abs * factor * volumen, 1)
-        elif ph_diff > 0: # pH zu niedrig -> erhöhen
-            # Berechnung: g = Differenz * (Dosierung / 10m3 / 0.1 pH-Schritt) * Poolvolumen
-            factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
-            ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
-
-        chlor_logged_after_measurement = bool(
-            dt_last_meas and dt_last_chlor_action and dt_last_chlor_action > dt_last_meas
+        chemistry = calculate_pool_chemistry(
+            conf,
+            c_ist,
+            ph_ist,
+            temp_ist,
+            self.pool_covered,
+            self.usage_mode,
+            weather_today,
         )
-        ph_plus_logged_after_measurement = bool(
-            dt_last_meas and dt_last_ph_plus_action and dt_last_ph_plus_action > dt_last_meas
-        )
-        ph_minus_logged_after_measurement = bool(
-            dt_last_meas and dt_last_ph_minus_action and dt_last_ph_minus_action > dt_last_meas
-        )
+        s_g = chemistry["chlor_dose"]
+        ph_senker_ml = chemistry["ph_senker_total"]
+        ph_erhoeher_g = chemistry["ph_erhoeher_total"]
+        c_ziel = chemistry["chlor_target"]
+        ph_ziel = chemistry["ph_target"]
+        ph_diff = chemistry["ph_diff"]
+        volume_m3 = chemistry["volume_m3"]
+        weather_note = chemistry["weather_note"]
+        chlor_breakdown_base = chemistry["chlor_breakdown_base"]
+        chlor_breakdown_shock_adj = chemistry["chlor_breakdown_shock_adj"]
+        chlor_breakdown_temp_adj = chemistry["chlor_breakdown_temp_adj"]
+        chlor_breakdown_env_adj = chemistry["chlor_breakdown_env_adj"]
+        chlor_breakdown_uv_adj = chemistry["chlor_breakdown_uv_adj"]
+        chlor_breakdown_bather_adj = chemistry["chlor_breakdown_bather_adj"]
+        chlor_breakdown_sum_raw = chemistry["chlor_breakdown_sum_raw"]
+        chlor_breakdown_min_dose_applied = chemistry["chlor_breakdown_min_dose_applied"]
 
-        awaiting_retest_chlor = s_g > 0 and chlor_logged_after_measurement
-        awaiting_retest_ph = (
-            (ph_senker_ml > 0 and ph_minus_logged_after_measurement)
-            or (ph_erhoeher_g > 0 and ph_plus_logged_after_measurement)
+        retest_status = calculate_retest_status(
+            s_g,
+            ph_senker_ml,
+            ph_erhoeher_g,
+            dt_last_meas,
+            dt_last_chlor_action,
+            dt_last_ph_plus_action,
+            dt_last_ph_minus_action,
         )
-
-        chemistry_actions_covered = []
-        relevant_action_dts = []
-        if s_g > 0:
-            chemistry_actions_covered.append(chlor_logged_after_measurement)
-            if dt_last_chlor_action:
-                relevant_action_dts.append(dt_last_chlor_action)
-        if ph_senker_ml > 0:
-            chemistry_actions_covered.append(ph_minus_logged_after_measurement)
-            if dt_last_ph_minus_action:
-                relevant_action_dts.append(dt_last_ph_minus_action)
-        if ph_erhoeher_g > 0:
-            chemistry_actions_covered.append(ph_plus_logged_after_measurement)
-            if dt_last_ph_plus_action:
-                relevant_action_dts.append(dt_last_ph_plus_action)
-
-        awaiting_retest = bool(chemistry_actions_covered) and all(chemistry_actions_covered)
-        awaiting_retest_since = max(relevant_action_dts).isoformat() if awaiting_retest and relevant_action_dts else None
+        awaiting_retest = retest_status["awaiting_retest"]
+        awaiting_retest_chlor = retest_status["awaiting_retest_chlor"]
+        awaiting_retest_ph = retest_status["awaiting_retest_ph"]
+        awaiting_retest_since = retest_status["awaiting_retest_since"]
 
         # Filter Wartung
         hours_since_filter_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
@@ -1209,39 +926,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Check and send filter notifications
         await self._check_filter_notifications(conf)
 
-        # --- Zentrale Status-Logik für Warnungen ---
-        warnings = []
-
-        # Konvertierung für sicheren Vergleich
-        current_ph = float(ph_ist) if ph_ist is not None else None
-        target_ph = float(ph_ziel)
-        current_c = float(c_ist) if c_ist is not None else None
-        target_c = float(c_ziel)
-
-        # pH Check (Schwellenwert 0.1)
-        if current_ph is not None:
-            if current_ph > (target_ph + 0.1):
-                warnings.append("pH zu hoch")
-            elif current_ph < (target_ph - 0.1):
-                warnings.append("pH zu niedrig")
-
-        # Chlor Check (Schwellenwert 0.2)
-        if current_c is not None:
-            if current_c < 0.5:
-                warnings.append("Stoßchlorung empfohlen")
-            elif current_c > (target_c + 0.2):
-                warnings.append("Chlor zu hoch")
-            elif current_c < (target_c - 0.2) and s_g > 0:
-                warnings.append("Chlor nachdosieren")
-
-        # Finaler Empfehlungstext
-        if awaiting_retest:
-            recommendation = "⏳ Warten auf erneute Messung"
-        elif not warnings:
-            recommendation = "✅ Alle Werte im Zielbereich"
-        else:
-            # Kombiniere Warnungen mit " & "
-            recommendation = "⚠️ " + " & ".join(warnings)
+        recommendation = build_recommendation(
+            awaiting_retest,
+            ph_ist,
+            c_ist,
+            ph_ziel,
+            c_ziel,
+            s_g,
+        )
 
         # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren
         new_calc_ts = dt_util.now().isoformat()

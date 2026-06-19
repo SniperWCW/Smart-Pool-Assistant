@@ -1,0 +1,279 @@
+"""Maintenance history helpers for Smart Pool Assistant."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from datetime import datetime
+
+from homeassistant.util import dt as dt_util
+
+
+VISIBLE_ACTIVITY_TYPES = ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace")
+
+
+def activity_text(
+    m_type: str | None,
+    amount: float | int | None,
+    pool_covered: bool = True,
+    usage_mode: str = "none",
+) -> str:
+    """Return a human readable activity label."""
+    if m_type == "chlor":
+        return f"{amount:g}g Chlor hinzugef\u00fcgt" if amount is not None else "Chlor hinzugef\u00fcgt"
+    if m_type == "ph_plus":
+        return f"{amount:g}g PH-Plus hinzugef\u00fcgt" if amount is not None else "PH-Plus hinzugef\u00fcgt"
+    if m_type == "ph_minus":
+        return f"{amount:g}ml PH-Minus hinzugef\u00fcgt" if amount is not None else "PH-Minus hinzugef\u00fcgt"
+    if m_type == "filter_clean":
+        return "Filter gereinigt"
+    if m_type == "filter_replace":
+        return "Filter getauscht"
+    if m_type == "set_covered":
+        return "Abdeckung: " + ("Abgedeckt" if pool_covered else "Offen")
+    if m_type == "set_usage":
+        mode_labels = {"none": "Keine", "normal": "Normal", "party": "Party"}
+        return f"Nutzungsmodus: {mode_labels.get(usage_mode, usage_mode)}"
+    return ""
+
+
+def normalize_loaded_history(
+    stored: dict,
+    pool_covered: bool = True,
+    usage_mode: str = "none",
+) -> dict:
+    """Fix legacy history entries after loading from storage."""
+    if not isinstance(stored, dict):
+        return {}
+
+    history = dict(stored)
+    activities = history.get("last_activities")
+    if isinstance(activities, list):
+        normalized: list[dict] = []
+        changed = False
+
+        for entry in activities:
+            if not isinstance(entry, dict):
+                continue
+
+            item = dict(entry)
+            m_type = item.get("type")
+
+            if m_type in ("filter_clean", "filter_replace"):
+                expected_text = activity_text(m_type, None, pool_covered, usage_mode)
+                if item.get("text") != expected_text:
+                    item["text"] = expected_text
+                    changed = True
+                if item.get("amount") == 0:
+                    item["amount"] = None
+                    changed = True
+            elif not item.get("text"):
+                item["text"] = activity_text(
+                    m_type,
+                    item.get("amount"),
+                    pool_covered,
+                    usage_mode,
+                ) or "--"
+                changed = True
+
+            normalized.append(item)
+
+        if changed:
+            history["last_activities"] = normalized
+
+    for key in ("filter_clean", "filter_replace"):
+        entry = history.get(key)
+        if isinstance(entry, dict) and entry.get("amount") == 0:
+            entry = dict(entry)
+            entry["amount"] = None
+            history[key] = entry
+
+    history.pop("bluetooth_connected", None)
+
+    return history
+
+
+def format_activity(
+    entry: dict,
+    pool_covered: bool = True,
+    usage_mode: str = "none",
+) -> str:
+    """Format a stored activity entry."""
+    return activity_text(entry.get("type"), entry.get("amount"), pool_covered, usage_mode) or "--"
+
+
+def collect_last_activities(
+    history: dict,
+    parse_ts: Callable[[str | None], datetime | None],
+    pool_covered: bool = True,
+    usage_mode: str = "none",
+) -> list[dict]:
+    """Build a compact activity list from stored maintenance actions."""
+    items = history.get("last_activities")
+    if isinstance(items, list) and items:
+        normalized = []
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("type") not in VISIBLE_ACTIVITY_TYPES:
+                continue
+            raw_ts = entry.get("raw_ts")
+            dt = parse_ts(raw_ts)
+            if not dt:
+                continue
+            normalized.append({
+                "type": entry.get("type"),
+                "text": entry.get("text")
+                or activity_text(entry.get("type"), entry.get("amount"), pool_covered, usage_mode)
+                or "--",
+                "time": entry.get("time"),
+                "raw_ts": raw_ts,
+                "_dt": dt,
+            })
+        normalized.sort(key=lambda item: item["_dt"], reverse=True)
+        for item in normalized:
+            item.pop("_dt", None)
+        return normalized[:5]
+
+    legacy_items = []
+
+    for key in VISIBLE_ACTIVITY_TYPES:
+        entry = history.get(key)
+        if not isinstance(entry, dict):
+            continue
+
+        raw_ts = entry.get("raw_ts")
+        dt = parse_ts(raw_ts)
+        if not dt:
+            continue
+
+        legacy_items.append({
+            "type": key,
+            "text": format_activity({"type": key, **entry}, pool_covered, usage_mode),
+            "time": entry.get("time"),
+            "raw_ts": raw_ts,
+            "_dt": dt,
+        })
+
+    legacy_items.sort(key=lambda item: item["_dt"], reverse=True)
+    for item in legacy_items:
+        item.pop("_dt", None)
+    return legacy_items[:5]
+
+
+def update_maintenance_history(
+    history: dict,
+    m_type: str,
+    amount: float,
+    now: datetime,
+    pool_covered: bool,
+    usage_mode: str,
+) -> tuple[bool, str, str | None]:
+    """Update maintenance history and return pool state plus notification text."""
+    ts_formatted = now.strftime("%d.%m. %H:%M")
+    msg = None
+    known_state_types = {"set_covered", "set_usage"}
+
+    if m_type not in VISIBLE_ACTIVITY_TYPES and m_type not in known_state_types:
+        return pool_covered, usage_mode, None
+
+    if m_type == "set_covered":
+        pool_covered = amount > 0
+        history["pool_covered"] = pool_covered
+    elif m_type == "set_usage":
+        modes = ["none", "normal", "party"]
+        usage_mode = modes[int(amount)] if int(amount) < len(modes) else "none"
+        history["usage_mode"] = usage_mode
+
+    action_text = activity_text(m_type, amount, pool_covered, usage_mode) if m_type else ""
+    if not action_text:
+        label, unit = _maintenance_label_and_unit(m_type)
+        action_text = f"{amount:g}{unit} {label}" if amount else label
+
+    stored_amount = None if m_type in ("filter_clean", "filter_replace") else amount
+    history[m_type] = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+
+    if m_type in ("set_covered", "set_usage"):
+        return pool_covered, usage_mode, None
+
+    if m_type in VISIBLE_ACTIVITY_TYPES:
+        history["last_action"] = f"{action_text} am {ts_formatted}"
+        activities = history.get("last_activities", [])
+        activities = activities if isinstance(activities, list) else []
+        activities.insert(0, {
+            "type": m_type,
+            "text": action_text,
+            "amount": stored_amount,
+            "time": ts_formatted,
+            "raw_ts": now.isoformat(),
+        })
+        history["last_activities"] = activities[:5]
+
+        if m_type == "filter_clean":
+            msg = "Pool-Wartung: Filter gereinigt."
+        elif m_type == "filter_replace":
+            msg = "Pool-Wartung: Filter getauscht."
+        else:
+            msg = f"Pool-Pflege: {action_text}."
+
+    return pool_covered, usage_mode, msg
+
+
+def get_time_since_last_action(
+    history: dict,
+    action_key: str,
+    in_hours: bool = False,
+) -> int | None:
+    """Calculate time since last action in hours or days."""
+    last_action_data = history.get(action_key)
+    if last_action_data and last_action_data.get("raw_ts"):
+        last_ts = dt_util.parse_datetime(last_action_data["raw_ts"])
+        if last_ts:
+            diff = dt_util.now() - last_ts
+            if in_hours:
+                return int(diff.total_seconds() // 3600)
+            return diff.days
+    return None
+
+
+def get_action_dt(
+    history: dict,
+    action_key: str,
+    parse_ts: Callable[[str | None], datetime | None],
+) -> datetime | None:
+    """Return the aware timestamp of a stored maintenance action."""
+    action_data = history.get(action_key)
+    if isinstance(action_data, dict):
+        return parse_ts(action_data.get("raw_ts"))
+    return None
+
+
+def get_filter_status(
+    time_since: int | None,
+    interval: int,
+    yellow_threshold: int,
+    red_threshold: int,
+) -> str:
+    """Determine filter status based on time since last action and thresholds."""
+    if time_since is None:
+        return "unknown"
+
+    time_until_due = interval - time_since
+    if time_until_due <= red_threshold:
+        return "critical"
+    if time_until_due <= yellow_threshold:
+        return "warning"
+
+    return "ok"
+
+
+def _maintenance_label_and_unit(m_type: str | None) -> tuple[str, str]:
+    if m_type == "chlor":
+        return "Chlor", "g"
+    if m_type == "ph_plus":
+        return "PH-Plus", "g"
+    if m_type == "ph_minus":
+        return "PH-Minus", "ml"
+    if m_type == "filter_clean":
+        return "Filter gereinigt", ""
+    if m_type == "filter_replace":
+        return "Filter getauscht", ""
+    return "", ""
