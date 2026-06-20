@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-20  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.0.4`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen fuer Chlor und pH, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.1.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -775,6 +775,22 @@ Für die Karte werden detaillierte Teilwerte geliefert:
 - `chlor_breakdown_bather_adj`
 - `chlor_breakdown_sum_raw`
 - `chlor_breakdown_min_dose_applied`
+
+### Chlor-Lernanalyse
+
+Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestaetigte Chlorzugaben in der lokalen `maintenance_history`. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der taegliche Chlorverlust bestimmt wird.
+
+Ausgegeben werden:
+
+- `chlor_consumption_24h`
+- `chlor_consumption_7d`
+- `chlor_consumption_14d`
+- `personal_chlor_factor`
+- `chlor_prediction_quality`
+- `chlor_stability`
+- `chlor_stability_attributes`
+
+Intervalle unter 3 Stunden, ueber 7 Tagen, negative Verbrauchswerte und extreme Ausreisser ueber `5 mg/l/d` werden verworfen. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase.
 
 ### pH-Berechnung
 

@@ -1,5 +1,13 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.0] - 2026-06-20
+
+- **Lernende Chloranalyse**: Neue lokale Lernhistorie fuer Chlor-Messpunkte und bestaetigte Chlorzugaben.
+- **Chlorverbrauch-Sensoren**: Neue Sensoren fuer `24h`, `7d` und `14d` in `mg/l/d`.
+- **Persoenlicher Chlorfaktor**: Neuer Faktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`.
+- **Chlor-Stabilitaet**: Neuer Stabilitaets-Sensor mit Durchschnitt, Minimum, Maximum, Stichprobenzahl, Lernphase und Vorhersagequalitaet.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.1.0.md` auf den aktuellen Stand gebracht.
+
 ## [2.0.4] - 2026-06-20
 
 - **Zielbereiche fuer Chlor und pH**: Config Flow und Options Flow nutzen jetzt Min-/Max-Werte statt fixer Einzelzielwerte. Bestehende `chlor_target`- und `ph_target`-Konfigurationen bleiben als Fallback kompatibel.

@@ -33,6 +33,12 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "Datenquelle", "data_source", None, "mdi:database-import"),
         PoolAssistantSensor(coordinator, "Abdeckung Status", "pool_covered", None, "mdi:pool"),
         PoolAssistantSensor(coordinator, "Nutzungsmodus", "usage_mode", None, "mdi:account-group"),
+        PoolAssistantSensor(coordinator, "Chlorverbrauch 24h", "chlor_consumption_24h", "mg/l/d", "mdi:chart-line"),
+        PoolAssistantSensor(coordinator, "Chlorverbrauch 7d", "chlor_consumption_7d", "mg/l/d", "mdi:chart-line"),
+        PoolAssistantSensor(coordinator, "Chlorverbrauch 14d", "chlor_consumption_14d", "mg/l/d", "mdi:chart-line"),
+        PoolAssistantSensor(coordinator, "Persoenlicher Chlorfaktor", "personal_chlor_factor", None, "mdi:brain"),
+        PoolAssistantSensor(coordinator, "Chlor Vorhersagequalitaet", "chlor_prediction_quality", None, "mdi:star-check"),
+        PoolAssistantChlorStabilitySensor(coordinator),
         PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
         PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
         PoolAssistantSensor(coordinator, "Cyanursäure", "cyanuric_acid", "ppm", "mdi:shield-check"),
@@ -75,6 +81,24 @@ class PoolAssistantBatterySensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         return self.coordinator.data.get("history", {}).get("ble_battery")
+
+
+class PoolAssistantChlorStabilitySensor(CoordinatorEntity, SensorEntity):
+    """Representation of learned chlorine stability."""
+
+    def __init__(self, coordinator: SmartPoolCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_name = "Pool Chlor Stabilitaet"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_chlor_stability"
+        self._attr_icon = "mdi:chart-bell-curve"
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("chlor_stability")
+
+    @property
+    def extra_state_attributes(self):
+        return self.coordinator.data.get("chlor_stability_attributes")
 
 class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     """Status sensor for recommendation text."""
@@ -120,6 +144,13 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "is_shock": data.get("is_shock"),
             "pool_covered": data.get("pool_covered"),
             "usage_mode": data.get("usage_mode"),
+            "chlor_consumption_24h": data.get("chlor_consumption_24h"),
+            "chlor_consumption_7d": data.get("chlor_consumption_7d"),
+            "chlor_consumption_14d": data.get("chlor_consumption_14d"),
+            "personal_chlor_factor": data.get("personal_chlor_factor"),
+            "chlor_prediction_quality": data.get("chlor_prediction_quality"),
+            "chlor_stability": data.get("chlor_stability"),
+            "chlor_stability_attributes": data.get("chlor_stability_attributes"),
             "chlor_breakdown_base": data.get("chlor_breakdown_base"),
             "chlor_breakdown_shock_adj": data.get("chlor_breakdown_shock_adj"),
             "chlor_breakdown_temp_adj": data.get("chlor_breakdown_temp_adj"),

@@ -24,6 +24,11 @@ from .calculation import (
     calculate_pool_chemistry,
     calculate_retest_status,
 )
+from .chlorine_learning import (
+    calculate_chlorine_learning,
+    record_chlor_dose,
+    record_chlor_measurement,
+)
 from .maintenance import (
     activity_text,
     collect_last_activities,
@@ -266,6 +271,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.pool_covered,
             self.usage_mode,
         )
+        if m_type == "chlor":
+            record_chlor_dose(self.maintenance_history, now.isoformat(), amount)
 
         await self._store.async_save(self.maintenance_history)
 
@@ -611,6 +618,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         weather_data = await async_get_weather_data(self.hass, conf, limit=2)
         weather_today = weather_data.get("today") if isinstance(weather_data, dict) else None
         weather_forecast_days = weather_data.get("forecast_days") if isinstance(weather_data, dict) else []
+        if c_ist is not None and last_meas_raw:
+            record_chlor_measurement(self.maintenance_history, last_meas_raw, c_ist)
+        chlorine_learning = calculate_chlorine_learning(
+            self.maintenance_history,
+            conf,
+            self._parse_ts_aware,
+            dt_util.now(),
+        )
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
         if c_ist is None and ph_ist is None:
@@ -669,6 +684,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "weather_note": None,
                 "chlor_breakdown_uv_adj": 0.0,
                 "history": self.maintenance_history,
+                **chlorine_learning,
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
 
@@ -826,4 +842,5 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "days_since_filter_replace": days_since_filter_replace,
             "filter_replace_status": filter_replace_status,
             "filter_replace_interval": filter_replace_interval,
+            **chlorine_learning,
         }

@@ -2,13 +2,14 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.0.4**
+**Aktueller Release-Stand: V2.1.0**
 
 ## Hauptfunktionen
 
 - Praezise Chlor-Berechnung ueber volumenbezogene Zielbereiche mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
 - Konservative Dosierempfehlungen passend zu Messloeffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
+- Lernende Chloranalyse mit persoenlichem Chlorfaktor, Verbrauch ueber 24h/7d/14d und Stabilitaetsbewertung.
 - Optionale Wetterintegration ueber eine Home-Assistant-`weather`-Entitaet mit Vorhersage fuer heute und morgen, inklusive Backend-Forecast-Fallback fuer Provider wie Tomorrow.io.
 - Optionaler separater `UV`-Sensor fuer Provider, die den UV-Index nicht im Daily-Forecast liefern.
 - Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und faellt erst danach auf heutige Coordinator-Wetterwerte zurueck.
@@ -99,6 +100,18 @@ Die pH-Berechnung ermittelt anhand Zielbereich, Poolvolumen und Produktdosierung
 - **PH-Minus** in ml
 - **PH-Plus** in g
 
+### Lernende Chloranalyse
+
+Die Integration speichert neue Chlor-Messpunkte und bestaetigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Daraus entstehen bereinigte Verbrauchsintervalle, bei denen Zugaben zwischen zwei Messungen rechnerisch beruecksichtigt werden.
+
+Berechnet werden:
+
+- Chlorverbrauch ueber 24 Stunden, 7 Tage und 14 Tage in `mg/l/d`
+- persoenlicher Chlorfaktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`
+- Chlor-Stabilitaet mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalitaet
+
+Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
+
 ## Frontend: Pool Chemistry Card
 
 Die Integration registriert automatisch eine Custom Card:
@@ -140,6 +153,12 @@ Die Integration stellt unter anderem bereit:
 - `sensor.pool_ph_istwert`
 - `sensor.pool_temperatur_istwert`
 - `sensor.pool_datenquelle`
+- `sensor.pool_chlorverbrauch_24h`
+- `sensor.pool_chlorverbrauch_7d`
+- `sensor.pool_chlorverbrauch_14d`
+- `sensor.pool_persoenlicher_chlorfaktor`
+- `sensor.pool_chlor_vorhersagequalitaet`
+- `sensor.pool_chlor_stabilitaet`
 - `sensor.pool_empfehlung`
 - `sensor.poollab_batterie`
 - `sensor.pool_filter_reinigung_fallig`
