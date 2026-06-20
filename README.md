@@ -2,12 +2,13 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.0.2**
+**Aktueller Release-Stand: V2.0.3**
 
 ## Hauptfunktionen
 
 - Praezise Chlor-Berechnung ueber volumenbezogene Zielkonzentrationen mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
+- Konservative Dosierempfehlungen passend zu Messloeffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
 - Optionale Wetterintegration ueber eine Home-Assistant-`weather`-Entitaet mit Vorhersage fuer heute und morgen, inklusive Backend-Forecast-Fallback fuer Provider wie Tomorrow.io.
 - Optionaler separater `UV`-Sensor fuer Provider, die den UV-Index nicht im Daily-Forecast liefern.
 - Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und faellt erst danach auf heutige Coordinator-Wetterwerte zurueck.
@@ -22,7 +23,7 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und 
 - Weiterhin zyklischer Cloud-Abruf ueber das konfigurierbare Cloud-Update-Intervall.
 - Abrufbutton direkt in der Messwertetabelle der Karte, inklusive Status-, Fehler- und Cooldown-Anzeige.
 - Live-BLE-Status: **BT Verbindung** ist nur waehrend eines aktiven BLE-Abrufs gruen und springt nach dem Disconnect wieder auf rot.
-- Fachlich sauberer Nachmess-Workflow: Nach bestaetigter Chlor- oder pH-Zugabe zeigt die Integration **Warten auf erneute Messung**, bis neue Werte vorliegen.
+- Fachlich sauberer Nachmess-Workflow: Nach jeder bestaetigten Chlor- oder pH-Zugabe zeigt die Integration **Warten auf erneute Messung**, bis neue Werte vorliegen.
 - Getrennte Quellenlogik fuer Bluetooth, Cloud, manuelle Sensoren und Speicher-Fallback.
 - Persistente Historie fuer letzte Werte, letzte Aktionen, letzte Cloud-Messwerte und Filterwartung.
 - LayZSpa-Panel mit Anzeige von Verbindung, RSSI, Pumpe, Heizung, Luftblasen, Ist-/Zieltemperatur und optionaler Zieltemperatur-Steuerung per `+` / `-`.

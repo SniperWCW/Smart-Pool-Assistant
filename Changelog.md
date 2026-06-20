@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [2.0.3] - 2026-06-20
+
+- **Nachmessstatus bei einzelner Chemiezugabe korrigiert**: Sobald Chlor, pH-Minus oder pH-Plus nach der letzten Messung bestaetigt wurde, springt der Gesamtstatus auf `Warten auf erneute Messung`, auch wenn weitere Empfehlungen rechnerisch noch offen waeren.
+- **Messloeffel-Dosierung**: Chlor, pH-Minus, pH-Plus und die Vor-Baden-Chlormenge werden konservativ auf praktische Kombinationen aus `1`, `2,5`, `5`, `7,5` und `15 g/ml` gerundet. Beispiel: `8 g` wird als `7,5 g` empfohlen.
+- **Lovelace-Anzeige erweitert**: Die Karte zeigt Dosierungen mit deutscher Zahlenformatierung und passender Messloeffel-Kombination an.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.3.md` auf den aktuellen Stand gebracht.
+
 ## [2.0.2] - 2026-06-19
 
 - **Mobile Messwerttabelle korrigiert**: Auf schmalen Displays werden Ist-, Ziel- und Quellenwerte jetzt mit kompakten Labels dargestellt, statt unklar untereinander zu laufen.

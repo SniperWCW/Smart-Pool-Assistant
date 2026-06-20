@@ -3,8 +3,8 @@
 **Projekt:** Smart Pool Assistant  
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
-**Dokumentationsstand:** 2026-06-19  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-19 auf Basis von `manifest.json` Version `2.0.2`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
+**Dokumentationsstand:** 2026-06-20  
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.0.3`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],

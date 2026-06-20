@@ -12,6 +12,33 @@ from .const import (
     CONF_POOL_VOLUME,
 )
 
+MEASURING_SPOON_SIZES = (1.0, 2.5, 5.0, 7.5, 15.0)
+
+
+def round_to_measuring_spoons(amount: float | int | None) -> float:
+    """Round down to a conservative, practical amount buildable from the spoons."""
+    if amount is None:
+        return 0.0
+
+    amount = float(amount)
+    if amount < min(MEASURING_SPOON_SIZES):
+        return 0.0
+
+    # Keep combinations practical: any number of 15 g/ml spoons plus up to two
+    # smaller spoons. This keeps 8 g conservative at 7.5 g instead of 8.5 g.
+    candidates = {0.0}
+    max_large_spoons = int(amount // 15.0)
+    small_spoons = (0.0, *MEASURING_SPOON_SIZES)
+    for large_count in range(max_large_spoons + 1):
+        base = large_count * 15.0
+        for first in small_spoons:
+            for second in small_spoons:
+                candidate = base + first + second
+                if candidate <= amount:
+                    candidates.add(candidate)
+
+    return max(candidates)
+
 
 def calculate_pool_chemistry(
     conf: dict,
@@ -97,7 +124,11 @@ def calculate_pool_chemistry(
     if c_ist is not None and c_ist >= c_ziel:
         s_g = 0.0
     else:
-        s_g = round(min(max(raw_chlor, min_dose), max_dose), 1) if c_ist is not None else 0.0
+        s_g = (
+            round_to_measuring_spoons(min(max(raw_chlor, min_dose), max_dose))
+            if c_ist is not None
+            else 0.0
+        )
 
     weather_note = None
     if weather_today and weather_today.get("has_forecast"):
@@ -116,14 +147,14 @@ def calculate_pool_chemistry(
 
     if ph_diff < 0:
         factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
-        ph_senker_ml = round(ph_diff_abs * factor * volumen, 1)
+        ph_senker_ml = round_to_measuring_spoons(ph_diff_abs * factor * volumen)
     elif ph_diff > 0:
         factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
-        ph_erhoeher_g = round(ph_diff_abs * factor * volumen, 1)
+        ph_erhoeher_g = round_to_measuring_spoons(ph_diff_abs * factor * volumen)
 
     return {
         "chlor_dose": s_g,
-        "chlor_pre": round(max(s_g * 0.3, 1.0 * volume_m3), 1) if s_g > 0 else 0.0,
+        "chlor_pre": round_to_measuring_spoons(max(s_g * 0.3, 1.0 * volume_m3)) if s_g > 0 else 0.0,
         "ph_senker_total": ph_senker_ml,
         "ph_erhoeher_total": ph_erhoeher_g,
         "ph_diff": ph_diff,
@@ -184,7 +215,7 @@ def calculate_retest_status(
         if dt_last_ph_plus_action:
             relevant_action_dts.append(dt_last_ph_plus_action)
 
-    awaiting_retest = bool(chemistry_actions_covered) and all(chemistry_actions_covered)
+    awaiting_retest = awaiting_retest_chlor or awaiting_retest_ph
 
     return {
         "awaiting_retest": awaiting_retest,

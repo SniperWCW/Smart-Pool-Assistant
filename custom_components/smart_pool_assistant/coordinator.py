@@ -682,12 +682,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             weather_today,
         )
         s_g = chemistry["chlor_dose"]
+        chlor_pre = chemistry["chlor_pre"]
         ph_senker_ml = chemistry["ph_senker_total"]
         ph_erhoeher_g = chemistry["ph_erhoeher_total"]
         c_ziel = chemistry["chlor_target"]
         ph_ziel = chemistry["ph_target"]
         ph_diff = chemistry["ph_diff"]
-        volume_m3 = chemistry["volume_m3"]
         weather_note = chemistry["weather_note"]
         chlor_breakdown_base = chemistry["chlor_breakdown_base"]
         chlor_breakdown_shock_adj = chemistry["chlor_breakdown_shock_adj"]
@@ -758,7 +758,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_source": ph_source,
             "temp_source": temp_source,
             "chlor_dose": s_g,
-            "chlor_pre": round(max(s_g * 0.3, 1.0 * volume_m3), 1) if s_g > 0 else 0.0,
+            "chlor_pre": chlor_pre,
             "ph_senker_total": ph_senker_ml,
             "ph_erhoeher_total": ph_erhoeher_g,
             "data_source": data_source,

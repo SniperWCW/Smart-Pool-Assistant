@@ -304,6 +304,30 @@ class PoolChemistryCard extends HTMLElement {
     return num >= 20 ? `${num.toFixed(0)} km/h` : `${num.toFixed(1)} m/s`;
   }
 
+  _formatDoseAmount(value, unit) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return `--${unit}`;
+    return `${num.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}${unit}`;
+  }
+
+  _getMeasuringSpoonText(value, unit) {
+    let remaining = Math.round(Number(value) * 2);
+    if (!Number.isFinite(remaining) || remaining <= 0) return "";
+
+    const spoons = [15, 7.5, 5, 2.5, 1];
+    const parts = [];
+    for (const spoon of spoons) {
+      const spoonSteps = Math.round(spoon * 2);
+      while (remaining >= spoonSteps) {
+        parts.push(this._formatDoseAmount(spoon, unit));
+        remaining -= spoonSteps;
+      }
+    }
+
+    if (remaining !== 0 || parts.length === 0) return "";
+    return parts.join(" + ");
+  }
+
   _normalizeForecastResponse(response, entityId) {
     if (!response) return [];
 
@@ -1284,8 +1308,12 @@ class PoolChemistryCard extends HTMLElement {
     } else if (chlorAwaitingRetest || awaitingRetest) {
       this.querySelector('#chlor-rec').innerHTML = "<i>Warten auf erneute Messung nach Chlor-Zugabe.</i>";
     } else {
+      const chlorDoseText = this._formatDoseAmount(attr.chlor_dose, "g");
+      const chlorPreText = this._formatDoseAmount(attr.chlor_pre, "g");
+      const chlorSpoons = this._getMeasuringSpoonText(attr.chlor_dose, "g");
+      const chlorSpoonHint = chlorSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorSpoons})</span>` : "";
       this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
-        ? `Bitte <b>${Number(attr.chlor_dose).toFixed(2)}g</b> Chlor für den Zielwert hinzufügen (Vor Baden: ca. ${Number(attr.chlor_pre).toFixed(2)}g).`
+        ? `Bitte <b>${chlorDoseText}</b> Chlor für den Zielwert hinzufügen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
         : (chlorDiff > 0.2
             ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorDiff.toFixed(2)} mg/l)</span>`
             : (chlorDiff < -0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist optimal.`));
@@ -1299,8 +1327,17 @@ class PoolChemistryCard extends HTMLElement {
         phText = "<i>Warten auf erneute Messung nach pH-Zugabe.</i>";
       } else {
         phText = "pH-Wert ist optimal.";
-        if (attr.ph_senker_total > 0) phText = `📉 PH-Minus: ca. <b>${Number(attr.ph_senker_total).toFixed(2)}ml</b> hinzufügen.`;
-        else if (attr.ph_erhoeher_total > 0) phText = `📈 PH-Plus: ca. <b>${Number(attr.ph_erhoeher_total).toFixed(2)}g</b> hinzufügen.`;
+        if (attr.ph_senker_total > 0) {
+          const amountText = this._formatDoseAmount(attr.ph_senker_total, "ml");
+          const spoons = this._getMeasuringSpoonText(attr.ph_senker_total, "ml");
+          const spoonHint = spoons ? ` <span class="table-sub">(Messlöffel: ${spoons})</span>` : "";
+          phText = `📉 PH-Minus: ca. <b>${amountText}</b> hinzufügen.${spoonHint}`;
+        } else if (attr.ph_erhoeher_total > 0) {
+          const amountText = this._formatDoseAmount(attr.ph_erhoeher_total, "g");
+          const spoons = this._getMeasuringSpoonText(attr.ph_erhoeher_total, "g");
+          const spoonHint = spoons ? ` <span class="table-sub">(Messlöffel: ${spoons})</span>` : "";
+          phText = `📈 PH-Plus: ca. <b>${amountText}</b> hinzufügen.${spoonHint}`;
+        }
       }
     }
     this.querySelector('#ph-rec').innerHTML = phText;
@@ -1943,7 +1980,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.0.2 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.0.3 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
