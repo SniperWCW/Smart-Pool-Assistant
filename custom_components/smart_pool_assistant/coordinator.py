@@ -686,7 +686,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         ph_senker_ml = chemistry["ph_senker_total"]
         ph_erhoeher_g = chemistry["ph_erhoeher_total"]
         c_ziel = chemistry["chlor_target"]
+        c_min = chemistry["chlor_min"]
+        c_max = chemistry["chlor_max"]
         ph_ziel = chemistry["ph_target"]
+        ph_min = chemistry["ph_min"]
+        ph_max = chemistry["ph_max"]
         ph_diff = chemistry["ph_diff"]
         weather_note = chemistry["weather_note"]
         chlor_breakdown_base = chemistry["chlor_breakdown_base"]
@@ -739,8 +743,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             awaiting_retest,
             ph_ist,
             c_ist,
-            ph_ziel,
-            c_ziel,
+            ph_min,
+            ph_max,
+            c_min,
+            c_max,
             s_g,
         )
 
@@ -771,7 +777,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "last_measurement_raw": last_meas_raw,
             "last_measurement_source": last_meas_source,
             "chlor_target": c_ziel,
+            "chlor_min": c_min,
+            "chlor_max": c_max,
             "ph_target": ph_ziel,
+            "ph_min": ph_min,
+            "ph_max": ph_max,
             "ble_battery": self.maintenance_history.get("ble_battery"),
             "bluetooth_connected": ble_connected,
             "last_activities": last_activities,

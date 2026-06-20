@@ -328,6 +328,33 @@ class PoolChemistryCard extends HTMLElement {
     return parts.join(" + ");
   }
 
+  _getTargetRange(attr, minKey, maxKey, legacyKey) {
+    let low = Number(attr[minKey]);
+    let high = Number(attr[maxKey]);
+    const legacy = Number(attr[legacyKey]);
+
+    if (!Number.isFinite(low)) low = legacy;
+    if (!Number.isFinite(high)) high = legacy;
+    if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
+    return low <= high ? { low, high } : { low: high, high: low };
+  }
+
+  _formatTargetRange(range, suffix = "") {
+    if (!range) return "--";
+    const format = (value) => value.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    if (range.low === range.high) return `${format(range.low)}${suffix}`;
+    return `${format(range.low)}-${format(range.high)}${suffix}`;
+  }
+
+  _getRangeColorClass(value, range, criticalTolerance) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || !range) return "";
+    if (num >= range.low && num <= range.high) return "status-ok";
+
+    const diff = num < range.low ? range.low - num : num - range.high;
+    return diff <= criticalTolerance ? "status-warning" : "status-critical";
+  }
+
   _normalizeForecastResponse(response, entityId) {
     if (!response) return [];
 
@@ -595,9 +622,9 @@ class PoolChemistryCard extends HTMLElement {
     const warnings = [];
     const isFromStorage = attr.data_source === "Speicher";
     const chlor = Number(attr.chlor_ist);
-    const chlorTarget = Number(attr.chlor_target);
+    const chlorRange = this._getTargetRange(attr, "chlor_min", "chlor_max", "chlor_target");
     const ph = Number(attr.ph_ist);
-    const phTarget = Number(attr.ph_target);
+    const phRange = this._getTargetRange(attr, "ph_min", "ph_max", "ph_target");
     const temp = Number(attr.temp_ist);
     const uv = Number(attr.weather_uv_today);
     const rainProbability = Number(attr.weather_rain_probability_today);
@@ -615,16 +642,17 @@ class PoolChemistryCard extends HTMLElement {
       issues.push("Stoßchlor aktiv");
     }
 
-    if (Number.isFinite(chlor) && Number.isFinite(chlorTarget)) {
-      const chlorDiff = chlor - chlorTarget;
+    if (Number.isFinite(chlor) && chlorRange) {
+      const chlorLowDiff = chlorRange.low - chlor;
+      const chlorHighDiff = chlor - chlorRange.high;
       if (chlor <= 0.3) issues.push("Chlor sehr niedrig");
-      else if (chlor >= 5 || chlorDiff > 0.9) issues.push("Chlor deutlich zu hoch");
-      else if (chlorDiff < -0.3) warnings.push("Chlor niedrig");
-      else if (chlorDiff > 0.3) warnings.push("Chlor erhöht");
+      else if (chlor >= 5 || chlorHighDiff > 0.9) issues.push("Chlor deutlich zu hoch");
+      else if (chlorLowDiff > 0.3) warnings.push("Chlor niedrig");
+      else if (chlorHighDiff > 0.3) warnings.push("Chlor erhöht");
     }
 
-    if (Number.isFinite(ph) && Number.isFinite(phTarget)) {
-      const phDiff = ph - phTarget;
+    if (Number.isFinite(ph) && phRange) {
+      const phDiff = ph < phRange.low ? phRange.low - ph : ph > phRange.high ? ph - phRange.high : 0;
       if (ph < 6.8 || ph > 7.8 || Math.abs(phDiff) > 0.4) issues.push("pH deutlich außerhalb");
       else if (Math.abs(phDiff) > 0.15) warnings.push("pH nicht ideal");
     }
@@ -1299,7 +1327,9 @@ class PoolChemistryCard extends HTMLElement {
 
     const isFromStorage = attr.data_source === "Speicher";
     const hasChlor = attr.chlor_ist !== null && attr.chlor_ist !== undefined && !isFromStorage;
-    const chlorDiff = hasChlor ? attr.chlor_ist - attr.chlor_target : 0;
+    const chlorRange = this._getTargetRange(attr, "chlor_min", "chlor_max", "chlor_target");
+    const chlorHighDiff = hasChlor && chlorRange ? attr.chlor_ist - chlorRange.high : 0;
+    const chlorLowDiff = hasChlor && chlorRange ? chlorRange.low - attr.chlor_ist : 0;
 
     if (!hasChlor) {
       this.querySelector('#chlor-rec').innerHTML = isFromStorage
@@ -1313,10 +1343,10 @@ class PoolChemistryCard extends HTMLElement {
       const chlorSpoons = this._getMeasuringSpoonText(attr.chlor_dose, "g");
       const chlorSpoonHint = chlorSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorSpoons})</span>` : "";
       this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
-        ? `Bitte <b>${chlorDoseText}</b> Chlor für den Zielwert hinzufügen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
-        : (chlorDiff > 0.2
-            ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorDiff.toFixed(2)} mg/l)</span>`
-            : (chlorDiff < -0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist optimal.`));
+        ? `Bitte <b>${chlorDoseText}</b> Chlor für den Zielbereich hinzufügen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
+        : (chlorHighDiff > 0.2
+            ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorHighDiff.toFixed(2)} mg/l)</span>`
+            : (chlorLowDiff > 0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist im Zielbereich.`));
     }
 
     this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
@@ -1326,7 +1356,7 @@ class PoolChemistryCard extends HTMLElement {
       if (phAwaitingRetest || awaitingRetest) {
         phText = "<i>Warten auf erneute Messung nach pH-Zugabe.</i>";
       } else {
-        phText = "pH-Wert ist optimal.";
+        phText = "pH-Wert ist im Zielbereich.";
         if (attr.ph_senker_total > 0) {
           const amountText = this._formatDoseAmount(attr.ph_senker_total, "ml");
           const spoons = this._getMeasuringSpoonText(attr.ph_senker_total, "ml");
@@ -1423,20 +1453,13 @@ class PoolChemistryCard extends HTMLElement {
     const c_ist = formatNum(attr.chlor_ist);
     const ph_ist = formatNum(attr.ph_ist);
     const t_ist = formatNum(attr.temp_ist);
-    const c_target = formatNum(attr.chlor_target);
-    const ph_target = formatNum(attr.ph_target);
+    const tableChlorRange = this._getTargetRange(attr, "chlor_min", "chlor_max", "chlor_target");
+    const tablePhRange = this._getTargetRange(attr, "ph_min", "ph_max", "ph_target");
+    const c_target = this._formatTargetRange(tableChlorRange, " mg/l");
+    const ph_target = this._formatTargetRange(tablePhRange);
 
-    // Helper to get colored text for measurements based on deviation
-    const getValColorClass = (val, target, t1, t2) => {
-      if (val === undefined || val === null || target === undefined || target === null || isNaN(val)) return '';
-      const diff = Math.abs(Number(val) - Number(target));
-      if (diff <= t1) return 'status-ok';
-      if (diff <= t2) return 'status-warning';
-      return 'status-critical';
-    };
-
-    const chlorColor = getValColorClass(attr.chlor_ist, attr.chlor_target, 0.3, 0.7);
-    const phColor = getValColorClass(attr.ph_ist, attr.ph_target, 0.1, 0.3);
+    const chlorColor = this._getRangeColorClass(attr.chlor_ist, tableChlorRange, 0.7);
+    const phColor = this._getRangeColorClass(attr.ph_ist, tablePhRange, 0.3);
     const chlorSource = attr.chlor_source || '--';
     const phSource = attr.ph_source || '--';
     const tempSource = attr.temp_source || '--';
@@ -1474,7 +1497,7 @@ class PoolChemistryCard extends HTMLElement {
       <div class="table-row">
         <div class="table-label">Chlor</div>
         <div class="table-value" data-label="Ist"><span class="${chlorColor}">${c_ist} mg/l</span></div>
-        <div class="table-target" data-label="Ziel">${c_target} mg/l</div>
+        <div class="table-target" data-label="Ziel">${c_target}</div>
         <div class="table-meta" data-label="Quelle">${sourceWithTime(chlorSource)}</div>
       </div>
       <div class="table-row">
@@ -1980,7 +2003,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.0.3 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.0.4 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

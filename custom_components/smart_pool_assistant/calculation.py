@@ -5,8 +5,12 @@ from datetime import datetime
 
 from .const import (
     CONF_CHLOR_CONTENT,
+    CONF_CHLOR_MAX,
+    CONF_CHLOR_MIN,
     CONF_CHLOR_TARGET,
     CONF_PH_DOWN_DOSAGE,
+    CONF_PH_MAX,
+    CONF_PH_MIN,
     CONF_PH_TARGET,
     CONF_PH_UP_DOSAGE,
     CONF_POOL_VOLUME,
@@ -34,10 +38,18 @@ def round_to_measuring_spoons(amount: float | int | None) -> float:
         for first in small_spoons:
             for second in small_spoons:
                 candidate = base + first + second
-                if candidate <= amount:
+                if candidate <= amount + 1e-9:
                     candidates.add(candidate)
 
     return max(candidates)
+
+
+def _target_range(conf: dict, min_key: str, max_key: str, legacy_key: str, default: float) -> tuple[float, float]:
+    """Return an ordered min/max target range with legacy single-target fallback."""
+    legacy_target = float(conf.get(legacy_key, default))
+    low = float(conf.get(min_key, legacy_target))
+    high = float(conf.get(max_key, legacy_target))
+    return (low, high) if low <= high else (high, low)
 
 
 def calculate_pool_chemistry(
@@ -51,8 +63,8 @@ def calculate_pool_chemistry(
 ) -> dict:
     """Calculate dosage recommendations and detailed chemistry breakdowns."""
     volumen = conf.get(CONF_POOL_VOLUME, 1.0)
-    c_ziel = conf.get(CONF_CHLOR_TARGET, 1.5)
-    ph_ziel = conf.get(CONF_PH_TARGET, 7.2)
+    c_min, c_max = _target_range(conf, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_CHLOR_TARGET, 1.5)
+    ph_min, ph_max = _target_range(conf, CONF_PH_MIN, CONF_PH_MAX, CONF_PH_TARGET, 7.2)
     wirkstoff = conf.get(CONF_CHLOR_CONTENT, 0.56)
 
     if wirkstoff <= 0:
@@ -60,7 +72,7 @@ def calculate_pool_chemistry(
 
     volume_m3 = max(float(volumen), 0.0)
 
-    c_diff = max(float(c_ziel) - float(c_ist), 0) if c_ist is not None else 0
+    c_diff = max(float(c_min) - float(c_ist), 0) if c_ist is not None else 0
 
     temp_target_extra = 0.0
     if temp_ist is not None:
@@ -97,7 +109,7 @@ def calculate_pool_chemistry(
         elif float(c_ist) < 1.0:
             shock_target = 2.0
 
-    base_target_with_conditions = float(c_ziel) + temp_target_extra + env_target_extra + uv_target_extra
+    base_target_with_conditions = float(c_min) + temp_target_extra + env_target_extra + uv_target_extra
     effective_target = base_target_with_conditions + bather_target_extra
     if shock_target > 0:
         effective_target = max(base_target_with_conditions, shock_target) + bather_target_extra
@@ -121,7 +133,7 @@ def calculate_pool_chemistry(
     target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
     raw_chlor = target_diff * volume_m3 / wirkstoff
 
-    if c_ist is not None and c_ist >= c_ziel:
+    if c_ist is not None and c_ist >= c_min:
         s_g = 0.0
     else:
         s_g = (
@@ -139,7 +151,12 @@ def calculate_pool_chemistry(
         ):
             weather_note = "Regen erwartet: Danach moeglichst erneut messen."
 
-    ph_diff = ph_ziel - ph_ist if ph_ist is not None else 0
+    ph_diff = 0.0
+    if ph_ist is not None:
+        if ph_ist < ph_min:
+            ph_diff = ph_min - ph_ist
+        elif ph_ist > ph_max:
+            ph_diff = ph_max - ph_ist
     ph_diff_abs = abs(ph_diff)
 
     ph_senker_ml = 0.0
@@ -159,8 +176,12 @@ def calculate_pool_chemistry(
         "ph_erhoeher_total": ph_erhoeher_g,
         "ph_diff": ph_diff,
         "is_shock": (c_ist is not None and c_ist < 0.5),
-        "chlor_target": c_ziel,
-        "ph_target": ph_ziel,
+        "chlor_target": c_min,
+        "chlor_min": c_min,
+        "chlor_max": c_max,
+        "ph_target": ph_min,
+        "ph_min": ph_min,
+        "ph_max": ph_max,
         "chlor_breakdown_base": round(chlor_base_amount_raw, 2),
         "chlor_breakdown_shock_adj": round(chlor_breakdown_shock_adj_raw, 2),
         "chlor_breakdown_temp_adj": round(chlor_breakdown_temp_adj_raw, 2),
@@ -231,30 +252,34 @@ def build_recommendation(
     awaiting_retest: bool,
     ph_ist: float | None,
     c_ist: float | None,
-    ph_ziel: float,
-    c_ziel: float,
+    ph_min: float,
+    ph_max: float,
+    c_min: float,
+    c_max: float,
     chlor_dose: float,
 ) -> str:
     """Build the user-facing recommendation text."""
     warnings = []
 
     current_ph = float(ph_ist) if ph_ist is not None else None
-    target_ph = float(ph_ziel)
+    target_ph_min = float(ph_min)
+    target_ph_max = float(ph_max)
     current_c = float(c_ist) if c_ist is not None else None
-    target_c = float(c_ziel)
+    target_c_min = float(c_min)
+    target_c_max = float(c_max)
 
     if current_ph is not None:
-        if current_ph > (target_ph + 0.1):
+        if current_ph > (target_ph_max + 0.1):
             warnings.append("pH zu hoch")
-        elif current_ph < (target_ph - 0.1):
+        elif current_ph < (target_ph_min - 0.1):
             warnings.append("pH zu niedrig")
 
     if current_c is not None:
         if current_c < 0.5:
             warnings.append("Sto\u00dfchlorung empfohlen")
-        elif current_c > (target_c + 0.2):
+        elif current_c > (target_c_max + 0.2):
             warnings.append("Chlor zu hoch")
-        elif current_c < (target_c - 0.2) and chlor_dose > 0:
+        elif current_c < (target_c_min - 0.2) and chlor_dose > 0:
             warnings.append("Chlor nachdosieren")
 
     if awaiting_retest:

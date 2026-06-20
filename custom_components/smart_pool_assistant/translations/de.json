@@ -1,12 +1,13 @@
 {
   "config": {
     "error": {
-      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor."
+      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor.",
+      "invalid_target_range": "Bitte pruefe die Zielbereiche: Minimum darf nicht groesser als Maximum sein."
     },
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
-        "description": "Konfiguriere die Sensoren und Zielwerte für deinen Pool oder Whirlpool.",
+        "description": "Konfiguriere die Sensoren und Zielbereiche für deinen Pool oder Whirlpool.",
         "data": {
           "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
@@ -16,8 +17,10 @@
           "weather_entity": "Wetter-Entität (optional)",
           "uv_sensor": "UV-Sensor (optional)",
           "pool_volume": "Poolvolumen (m³)",
-          "chlor_target": "Chlor Zielwert (mg/l)",
-          "ph_target": "pH Zielwert",
+          "chlor_min": "Chlor Minimum (mg/l)",
+          "chlor_max": "Chlor Maximum (mg/l)",
+          "ph_min": "pH Minimum",
+          "ph_max": "pH Maximum",
           "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
           "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
           "ph_up_dosage": "pH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
@@ -37,7 +40,8 @@
   },
   "options": {
     "error": {
-      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor."
+      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor.",
+      "invalid_target_range": "Bitte pruefe die Zielbereiche: Minimum darf nicht groesser als Maximum sein."
     },
     "step": {
       "init": {
@@ -50,8 +54,10 @@
           "weather_entity": "Wetter-Entität (optional)",
           "uv_sensor": "UV-Sensor (optional)",
           "pool_volume": "Poolvolumen (m³)",
-          "chlor_target": "Chlor Zielwert (mg/l)",
-          "ph_target": "pH Zielwert",
+          "chlor_min": "Chlor Minimum (mg/l)",
+          "chlor_max": "Chlor Maximum (mg/l)",
+          "ph_min": "pH Minimum",
+          "ph_max": "pH Maximum",
           "chlor_content": "Wirkstoffanteil Chlor (z.B. 0.56 für 56%)",
           "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
           "ph_up_dosage": "pH-Plus Dosierung (g pro 10m³ für +0.1 pH)",

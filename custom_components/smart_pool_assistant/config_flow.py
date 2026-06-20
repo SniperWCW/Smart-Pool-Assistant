@@ -16,7 +16,7 @@ from homeassistant.components.bluetooth import (
 
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
-    CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_PH_TARGET,
+    CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_PH_TARGET, CONF_PH_MIN, CONF_PH_MAX,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
     , CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
@@ -38,6 +38,30 @@ def validate_data_source(user_input: dict[str, Any]) -> bool:
 
     return bool(api_key or ble_address or has_manual)
 
+
+def _range_defaults(defaults: dict[str, Any]) -> dict[str, float]:
+    """Return target ranges with backwards-compatible fallbacks."""
+    old_chlor_target = defaults.get(CONF_CHLOR_TARGET, 1.5)
+    old_ph_target = defaults.get(CONF_PH_TARGET, 7.2)
+    return {
+        CONF_CHLOR_MIN: defaults.get(CONF_CHLOR_MIN, old_chlor_target),
+        CONF_CHLOR_MAX: defaults.get(CONF_CHLOR_MAX, old_chlor_target),
+        CONF_PH_MIN: defaults.get(CONF_PH_MIN, old_ph_target),
+        CONF_PH_MAX: defaults.get(CONF_PH_MAX, old_ph_target),
+    }
+
+
+def validate_target_ranges(user_input: dict[str, Any]) -> bool:
+    """Check that configured chemistry ranges are ordered correctly."""
+    ranges = _range_defaults(user_input)
+    try:
+        return (
+            float(ranges[CONF_CHLOR_MIN]) <= float(ranges[CONF_CHLOR_MAX])
+            and float(ranges[CONF_PH_MIN]) <= float(ranges[CONF_PH_MAX])
+        )
+    except (TypeError, ValueError):
+        return False
+
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Pool Assistant."""
 
@@ -55,6 +79,8 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if CONF_POOL_VOLUME in user_input:
                 if not validate_data_source(user_input):
                     errors["base"] = "missing_data_source"
+                elif not validate_target_ranges(user_input):
+                    errors["base"] = "invalid_target_range"
                 else:
                     return self.async_create_entry(title="Smart Pool Assistant", data=user_input)
 
@@ -117,6 +143,8 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         if (info.name and "PoolLab" in info.name) or SERVICE_UUID in info.service_uuids:
             discovered_devices[info.address] = f"{info.name or 'PoolLab'} ({info.address})"
 
+    range_defaults = _range_defaults(defaults)
+
     return vol.Schema({
         vol.Optional(CONF_BLE_ADDRESS, default=defaults.get(CONF_BLE_ADDRESS, "")): selector.SelectSelector(
             selector.SelectSelectorConfig(
@@ -137,10 +165,16 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Required(CONF_POOL_VOLUME, default=defaults.get(CONF_POOL_VOLUME, 0.916)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="m³", step="any")
         ),
-        vol.Required(CONF_CHLOR_TARGET, default=defaults.get(CONF_CHLOR_TARGET, 1.5)): selector.NumberSelector(
+        vol.Required(CONF_CHLOR_MIN, default=range_defaults[CONF_CHLOR_MIN]): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="mg/l", step=0.1)
         ),
-        vol.Required(CONF_PH_TARGET, default=defaults.get(CONF_PH_TARGET, 7.2)): selector.NumberSelector(
+        vol.Required(CONF_CHLOR_MAX, default=range_defaults[CONF_CHLOR_MAX]): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="mg/l", step=0.1)
+        ),
+        vol.Required(CONF_PH_MIN, default=range_defaults[CONF_PH_MIN]): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1)
+        ),
+        vol.Required(CONF_PH_MAX, default=range_defaults[CONF_PH_MAX]): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1)
         ),
         vol.Required(CONF_CHLOR_CONTENT, default=defaults.get(CONF_CHLOR_CONTENT, 0.56)): selector.NumberSelector(
@@ -188,6 +222,8 @@ class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             if not validate_data_source(user_input):
                 errors["base"] = "missing_data_source"
+            elif not validate_target_ranges(user_input):
+                errors["base"] = "invalid_target_range"
             else:
                 return self.async_create_entry(title="", data=user_input)
 

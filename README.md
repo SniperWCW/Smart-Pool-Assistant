@@ -2,11 +2,11 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.0.3**
+**Aktueller Release-Stand: V2.0.4**
 
 ## Hauptfunktionen
 
-- Praezise Chlor-Berechnung ueber volumenbezogene Zielkonzentrationen mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
+- Praezise Chlor-Berechnung ueber volumenbezogene Zielbereiche mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
 - Konservative Dosierempfehlungen passend zu Messloeffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
 - Optionale Wetterintegration ueber eine Home-Assistant-`weather`-Entitaet mit Vorhersage fuer heute und morgen, inklusive Backend-Forecast-Fallback fuer Provider wie Tomorrow.io.
@@ -56,7 +56,7 @@ Wichtige Konfigurationspunkte:
 - **Cloud-Update-Intervall**: Zyklischer Cloud-Abruf in Minuten, Standard `5`, Bereich `1-60`.
 - **Manuelle Sensoren**: Chlor, pH und optional Temperatur.
 - **Poolvolumen**: Wassermenge in m3.
-- **Zielwerte**: Chlor und pH.
+- **Zielbereiche**: Chlor Minimum/Maximum und pH Minimum/Maximum.
 - **Wirkstoffanteil**: Wirkstoffanteil des Chlorprodukts.
 - **pH-Dosierungen**: pH-Minus in ml und pH-Plus in g.
 - **Benachrichtigungsdienst(e)** und **Follow-up-Zeit**.
@@ -84,17 +84,17 @@ Wichtige Konfigurationspunkte:
 
 Die Chlorempfehlung beruecksichtigt:
 
-1. Basisbedarf aus `Ziel - Ist` in `mg/l`.
+1. Basisbedarf aus `untere Zielgrenze - Ist` in `mg/l`, wenn Chlor unter dem Zielbereich liegt.
 2. Temperatur-Zuschlag ab 28 C bzw. 32 C.
 3. Zuschlag fuer offene Abdeckung.
 4. Nutzungsmodus (`none`, `normal`, `party`) als zusaetzlicher Konzentrationsbedarf, der auch bei aktivem Stoßchlor-Ziel zusaetzlich auf die Endmenge wirkt.
 5. Stoßchlor-Ziele bei sehr niedrigen Chlorwerten.
 6. Umrechnung der benoetigten Gesamtkonzentration ueber das konfigurierte `Poolvolumen (m³)` und den Wirkstoffanteil in Gramm Produkt.
-7. Zielwert-Check, damit bei Zielerreichung oder Ueberdosierung `0 g` empfohlen wird.
+7. Zielbereich-Check, damit innerhalb des Bereichs oder bei Ueberdosierung `0 g` empfohlen wird.
 
 ### pH
 
-Die pH-Berechnung ermittelt anhand Zielwert, Poolvolumen und Produktdosierung die benoetigte Menge an:
+Die pH-Berechnung ermittelt anhand Zielbereich, Poolvolumen und Produktdosierung die benoetigte Menge an:
 
 - **PH-Minus** in ml
 - **PH-Plus** in g

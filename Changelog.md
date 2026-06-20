@@ -1,5 +1,13 @@
 # Changelog - Smart Pool Assistant
 
+## [2.0.4] - 2026-06-20
+
+- **Zielbereiche fuer Chlor und pH**: Config Flow und Options Flow nutzen jetzt Min-/Max-Werte statt fixer Einzelzielwerte. Bestehende `chlor_target`- und `ph_target`-Konfigurationen bleiben als Fallback kompatibel.
+- **Berechnungen auf Bereiche umgestellt**: Innerhalb des Zielbereichs wird keine Chemie empfohlen. Chlor wird bei Unterschreitung konservativ zur unteren Bereichsgrenze nachdosiert; pH wird bei Unterschreitung zur unteren und bei Ueberschreitung zur oberen Bereichsgrenze korrigiert.
+- **Karte und Badeampel angepasst**: Zielspalte, Farblogik, Badeempfehlung und Status-Texte bewerten Chlor und pH jetzt gegen die konfigurierten Bereiche.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.4.md` auf den aktuellen Stand gebracht.
+
+
 ## [2.0.3] - 2026-06-20
 
 - **Nachmessstatus bei einzelner Chemiezugabe korrigiert**: Sobald Chlor, pH-Minus oder pH-Plus nach der letzten Messung bestaetigt wurde, springt der Gesamtstatus auf `Warten auf erneute Messung`, auch wenn weitere Empfehlungen rechnerisch noch offen waeren.

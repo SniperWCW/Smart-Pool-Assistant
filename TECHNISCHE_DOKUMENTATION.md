@@ -4,13 +4,13 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-20  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.0.3`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.0.4`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen fuer Chlor und pH, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
 
 ---
 
 ## 1. Zweck der Integration
 
-Der **Smart Pool Assistant** ist eine Custom Integration für Home Assistant zur Pflege von Pool oder Whirlpool. Die Integration kombiniert Messwerte, Zielwerte, Dosierlogik, Wartungshistorie, PoolLab-Bluetooth, PoolLab-Cloud und eine eigene Lovelace-Karte zu einer zentralen Empfehlung.
+Der **Smart Pool Assistant** ist eine Custom Integration für Home Assistant zur Pflege von Pool oder Whirlpool. Die Integration kombiniert Messwerte, Zielbereiche, Dosierlogik, Wartungshistorie, PoolLab-Bluetooth, PoolLab-Cloud und eine eigene Lovelace-Karte zu einer zentralen Empfehlung.
 
 Die Integration zeigt nicht nur Rohwerte an, sondern berechnet konkrete Handlungsanweisungen:
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -692,7 +692,7 @@ Eingänge:
 
 ### Aktuelle Faktoren
 
-Die Basisdosis wird aus `Ziel - Ist`, Volumen und Wirkstoffanteil berechnet.
+Die Basisdosis wird aus `untere Zielgrenze - Ist`, Volumen und Wirkstoffanteil berechnet.
 Alle Zusatzlogiken arbeiten als zusaetzliche Zielkonzentration in `mg/l`
 (Temperatur, offenes Becken, Nutzung, Stoßchlorung). Erst ganz am Ende wird
 die benoetigte Gesamtkonzentration ueber das konfigurierte Poolvolumen und den
@@ -745,9 +745,9 @@ sonst       -> 2.0 g pro m³
 maximales Ziel: 10.0 mg/l freies Chlor
 ```
 
-#### Zielwert-Sperre
+#### Zielbereich-Sperre
 
-Wenn `chlor_ist >= chlor_target`, dann:
+Wenn `chlor_ist >= chlor_min`, dann:
 
 ```text
 chlor_dose = 0.0
@@ -815,16 +815,16 @@ Aktuelle Warnregeln:
 ### pH
 
 ```text
-pH > Ziel + 0.1 -> "pH zu hoch"
-pH < Ziel - 0.1 -> "pH zu niedrig"
+pH > ph_max + 0.1 -> "pH zu hoch"
+pH < ph_min - 0.1 -> "pH zu niedrig"
 ```
 
 ### Chlor
 
 ```text
 chlor < 0.5 -> "Stoßchlorung empfohlen"
-chlor > Ziel + 0.2 -> "Chlor zu hoch"
-chlor < Ziel - 0.2 und chlor_dose > 0 -> "Chlor nachdosieren"
+chlor > chlor_max + 0.2 -> "Chlor zu hoch"
+chlor < chlor_min - 0.2 und chlor_dose > 0 -> "Chlor nachdosieren"
 ```
 
 ### Ausgabe
@@ -1109,7 +1109,7 @@ Die Karte:
 
 - zeigt die zentrale Empfehlung
 - zeigt eine Badeampel neben der Empfehlung
-- zeigt Messwerte und Zielwerte
+- zeigt Messwerte und Zielbereiche
 - zeigt Messquellen
 - zeigt BLE-Verbindungsstatus
 - integriert den PoolLab-Abrufbutton
@@ -1130,12 +1130,12 @@ Die Messwertetabelle nutzt die Spalten:
 Messwert | Ist | Ziel | Quelle
 ```
 
-Chemiewerte zeigen Ist- und Zielwerte getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Zusaetzlich enthaelt die Tabelle zwei relevante Status-/Aktionszeilen:
+Chemiewerte zeigen Istwerte und Zielbereiche getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Zusaetzlich enthaelt die Tabelle zwei relevante Status-/Aktionszeilen:
 
 - `BT Verbindung`
 - `PoolLab Abruf`
 
-Auf schmalen Displays blendet die Karte den Tabellenkopf aus und zeigt die Werte je Messwert mit kompakten Labels (`Ist`, `Ziel`, `Quelle`). Dadurch bleiben Zielwerte und Quellen auch auf dem Handy eindeutig zuordenbar.
+Auf schmalen Displays blendet die Karte den Tabellenkopf aus und zeigt die Werte je Messwert mit kompakten Labels (`Ist`, `Ziel`, `Quelle`). Dadurch bleiben Zielbereiche und Quellen auch auf dem Handy eindeutig zuordenbar.
 
 Die Karte ermittelt den Button standardmäßig automatisch:
 
