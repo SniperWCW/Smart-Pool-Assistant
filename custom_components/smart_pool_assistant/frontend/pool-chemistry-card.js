@@ -843,17 +843,11 @@ class PoolChemistryCard extends HTMLElement {
     };
   }
 
-  _shouldMergeBathingAdvice(statusText, statusClass, bathingAdvice) {
-    if (statusClass !== "critical" || bathingAdvice.className !== "critical") return false;
-
-    const normalizedStatus = String(statusText || "")
-      .toLowerCase()
-      .replace(/chlor deutlich zu hoch/g, "chlor zu hoch");
-    const normalizedDetail = String(bathingAdvice.detail || "")
-      .toLowerCase()
-      .replace(/chlor deutlich zu hoch/g, "chlor zu hoch");
-
-    return normalizedStatus.includes("chlor zu hoch") && normalizedDetail.includes("chlor zu hoch");
+  _getCombinedStatusClass(statusClass, bathingClass) {
+    if (statusClass === "critical" || bathingClass === "critical") return "critical";
+    if (statusClass === "waiting") return "waiting";
+    if (statusClass === "warning" || bathingClass === "warning") return "warning";
+    return "ok";
   }
 
   set hass(hass) {
@@ -891,9 +885,9 @@ class PoolChemistryCard extends HTMLElement {
       this.innerHTML = `
         <ha-card header="💧 Smart Pool Assistant">
           <div class="card-content">
-            <div class="top-status-grid">
-              <div id="status-box"></div>
-              <div id="bathing-box"></div>
+            <div id="top-status-card" class="top-status-card">
+              <div id="status-box" class="status-segment"></div>
+              <div id="bathing-box" class="status-segment"></div>
             </div>
             <div class="recommendation-section">
               <div class="rec-row">
@@ -998,25 +992,44 @@ class PoolChemistryCard extends HTMLElement {
             <div id="footer-info" class="footer"></div>
           </div>
           <style>
-            .top-status-grid {
+            .top-status-card {
               display: grid;
               grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
-              gap: 10px;
               margin-bottom: 16px;
+              border-radius: 8px;
+              overflow: hidden;
+              border: 1px solid var(--divider-color);
             }
-            .status-box { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; font-size: 1.1em; }
-            .status-box.warning { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
-            .status-box.critical { background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; }
-            .status-box.ok { background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
-            .status-box.waiting { background: rgba(3, 169, 244, 0.12); color: #03a9f4; border: 1px solid #03a9f4; }
-            .bathing-box {
+            .top-status-card.warning { background: rgba(255, 152, 0, 0.1); border-color: #ff9800; }
+            .top-status-card.critical { background: rgba(244, 67, 54, 0.1); border-color: #f44336; }
+            .top-status-card.ok { background: rgba(76, 175, 80, 0.1); border-color: #4caf50; }
+            .top-status-card.waiting { background: rgba(3, 169, 244, 0.12); border-color: #03a9f4; }
+            .status-segment {
+              padding: 12px 14px;
+              text-align: center;
+              min-width: 0;
               display: flex;
               flex-direction: column;
               justify-content: center;
               gap: 3px;
             }
-            .bathing-title {
-              font-size: 1em;
+            .status-segment + .status-segment {
+              border-left: 1px solid rgba(0, 0, 0, 0.12);
+            }
+            .status-segment.warning { color: #ff9800; }
+            .status-segment.critical { color: #f44336; }
+            .status-segment.ok { color: #4caf50; }
+            .status-segment.waiting { color: #03a9f4; }
+            .status-label {
+              font-size: 0.7em;
+              font-weight: 700;
+              letter-spacing: 0.06em;
+              opacity: 0.65;
+              text-transform: uppercase;
+            }
+            .status-title, .bathing-title {
+              font-size: 1.05em;
+              font-weight: 700;
               line-height: 1.2;
             }
             .bathing-detail {
@@ -1025,16 +1038,13 @@ class PoolChemistryCard extends HTMLElement {
               opacity: 0.78;
               line-height: 1.25;
             }
-            .status-detail {
-              font-size: 0.82em;
-              font-weight: 500;
-              opacity: 0.78;
-              line-height: 1.25;
-              margin-top: 3px;
-            }
             @media (max-width: 620px) {
-              .top-status-grid {
+              .top-status-card {
                 grid-template-columns: 1fr;
+              }
+              .status-segment + .status-segment {
+                border-left: 0;
+                border-top: 1px solid rgba(0, 0, 0, 0.12);
               }
             }
             .recommendation-section { margin-bottom: 0; line-height: 1.5; }
@@ -1520,6 +1530,7 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     // Aktualisiere nur die dynamischen Inhalte
+    const topStatusCard = this.querySelector('#top-status-card');
     const statusBox = this.querySelector('#status-box');
     const awaitingRetest = attr.awaiting_retest === true;
     const chlorAwaitingRetest = attr.awaiting_retest_chlor === true;
@@ -1543,29 +1554,22 @@ class PoolChemistryCard extends HTMLElement {
 
     const bathingBox = this.querySelector('#bathing-box');
     const bathingAdvice = this._getBathingAdvice(attr);
-    const mergeBathingAdvice = this._shouldMergeBathingAdvice(statusText, statusClass, bathingAdvice);
+    const combinedStatusClass = this._getCombinedStatusClass(statusClass, bathingAdvice.className);
 
-    statusBox.className = `status-box ${statusClass}`;
-    statusBox.style.gridColumn = mergeBathingAdvice ? '1 / -1' : '';
-    statusBox.textContent = '';
-    const statusTitle = document.createElement('div');
-    statusTitle.textContent = statusText;
-    statusBox.appendChild(statusTitle);
-    if (mergeBathingAdvice) {
-      const statusDetail = document.createElement('div');
-      statusDetail.className = 'status-detail';
-      statusDetail.textContent = `${bathingAdvice.icon} ${bathingAdvice.title}`;
-      statusBox.appendChild(statusDetail);
-    }
+    topStatusCard.className = `top-status-card ${combinedStatusClass}`;
+    statusBox.className = `status-segment ${statusClass}`;
+    statusBox.innerHTML = `
+      <div class="status-label">Status</div>
+      <div class="status-title"></div>
+    `;
+    statusBox.querySelector('.status-title').textContent = statusText;
 
-    bathingBox.style.display = mergeBathingAdvice ? 'none' : '';
-    if (!mergeBathingAdvice) {
-      bathingBox.className = `status-box bathing-box ${bathingAdvice.className}`;
-      bathingBox.innerHTML = `
-        <div class="bathing-title">${bathingAdvice.icon} ${bathingAdvice.title}</div>
-        <div class="bathing-detail">${bathingAdvice.detail}</div>
-      `;
-    }
+    bathingBox.className = `status-segment bathing-box ${bathingAdvice.className}`;
+    bathingBox.innerHTML = `
+      <div class="status-label">Baden</div>
+      <div class="bathing-title">${bathingAdvice.icon} ${bathingAdvice.title}</div>
+      <div class="bathing-detail">${bathingAdvice.detail}</div>
+    `;
 
     // LayzSpa Panel Rendering
     this._updateLayzSpaPanel();
@@ -2278,7 +2282,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.1.4 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.1.5 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

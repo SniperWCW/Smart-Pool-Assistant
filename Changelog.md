@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.5] - 2026-06-21
+
+- **Gemeinsame Statusbox**: Status und Badeampel werden oben in der Lovelace-Karte als eine gemeinsame Box mit zwei Spalten dargestellt.
+- **Bessere Lesbarkeit**: Die Box nutzt einen gemeinsamen Rahmen mit Farbe nach kritischstem Zustand und trennt `Status` und `Baden` über klare Segment-Labels.
+- **Mobile Darstellung**: Auf schmalen Displays werden die beiden Bereiche innerhalb derselben Box sauber untereinander gestapelt.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V2.1.5.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.4] - 2026-06-21
 
 - **Doppelte Warnbox zusammengeführt**: Wenn Status und Badeampel denselben kritischen Chlor-Grund anzeigen, wird in der Lovelace-Karte nur noch eine rote Box dargestellt.
