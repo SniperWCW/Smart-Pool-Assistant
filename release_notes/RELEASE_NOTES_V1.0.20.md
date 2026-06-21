@@ -23,4 +23,4 @@
 ### Dokumentation / Versionierung
 
 - `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und Frontend-Versionsbanner auf `1.0.20` angehoben.
-- Eigene Markdown-Release-Note fuer den Stand `V1.0.20` hinzugefuegt.
+- Eigene Markdown-Release-Note für den Stand `V1.0.20` hinzugefügt.

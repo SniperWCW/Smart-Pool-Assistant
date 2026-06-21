@@ -13,8 +13,8 @@
 ### PoolLab Cloud
 
 - `poollab_cloud.py` kapselt den GraphQL-Request zur LabCom-Cloud.
-- Cloud-Messwerte werden dort sortiert, normalisiert und als strukturiertes Ergebnis an den Coordinator zurueckgegeben.
-- Der Coordinator entscheidet weiterhin ueber Quellenprioritaet, Cache-Fallbacks und UI-Daten.
+- Cloud-Messwerte werden dort sortiert, normalisiert und als strukturiertes Ergebnis an den Coordinator zurückgegeben.
+- Der Coordinator entscheidet weiterhin über Quellenpriorität, Cache-Fallbacks und UI-Daten.
 
 ### Benachrichtigungen
 

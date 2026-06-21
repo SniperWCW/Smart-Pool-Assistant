@@ -12,16 +12,16 @@
 - Config Flow und Options Flow verwenden jetzt:
   - `chlor_min` / `chlor_max`
   - `ph_min` / `ph_max`
-- Bestehende Installationen mit `chlor_target` und `ph_target` bleiben kompatibel. Die alten Einzelzielwerte werden als Fallback fuer Minimum und Maximum genutzt.
-- Ungueltige Bereiche werden im Flow abgefangen, wenn Minimum groesser als Maximum ist.
+- Bestehende Installationen mit `chlor_target` und `ph_target` bleiben kompatibel. Die alten Einzelzielwerte werden als Fallback für Minimum und Maximum genutzt.
+- Ungültige Bereiche werden im Flow abgefangen, wenn Minimum größer als Maximum ist.
 
 ### Berechnung
 
 - Innerhalb des Zielbereichs wird keine Chemie empfohlen.
 - Chlor wird bei Unterschreitung konservativ zur unteren Zielgrenze nachdosiert.
 - pH wird bei Unterschreitung zur unteren Zielgrenze angehoben.
-- pH wird bei Ueberschreitung zur oberen Zielgrenze gesenkt.
-- Stoßchlor-, Wetter-, Temperatur-, Abdeckungs-, Nutzungs- und Messloeffel-Logik bleiben erhalten.
+- pH wird bei Überschreitung zur oberen Zielgrenze gesenkt.
+- Stoßchlor-, Wetter-, Temperatur-, Abdeckungs-, Nutzungs- und Messlöffel-Logik bleiben erhalten.
 
 ### Lovelace-Karte
 

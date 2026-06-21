@@ -2,63 +2,63 @@
 
 ## [2.1.0] - 2026-06-20
 
-- **Lernende Chloranalyse**: Neue lokale Lernhistorie fuer Chlor-Messpunkte und bestaetigte Chlorzugaben.
-- **Chlorverbrauch-Sensoren**: Neue Sensoren fuer `24h`, `7d` und `14d` in `mg/l/d`.
-- **Persoenlicher Chlorfaktor**: Neuer Faktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`.
-- **Chlor-Stabilitaet**: Neuer Stabilitaets-Sensor mit Durchschnitt, Minimum, Maximum, Stichprobenzahl, Lernphase und Vorhersagequalitaet.
+- **Lernende Chloranalyse**: Neue lokale Lernhistorie für Chlor-Messpunkte und bestätigte Chlorzugaben.
+- **Chlorverbrauch-Sensoren**: Neue Sensoren für `24h`, `7d` und `14d` in `mg/l/d`.
+- **Persönlicher Chlorfaktor**: Neuer Faktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`.
+- **Chlor-Stabilität**: Neuer Stabilitäts-Sensor mit Durchschnitt, Minimum, Maximum, Stichprobenzahl, Lernphase und Vorhersagequalität.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.1.0.md` auf den aktuellen Stand gebracht.
 
 ## [2.0.4] - 2026-06-20
 
-- **Zielbereiche fuer Chlor und pH**: Config Flow und Options Flow nutzen jetzt Min-/Max-Werte statt fixer Einzelzielwerte. Bestehende `chlor_target`- und `ph_target`-Konfigurationen bleiben als Fallback kompatibel.
-- **Berechnungen auf Bereiche umgestellt**: Innerhalb des Zielbereichs wird keine Chemie empfohlen. Chlor wird bei Unterschreitung konservativ zur unteren Bereichsgrenze nachdosiert; pH wird bei Unterschreitung zur unteren und bei Ueberschreitung zur oberen Bereichsgrenze korrigiert.
+- **Zielbereiche für Chlor und pH**: Config Flow und Options Flow nutzen jetzt Min-/Max-Werte statt fixer Einzelzielwerte. Bestehende `chlor_target`- und `ph_target`-Konfigurationen bleiben als Fallback kompatibel.
+- **Berechnungen auf Bereiche umgestellt**: Innerhalb des Zielbereichs wird keine Chemie empfohlen. Chlor wird bei Unterschreitung konservativ zur unteren Bereichsgrenze nachdosiert; pH wird bei Unterschreitung zur unteren und bei Überschreitung zur oberen Bereichsgrenze korrigiert.
 - **Karte und Badeampel angepasst**: Zielspalte, Farblogik, Badeempfehlung und Status-Texte bewerten Chlor und pH jetzt gegen die konfigurierten Bereiche.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.4.md` auf den aktuellen Stand gebracht.
 
 
 ## [2.0.3] - 2026-06-20
 
-- **Nachmessstatus bei einzelner Chemiezugabe korrigiert**: Sobald Chlor, pH-Minus oder pH-Plus nach der letzten Messung bestaetigt wurde, springt der Gesamtstatus auf `Warten auf erneute Messung`, auch wenn weitere Empfehlungen rechnerisch noch offen waeren.
-- **Messloeffel-Dosierung**: Chlor, pH-Minus, pH-Plus und die Vor-Baden-Chlormenge werden konservativ auf praktische Kombinationen aus `1`, `2,5`, `5`, `7,5` und `15 g/ml` gerundet. Beispiel: `8 g` wird als `7,5 g` empfohlen.
-- **Lovelace-Anzeige erweitert**: Die Karte zeigt Dosierungen mit deutscher Zahlenformatierung und passender Messloeffel-Kombination an.
+- **Nachmessstatus bei einzelner Chemiezugabe korrigiert**: Sobald Chlor, pH-Minus oder pH-Plus nach der letzten Messung bestätigt wurde, springt der Gesamtstatus auf `Warten auf erneute Messung`, auch wenn weitere Empfehlungen rechnerisch noch offen wären.
+- **Messlöffel-Dosierung**: Chlor, pH-Minus, pH-Plus und die Vor-Baden-Chlormenge werden konservativ auf praktische Kombinationen aus `1`, `2,5`, `5`, `7,5` und `15 g/ml` gerundet. Beispiel: `8 g` wird als `7,5 g` empfohlen.
+- **Lovelace-Anzeige erweitert**: Die Karte zeigt Dosierungen mit deutscher Zahlenformatierung und passender Messlöffel-Kombination an.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.3.md` auf den aktuellen Stand gebracht.
 
 ## [2.0.2] - 2026-06-19
 
 - **Mobile Messwerttabelle korrigiert**: Auf schmalen Displays werden Ist-, Ziel- und Quellenwerte jetzt mit kompakten Labels dargestellt, statt unklar untereinander zu laufen.
-- **Wetter-Kopfzeile mobil verbessert**: Die kompakte Wetterzusammenfassung bricht auf dem Handy sauber um und wird nicht mehr unguenstig abgeschnitten.
+- **Wetter-Kopfzeile mobil verbessert**: Die kompakte Wetterzusammenfassung bricht auf dem Handy sauber um und wird nicht mehr ungünstig abgeschnitten.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.2.md` auf den aktuellen Stand gebracht.
 
 ## [2.0.1] - 2026-06-19
 
 - **Badeampel in der Lovelace-Karte**: Neben der Empfehlung zeigt die Karte jetzt `Baden empfohlen`, `Baden möglich` oder `Nicht empfohlen` anhand von Chemie-, Nachmess-, Temperatur- und Wetterdaten.
-- **Aktuelle Messwerte uebersichtlicher**: Die Messwertetabelle nutzt jetzt getrennte Spalten fuer `Messwert`, `Ist`, `Ziel` und `Quelle`; passende Messzeitpunkte werden in der Quellen-Spalte angezeigt.
-- **Karten-Editor bereinigt**: Wetter-Entitaet, Empfehlungs-Hauptsensor und PoolLab-Abruf-Button sind im visuellen Karten-Editor nicht mehr editierbar. Die Integration bzw. die automatische Erkennung bleiben die fuehrende Quelle.
+- **Aktuelle Messwerte übersichtlicher**: Die Messwertetabelle nutzt jetzt getrennte Spalten für `Messwert`, `Ist`, `Ziel` und `Quelle`; passende Messzeitpunkte werden in der Quellen-Spalte angezeigt.
+- **Karten-Editor bereinigt**: Wetter-Entität, Empfehlungs-Hauptsensor und PoolLab-Abruf-Button sind im visuellen Karten-Editor nicht mehr editierbar. Die Integration bzw. die automatische Erkennung bleiben die führende Quelle.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.1.md` auf den aktuellen Stand gebracht.
 
 ## [2.0.0] - 2026-06-19
 
-- **Stabiler Abschluss der grossen Umbauten**: Der Stand buendelt die Refactorings der Berechnungs-, Wartungs-, Benachrichtigungs-, PoolLab-Cloud-, PoolLab-BLE- und Wetterlogik als neue Major-Version.
-- **Optimierte Lovelace-Karte**: Die Karte rendert nicht mehr bei jedem beliebigen Home-Assistant-State-Update neu, sondern nur noch bei relevanten Aenderungen an Empfehlung, Wetter, PoolLab oder LayzSpa-Entitaeten.
-- **PoolLab-Button-Erkennung beschleunigt**: Die automatisch erkannte PoolLab-Abruf-Button-Entitaet wird gecacht und muss nicht wiederholt ueber alle States gesucht werden.
+- **Stabiler Abschluss der großen Umbauten**: Der Stand bündelt die Refactorings der Berechnungs-, Wartungs-, Benachrichtigungs-, PoolLab-Cloud-, PoolLab-BLE- und Wetterlogik als neue Major-Version.
+- **Optimierte Lovelace-Karte**: Die Karte rendert nicht mehr bei jedem beliebigen Home-Assistant-State-Update neu, sondern nur noch bei relevanten Änderungen an Empfehlung, Wetter, PoolLab oder LayzSpa-Entitäten.
+- **PoolLab-Button-Erkennung beschleunigt**: Die automatisch erkannte PoolLab-Abruf-Button-Entität wird gecacht und muss nicht wiederholt über alle States gesucht werden.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.0.0.md` auf den aktuellen Stand gebracht.
 
 ## [1.1.5] - 2026-06-19
 
-- **Wetter einklappbar**: Die Wettersektion der Lovelace-Karte ist jetzt als ein- und ausklappbares Panel umgesetzt, aehnlich zum LayzSpa-Bereich.
+- **Wetter einklappbar**: Die Wettersektion der Lovelace-Karte ist jetzt als ein- und ausklappbares Panel umgesetzt, ähnlich zum LayzSpa-Bereich.
 - **Kompakte Wetter-Kopfzeile**: In der Kopfzeile werden die heutigen Wetterdaten jetzt in einer Reihe mit Komma-Trennung angezeigt, z. B. Zustand, Temperatur, UV, Regen und Wind.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.5.md` auf den aktuellen Stand gebracht.
 
 ## [1.1.4] - 2026-06-19
 
-- **Optionaler UV-Sensor**: Im Config Flow und Options Flow kann jetzt zusaetzlich ein separater `sensor` fuer den UV-Index hinterlegt werden, z. B. `sensor.tomorrow_io_home_uv_index`.
-- **UV priorisiert aus eigener Entity**: `weather.py` verwendet fuer `weather_uv_today` bevorzugt den konfigurierten UV-Sensor und faellt erst danach auf Forecast-Daten zurueck.
-- **Wetterattribute erweitert**: `weather_uv_sensor` wird zusaetzlich bis in die Sensorattribute durchgereicht.
+- **Optionaler UV-Sensor**: Im Config Flow und Options Flow kann jetzt zusätzlich ein separater `sensor` für den UV-Index hinterlegt werden, z. B. `sensor.tomorrow_io_home_uv_index`.
+- **UV priorisiert aus eigener Entity**: `weather.py` verwendet für `weather_uv_today` bevorzugt den konfigurierten UV-Sensor und fällt erst danach auf Forecast-Daten zurück.
+- **Wetterattribute erweitert**: `weather_uv_sensor` wird zusätzlich bis in die Sensorattribute durchgereicht.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.4.md` auf den aktuellen Stand gebracht.
 
 ## [1.1.3] - 2026-06-19
 
-- **Tomorrow.io-Forecast ins Backend verlagert**: Die Integration holt Daily-Forecasts nun in `weather.py` ueber Home Assistants Wetter-Service und normalisiert sie zentral fuer Coordinator und Karte.
+- **Tomorrow.io-Forecast ins Backend verlagert**: Die Integration holt Daily-Forecasts nun in `weather.py` über Home Assistants Wetter-Service und normalisiert sie zentral für Coordinator und Karte.
 - **Karte zeigt wieder heute und morgen**: Die Lovelace-Karte nutzt bevorzugt `weather_forecast_days` aus dem Empfehlungssensor statt sich allein auf direkte Forecast-Attribute der Weather-Entity zu verlassen.
 - **Stabilere Wetterattribute**: `weather_wind_speed_unit` und die normalisierten Forecast-Tagesdaten werden nun bis in die Sensorattribute durchgereicht.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.3.md` auf den aktuellen Stand gebracht.
@@ -66,7 +66,7 @@
 ## [1.1.2] - 2026-06-19
 
 - **Wetterlogik ausgelagert**: Die Backend-Normalisierung der Wetter-Entity liegt nun in `weather.py`.
-- **BLE-Messwertauswahl ausgelagert**: PoolLab-BLE-Type-ID-Auswertung fuer Chlor, pH, Temperatur und Cyanursaeure liegt nun in `poollab_ble_source.py`.
+- **BLE-Messwertauswahl ausgelagert**: PoolLab-BLE-Type-ID-Auswertung für Chlor, pH, Temperatur und Cyanursäure liegt nun in `poollab_ble_source.py`.
 - **Wetterkarte robuster**: Die Lovelace-Karte verarbeitet mehr Forecast-Antwortformate und nutzt als Fallback die Coordinator-Wetterattribute, wenn kein Daily-Forecast geliefert wird.
 - **Wetterattribute erweitert**: `weather_condition_today`, `weather_temperature_today` und `weather_wind_speed_today` werden nun an die Empfehlungssensor-Attribute durchgereicht.
 - **Frontend-Cachebuster korrigiert**: Die Lovelace-Ressource nutzt nun die Manifest-Version statt der Config-Entry-Version.
@@ -76,37 +76,37 @@
 
 - **Cloud-Logik ausgelagert**: PoolLab-Cloud-GraphQL-Abruf und Messwert-Normalisierung liegen nun in `poollab_cloud.py`.
 - **Benachrichtigungen ausgelagert**: Persistent Notifications, Notify-Service-Versand, Follow-up-Hinweise und Filterwarnungen liegen nun in `notifications.py`.
-- **Zweites Notify-Ziel**: Optional kann nun ein zweiter `notify`-Dienst konfiguriert werden, damit Meldungen an zwei Geraete/Ziele gehen.
-- **Release Notes aufgeraeumt**: Alle `RELEASE_NOTES_*.md` liegen nun im Ordner `release_notes/`.
-- **Coordinator weiter entlastet**: `coordinator.py` fokussiert sich weiter auf Ablaufsteuerung, Quellpriorisierung und Ergebniszusammenfuehrung.
+- **Zweites Notify-Ziel**: Optional kann nun ein zweiter `notify`-Dienst konfiguriert werden, damit Meldungen an zwei Geräte/Ziele gehen.
+- **Release Notes aufgeräumt**: Alle `RELEASE_NOTES_*.md` liegen nun im Ordner `release_notes/`.
+- **Coordinator weiter entlastet**: `coordinator.py` fokussiert sich weiter auf Ablaufsteuerung, Quellpriorisierung und Ergebniszusammenführung.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.1.md` auf den aktuellen Stand gebracht.
 
 ## [1.1.0] - 2026-06-19
 
-- **Refactoring-Start fuer 1.1.x**: Wartungs-/History-Logik wurde aus `coordinator.py` in `maintenance.py` ausgelagert.
-- **Berechnungslogik ausgelagert**: Chlor-, pH-, Nachmess- und Empfehlungslogik liegt nun in `calculation.py`, damit sie kuenftig gezielter getestet und angepasst werden kann.
-- **Coordinator entlastet**: `coordinator.py` bleibt fuer Home-Assistant-Orchestrierung, Datenbeschaffung, Persistenz und Zusammenfuehrung verantwortlich.
+- **Refactoring-Start für 1.1.x**: Wartungs-/History-Logik wurde aus `coordinator.py` in `maintenance.py` ausgelagert.
+- **Berechnungslogik ausgelagert**: Chlor-, pH-, Nachmess- und Empfehlungslogik liegt nun in `calculation.py`, damit sie künftig gezielter getestet und angepasst werden kann.
+- **Coordinator entlastet**: `coordinator.py` bleibt für Home-Assistant-Orchestrierung, Datenbeschaffung, Persistenz und Zusammenführung verantwortlich.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.1.0.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.23] - 2026-06-19
 
-- **Forecast-Logspam behoben**: Die Lovelace-Karte ruft Wetter-Forecasts im Frontend nicht mehr ueber den problematischen `weather.get_forecasts`-Servicepfad ab, der im Dashboard-Kontext WebSocket-Fehler mit `return_response=True` ausloesen konnte.
-- **Stabileres Forecast-Nachladen**: Fuer Tagesvorhersagen wird nur noch der Forecast-Endpunkt verwendet. Wenn kein Ergebnis zurueckkommt, verhindert ein Retry-Cooldown sofortige Endlosschleifen und Log-Spam.
+- **Forecast-Logspam behoben**: Die Lovelace-Karte ruft Wetter-Forecasts im Frontend nicht mehr über den problematischen `weather.get_forecasts`-Servicepfad ab, der im Dashboard-Kontext WebSocket-Fehler mit `return_response=True` auslösen konnte.
+- **Stabileres Forecast-Nachladen**: Für Tagesvorhersagen wird nur noch der Forecast-Endpunkt verwendet. Wenn kein Ergebnis zurückkommt, verhindert ein Retry-Cooldown sofortige Endlosschleifen und Log-Spam.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.0.23.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.22] - 2026-06-19
 
-- **Tomorrow.io-Forecast-Fallback in der Karte**: Die Lovelace-Karte liest Tagesvorhersagen jetzt nicht mehr nur aus `attributes.forecast`, sondern laedt bei Bedarf aktiv `daily`-Forecasts ueber Home Assistants Weather-Forecast-API nach.
-- **Kompatiblere Wetteranzeige**: Wetterkarten mit Providern wie `weather.tomorrow_io_home_daily` zeigen damit wieder heute und morgen an, auch wenn die Forecast-Daten nicht direkt als Attribut an der Entity haengen.
+- **Tomorrow.io-Forecast-Fallback in der Karte**: Die Lovelace-Karte liest Tagesvorhersagen jetzt nicht mehr nur aus `attributes.forecast`, sondern lädt bei Bedarf aktiv `daily`-Forecasts über Home Assistants Weather-Forecast-API nach.
+- **Kompatiblere Wetteranzeige**: Wetterkarten mit Providern wie `weather.tomorrow_io_home_daily` zeigen damit wieder heute und morgen an, auch wenn die Forecast-Daten nicht direkt als Attribut an der Entity hängen.
 - **Wind-Einheit korrigiert**: Die Windanzeige verwendet jetzt die von der Wetter-Entity gelieferte Einheit (`wind_speed_unit`) statt kleine Werte pauschal als `m/s` zu behandeln.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.0.22.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.21] - 2026-06-18
 
-- **Wetter in der Lovelace-Karte**: Zwischen Empfehlung und weiteren Bereichen kann jetzt eine Vorhersage fuer heute und morgen aus einer konfigurierbaren `weather`-Entitaet angezeigt werden, inklusive Sonne/UV, Regen und Wind.
-- **Optionale Wetterquelle in der Integration**: Config Flow und Options Flow unterstuetzen jetzt eine `weather`-Entitaet direkt in der Integration, statt die Wetterlogik nur an die Kartenkonfiguration zu binden.
-- **Konservative Wetterlogik fuer Chlor**: Hoher `uv_index` erhoeht den Chlor-Zielbedarf leicht ueber einen separaten `UV-Zuschlag` im Breakdown.
-- **Regen als Nachmess-Hinweis**: Erwarteter starker Regen fuehrt zunaechst nicht zu harter Ueberdosierung, sondern zu einem expliziten Hinweis, danach moeglichst erneut zu messen.
+- **Wetter in der Lovelace-Karte**: Zwischen Empfehlung und weiteren Bereichen kann jetzt eine Vorhersage für heute und morgen aus einer konfigurierbaren `weather`-Entität angezeigt werden, inklusive Sonne/UV, Regen und Wind.
+- **Optionale Wetterquelle in der Integration**: Config Flow und Options Flow unterstützen jetzt eine `weather`-Entität direkt in der Integration, statt die Wetterlogik nur an die Kartenkonfiguration zu binden.
+- **Konservative Wetterlogik für Chlor**: Hoher `uv_index` erhöht den Chlor-Zielbedarf leicht über einen separaten `UV-Zuschlag` im Breakdown.
+- **Regen als Nachmess-Hinweis**: Erwarteter starker Regen führt zunächst nicht zu harter Überdosierung, sondern zu einem expliziten Hinweis, danach möglichst erneut zu messen.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.0.21.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.20] - 2026-06-18
@@ -117,25 +117,25 @@
 
 ## [1.0.19] - 2026-06-18
 
-- **Chlorlogik neu aufgebaut**: Die Chlorberechnung arbeitet jetzt ueber volumenbezogene Zielkonzentrationen in `mg/l` und rechnet erst am Ende ueber das konfigurierte `pool_volume` in Gramm Produkt um.
-- **Plausiblere Whirlpool-Dosierung**: Feste Grammzuschlaege fuer kleine Becken entfallen. Temperatur, offenes Becken, Nutzung und Stoßchlorung werden jetzt fachlich konsistenter beruecksichtigt.
+- **Chlorlogik neu aufgebaut**: Die Chlorberechnung arbeitet jetzt über volumenbezogene Zielkonzentrationen in `mg/l` und rechnet erst am Ende über das konfigurierte `pool_volume` in Gramm Produkt um.
+- **Plausiblere Whirlpool-Dosierung**: Feste Grammzuschläge für kleine Becken entfallen. Temperatur, offenes Becken, Nutzung und Stoßchlorung werden jetzt fachlich konsistenter berücksichtigt.
 - **Frontend-Breakdown angepasst**: Die Karte zeigt jetzt `Stoßchlor-Ziel`, `Temperatur-Zuschlag`, `Offenes Becken` und `Nutzung` statt der alten Faktor-Begriffe.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.0.19.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.16] - 2026-06-18
 
 ### Neu
-- **Nachmess-Workflow in der Karte**: Nach bestaetigter Chlor-, pH-Minus- oder pH-Plus-Zugabe zeigt die Integration jetzt **Warten auf erneute Messung**, bis neue Werte eingelesen wurden.
-- **LayZSpa Zieltemperatur-Steuerung**: Die Karte kann die Zieltemperatur jetzt optional direkt per `+` / `-` ueber `number.*`- oder `climate.*`-Entitaeten anpassen.
-- **Markdown Release Notes**: Neue Datei `release_notes/RELEASE_NOTES_V1.0.16.md` fuer den GitHub-Release.
+- **Nachmess-Workflow in der Karte**: Nach bestätigter Chlor-, pH-Minus- oder pH-Plus-Zugabe zeigt die Integration jetzt **Warten auf erneute Messung**, bis neue Werte eingelesen wurden.
+- **LayZSpa Zieltemperatur-Steuerung**: Die Karte kann die Zieltemperatur jetzt optional direkt per `+` / `-` über `number.*`- oder `climate.*`-Entitäten anpassen.
+- **Markdown Release Notes**: Neue Datei `release_notes/RELEASE_NOTES_V1.0.16.md` für den GitHub-Release.
 
 ### Verbesserungen
-- **Live-BLE-Status**: Die Zeile **BT Verbindung** ist nur waehrend eines aktiven PoolLab-BLE-Abrufs gruen und springt nach dem Disconnect wieder auf rot.
-- **Dokumentation aktualisiert**: README und technische Doku spiegeln jetzt den aktuellen Ablauf fuer BLE, Cloud, Nachmessung und LayZSpa-Temperatursteuerung wider.
+- **Live-BLE-Status**: Die Zeile **BT Verbindung** ist nur während eines aktiven PoolLab-BLE-Abrufs grün und springt nach dem Disconnect wieder auf rot.
+- **Dokumentation aktualisiert**: README und technische Doku spiegeln jetzt den aktuellen Ablauf für BLE, Cloud, Nachmessung und LayZSpa-Temperatursteuerung wider.
 
 ### Fixes
 - **Keine sticky BLE-Anzeige mehr**: `bluetooth_connected` wird nicht mehr persistent als letzter Erfolgszustand gehalten.
-- **Fachlich sauberere Dosieranzeige**: Bereits protokollierte Chemiezugaben fuehren nicht mehr dazu, dass alte Empfehlungen weiter aktiv dargestellt werden.
+- **Fachlich sauberere Dosieranzeige**: Bereits protokollierte Chemiezugaben führen nicht mehr dazu, dass alte Empfehlungen weiter aktiv dargestellt werden.
 
 ## [1.0.15] - 2026-06-17
 

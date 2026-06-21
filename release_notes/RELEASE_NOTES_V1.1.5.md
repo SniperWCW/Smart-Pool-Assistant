@@ -4,7 +4,7 @@
 
 - Die Wettersektion der Karte ist jetzt einklappbar.
 - Die Kopfzeile zeigt eine kompakte Heute-Zusammenfassung.
-- Die Detailkarten fuer heute und morgen bleiben beim Aufklappen unveraendert erhalten.
+- Die Detailkarten für heute und morgen bleiben beim Aufklappen unverändert erhalten.
 
 ## Details
 

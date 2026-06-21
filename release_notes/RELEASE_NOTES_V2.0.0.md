@@ -2,18 +2,18 @@
 
 ## Highlights
 
-- Abschluss der grossen Architektur- und Frontend-Umbauten als Major Release.
-- Die Lovelace-Karte rendert deutlich gezielter und reagiert nur noch auf relevante Entity-Aenderungen.
+- Abschluss der großen Architektur- und Frontend-Umbauten als Major Release.
+- Die Lovelace-Karte rendert deutlich gezielter und reagiert nur noch auf relevante Entity-Änderungen.
 - PoolLab-, Wetter-, Chemie-, Wartungs- und Benachrichtigungslogik sind jetzt sauberer getrennt und leichter wartbar.
 
 ## Details
 
 ### Frontend Performance
 
-- Der `hass`-Setter der Karte nutzt nun eine Render-Signatur fuer die relevanten Entitaeten.
-- Unbeteiligte Home-Assistant-State-Updates loesen keinen kompletten DOM-Neuaufbau der Karte mehr aus.
-- Die automatisch erkannte PoolLab-Abruf-Button-Entitaet wird gecacht.
-- Lokale UI-Zustaende wie PoolLab-Abrufstatus bleiben weiterhin sofort sichtbar.
+- Der `hass`-Setter der Karte nutzt nun eine Render-Signatur für die relevanten Entitäten.
+- Unbeteiligte Home-Assistant-State-Updates lösen keinen kompletten DOM-Neuaufbau der Karte mehr aus.
+- Die automatisch erkannte PoolLab-Abruf-Button-Entität wird gecacht.
+- Lokale UI-Zustände wie PoolLab-Abrufstatus bleiben weiterhin sofort sichtbar.
 
 ### Architekturstand
 

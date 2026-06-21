@@ -1,43 +1,43 @@
 # Smart Pool Assistant
 
-Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
+Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
 **Aktueller Release-Stand: V2.1.0**
 
 ## Hauptfunktionen
 
-- Praezise Chlor-Berechnung ueber volumenbezogene Zielbereiche mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
+- Präzise Chlor-Berechnung über volumenbezogene Zielbereiche mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
-- Konservative Dosierempfehlungen passend zu Messloeffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
-- Lernende Chloranalyse mit persoenlichem Chlorfaktor, Verbrauch ueber 24h/7d/14d und Stabilitaetsbewertung.
-- Optionale Wetterintegration ueber eine Home-Assistant-`weather`-Entitaet mit Vorhersage fuer heute und morgen, inklusive Backend-Forecast-Fallback fuer Provider wie Tomorrow.io.
-- Optionaler separater `UV`-Sensor fuer Provider, die den UV-Index nicht im Daily-Forecast liefern.
-- Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und faellt erst danach auf heutige Coordinator-Wetterwerte zurueck.
+- Konservative Dosierempfehlungen passend zu Messlöffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
+- Lernende Chloranalyse mit persönlichem Chlorfaktor, Verbrauch über 24h/7d/14d und Stabilitätsbewertung.
+- Optionale Wetterintegration über eine Home-Assistant-`weather`-Entität mit Vorhersage für heute und morgen, inklusive Backend-Forecast-Fallback für Provider wie Tomorrow.io.
+- Optionaler separater `UV`-Sensor für Provider, die den UV-Index nicht im Daily-Forecast liefern.
+- Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und fällt erst danach auf heutige Coordinator-Wetterwerte zurück.
 - Die Wettersektion ist jetzt einklappbar und zeigt in der Kopfzeile eine kompakte Heute-Zusammenfassung.
-- Optimierte Lovelace-Karte: rendert nur noch bei relevanten Entity-Aenderungen neu.
+- Optimierte Lovelace-Karte: rendert nur noch bei relevanten Entity-Änderungen neu.
 - Badeampel in der Lovelace-Karte: `Baden empfohlen`, `Baden möglich` oder `Nicht empfohlen` anhand von Chemie-, Nachmess-, Temperatur- und Wetterdaten.
-- Uebersichtlichere Messwertetabelle mit getrennten Spalten fuer `Messwert`, `Ist`, `Ziel` und `Quelle`.
-- Verbesserte mobile Darstellung fuer Wetter-Kopfzeile und aktuelle Messwerte.
-- Konservativer Wetter-Einfluss auf Chlor: hoher UV-Index kann den Zielbedarf leicht erhoehen, Regen erzeugt einen Nachmess-Hinweis.
-- Direkte Bluetooth-Anbindung fuer **PoolLab 1.0** inklusive Batteriestatus und Nutzung ueber ESP Bluetooth Proxy.
-- Manueller PoolLab-Abruf ueber `button.poollab_messwerte_abrufen` statt zyklischem BLE-Polling.
-- Weiterhin zyklischer Cloud-Abruf ueber das konfigurierbare Cloud-Update-Intervall.
+- Übersichtlichere Messwertetabelle mit getrennten Spalten für `Messwert`, `Ist`, `Ziel` und `Quelle`.
+- Verbesserte mobile Darstellung für Wetter-Kopfzeile und aktuelle Messwerte.
+- Konservativer Wetter-Einfluss auf Chlor: hoher UV-Index kann den Zielbedarf leicht erhöhen, Regen erzeugt einen Nachmess-Hinweis.
+- Direkte Bluetooth-Anbindung für **PoolLab 1.0** inklusive Batteriestatus und Nutzung über ESP Bluetooth Proxy.
+- Manueller PoolLab-Abruf über `button.poollab_messwerte_abrufen` statt zyklischem BLE-Polling.
+- Weiterhin zyklischer Cloud-Abruf über das konfigurierbare Cloud-Update-Intervall.
 - Abrufbutton direkt in der Messwertetabelle der Karte, inklusive Status-, Fehler- und Cooldown-Anzeige.
-- Live-BLE-Status: **BT Verbindung** ist nur waehrend eines aktiven BLE-Abrufs gruen und springt nach dem Disconnect wieder auf rot.
-- Fachlich sauberer Nachmess-Workflow: Nach jeder bestaetigten Chlor- oder pH-Zugabe zeigt die Integration **Warten auf erneute Messung**, bis neue Werte vorliegen.
-- Getrennte Quellenlogik fuer Bluetooth, Cloud, manuelle Sensoren und Speicher-Fallback.
-- Persistente Historie fuer letzte Werte, letzte Aktionen, letzte Cloud-Messwerte und Filterwartung.
+- Live-BLE-Status: **BT Verbindung** ist nur während eines aktiven BLE-Abrufs grün und springt nach dem Disconnect wieder auf rot.
+- Fachlich sauberer Nachmess-Workflow: Nach jeder bestätigten Chlor- oder pH-Zugabe zeigt die Integration **Warten auf erneute Messung**, bis neue Werte vorliegen.
+- Getrennte Quellenlogik für Bluetooth, Cloud, manuelle Sensoren und Speicher-Fallback.
+- Persistente Historie für letzte Werte, letzte Aktionen, letzte Cloud-Messwerte und Filterwartung.
 - LayZSpa-Panel mit Anzeige von Verbindung, RSSI, Pumpe, Heizung, Luftblasen, Ist-/Zieltemperatur und optionaler Zieltemperatur-Steuerung per `+` / `-`.
-- Benachrichtigungen fuer Chemie-Follow-up und Filterwartung, optional an zwei Notify-Ziele.
-- Re-Konfiguration ueber Config Flow / Options Flow.
+- Benachrichtigungen für Chemie-Follow-up und Filterwartung, optional an zwei Notify-Ziele.
+- Re-Konfiguration über Config Flow / Options Flow.
 
 ## Installation
 
-### Ueber HACS
+### Über HACS
 
-1. Oeffne **HACS** in Home Assistant.
+1. Öffne **HACS** in Home Assistant.
 2. Gehe auf **Benutzerdefinierte Repositories**.
-3. Fuege dieses Repository als Typ `Integration` hinzu.
+3. Füge dieses Repository als Typ `Integration` hinzu.
 4. Installiere **Smart Pool Assistant**.
 5. Starte Home Assistant neu.
 
@@ -48,11 +48,11 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und 
 
 ## Konfiguration
 
-Die Einrichtung erfolgt ueber **Einstellungen > Geraete & Dienste > Integration hinzufuegen**.
+Die Einrichtung erfolgt über **Einstellungen > Geräte & Dienste > Integration hinzufuegen**.
 
 Wichtige Konfigurationspunkte:
 
-- **BLE-Adresse**: PoolLab 1.0 fuer manuellen BLE-Abruf.
+- **BLE-Adresse**: PoolLab 1.0 für manuellen BLE-Abruf.
 - **PoolLab API-Key**: Aktiviert die zyklische Cloud-Aktualisierung und dient ohne BLE optional auch als manuelle Abrufquelle.
 - **Cloud-Update-Intervall**: Zyklischer Cloud-Abruf in Minuten, Standard `5`, Bereich `1-60`.
 - **Manuelle Sensoren**: Chlor, pH und optional Temperatur.
@@ -66,49 +66,49 @@ Wichtige Konfigurationspunkte:
 ## PoolLab-Abruf
 
 - Die Integration verbindet sich nicht mehr zyklisch mit dem PoolLab.
-- Fuer einen BLE-Abruf: PoolLab einschalten, Messung oder Zero durchfuehren, kurz warten und dann `button.poollab_messwerte_abrufen` druecken.
+- Für einen BLE-Abruf: PoolLab einschalten, Messung oder Zero durchführen, kurz warten und dann `button.poollab_messwerte_abrufen` druecken.
 - Der gleiche Abruf ist direkt in der Lovelace-Karte unter **Aktuelle Messwerte** integriert.
 - Nach Erfolg gilt ein Cooldown von 20 Sekunden, nach Fehlern 30 Sekunden.
-- Cloud-Daten laufen weiterhin zyklisch ueber das konfigurierte Intervall weiter, ohne dass BLE automatisch verbunden wird.
+- Cloud-Daten laufen weiterhin zyklisch über das konfigurierte Intervall weiter, ohne dass BLE automatisch verbunden wird.
 - **BT Verbindung** zeigt nur den aktuell laufenden BLE-Connect an. Nach dem Lesen trennt die Integration bewusst wieder.
 
 ## Nachmess-Workflow nach Chemiezugabe
 
 - Wenn du Chlor, pH-Minus oder pH-Plus in der Karte bestaetigst, gilt die bisherige Messung fachlich als verbraucht.
 - Solange noch keine neue Messung eingelesen wurde, zeigt die Integration **Warten auf erneute Messung** statt denselben Dosiervorschlag erneut an.
-- Die betroffenen Eingabefelder bleiben bis zur naechsten Messung gesperrt.
+- Die betroffenen Eingabefelder bleiben bis zur nächsten Messung gesperrt.
 - Die Follow-up-Erinnerung bleibt aktiv und passt weiterhin zum Nachmess-Ablauf.
 
 ## Berechnungslogik
 
 ### Chlor
 
-Die Chlorempfehlung beruecksichtigt:
+Die Chlorempfehlung berücksichtigt:
 
 1. Basisbedarf aus `untere Zielgrenze - Ist` in `mg/l`, wenn Chlor unter dem Zielbereich liegt.
 2. Temperatur-Zuschlag ab 28 C bzw. 32 C.
-3. Zuschlag fuer offene Abdeckung.
-4. Nutzungsmodus (`none`, `normal`, `party`) als zusaetzlicher Konzentrationsbedarf, der auch bei aktivem Stoßchlor-Ziel zusaetzlich auf die Endmenge wirkt.
+3. Zuschlag für offene Abdeckung.
+4. Nutzungsmodus (`none`, `normal`, `party`) als zusätzlicher Konzentrationsbedarf, der auch bei aktivem Stoßchlor-Ziel zusätzlich auf die Endmenge wirkt.
 5. Stoßchlor-Ziele bei sehr niedrigen Chlorwerten.
-6. Umrechnung der benoetigten Gesamtkonzentration ueber das konfigurierte `Poolvolumen (m³)` und den Wirkstoffanteil in Gramm Produkt.
-7. Zielbereich-Check, damit innerhalb des Bereichs oder bei Ueberdosierung `0 g` empfohlen wird.
+6. Umrechnung der benötigten Gesamtkonzentration über das konfigurierte `Poolvolumen (m³)` und den Wirkstoffanteil in Gramm Produkt.
+7. Zielbereich-Check, damit innerhalb des Bereichs oder bei Überdosierung `0 g` empfohlen wird.
 
 ### pH
 
-Die pH-Berechnung ermittelt anhand Zielbereich, Poolvolumen und Produktdosierung die benoetigte Menge an:
+Die pH-Berechnung ermittelt anhand Zielbereich, Poolvolumen und Produktdosierung die benötigte Menge an:
 
 - **PH-Minus** in ml
 - **PH-Plus** in g
 
 ### Lernende Chloranalyse
 
-Die Integration speichert neue Chlor-Messpunkte und bestaetigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Daraus entstehen bereinigte Verbrauchsintervalle, bei denen Zugaben zwischen zwei Messungen rechnerisch beruecksichtigt werden.
+Die Integration speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Daraus entstehen bereinigte Verbrauchsintervalle, bei denen Zugaben zwischen zwei Messungen rechnerisch berücksichtigt werden.
 
 Berechnet werden:
 
-- Chlorverbrauch ueber 24 Stunden, 7 Tage und 14 Tage in `mg/l/d`
-- persoenlicher Chlorfaktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`
-- Chlor-Stabilitaet mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalitaet
+- Chlorverbrauch über 24 Stunden, 7 Tage und 14 Tage in `mg/l/d`
+- persönlicher Chlorfaktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`
+- Chlor-Stabilität mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalität
 
 Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
 
@@ -135,13 +135,13 @@ layzspa:
   temp_target_control: number.layzspa_target_temp_c
 ```
 
-`temp_target_control` ist optional und kann auf eine `number.*`- oder `climate.*`-Entitaet zeigen. Wenn gesetzt, blendet die Karte unterhalb der Temperaturanzeige eine direkte Zieltemperatur-Steuerung ein.
+`temp_target_control` ist optional und kann auf eine `number.*`- oder `climate.*`-Entität zeigen. Wenn gesetzt, blendet die Karte unterhalb der Temperaturanzeige eine direkte Zieltemperatur-Steuerung ein.
 
-Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, Stosschlor oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden moeglich ist, aber Werte oder Wetter nicht ideal sind. Gruen bedeutet, dass keine Warn- oder Sperrgruende vorliegen.
+Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, Stoßchlor oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
 
-Im visuellen Karten-Editor bleiben nur die LayZSpa-Optionen editierbar. Wetter-Entitaet und UV-Sensor werden in der Integration konfiguriert; Empfehlungssensor und PoolLab-Abruf-Button werden von der Karte fest bzw. automatisch verwendet.
+Im visuellen Karten-Editor bleiben nur die LayZSpa-Optionen editierbar. Wetter-Entität und UV-Sensor werden in der Integration konfiguriert; Empfehlungssensor und PoolLab-Abruf-Button werden von der Karte fest bzw. automatisch verwendet.
 
-## Entitaeten
+## Entitäten
 
 Die Integration stellt unter anderem bereit:
 

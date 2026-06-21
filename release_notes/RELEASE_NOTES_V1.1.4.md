@@ -11,12 +11,12 @@
 ### UV-Sensor
 
 - Im Config Flow und im Options Flow gibt es jetzt ein optionales Feld `uv_sensor`.
-- Wenn gesetzt, verwendet die Integration diesen Sensor bevorzugt fuer `weather_uv_today`.
+- Wenn gesetzt, verwendet die Integration diesen Sensor bevorzugt für `weather_uv_today`.
 - Forecast-Daten bleiben als Fallback bestehen, falls kein separater UV-Sensor konfiguriert ist.
 
 ### Wirkung
 
-- `Sonne/UV` in der Wetterkarte kann nun auch dann gefuellt werden, wenn der Daily-Forecast selbst keinen `uv_index` liefert.
+- `Sonne/UV` in der Wetterkarte kann nun auch dann gefüllt werden, wenn der Daily-Forecast selbst keinen `uv_index` liefert.
 - Die bestehende UV-basierte Chlor-Anpassung arbeitet damit robuster mit Providern wie Tomorrow.io.
 
 ### Dokumentation / Versionierung

@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-20  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.1.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-20 auf Basis von `manifest.json` Version `2.1.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -41,12 +41,12 @@ SmartPoolCoordinator
    │
    ├── zyklischer Refresh (Cloud, manuelle Sensoren, Wartung, Persistenz)
    ├── manueller One-shot PoolLab-Abruf
-   ├── BLE-Kommunikation und BLE-Auswertung ueber poollab_ble.py / poollab_ble_source.py
-   ├── Cloud-Abruf ueber poollab_cloud.py
+   ├── BLE-Kommunikation und BLE-Auswertung über poollab_ble.py / poollab_ble_source.py
+   ├── Cloud-Abruf über poollab_cloud.py
    ├── Zeitstempel- und Quellenlogik
-   ├── Chemieberechnung ueber calculation.py
-   ├── Filterwartung ueber maintenance.py
-   ├── Benachrichtigungen ueber notifications.py
+   ├── Chemieberechnung über calculation.py
+   ├── Filterwartung über maintenance.py
+   ├── Benachrichtigungen über notifications.py
    └── zentrale Ausgabe in coordinator.data
    │
    ├── Sensor Platform
@@ -124,7 +124,7 @@ release_notes/
 | `button.py` | native Button-Entität für den manuellen PoolLab-Abruf |
 | `services.yaml` | Service-Definition für `smart_pool_assistant.log_maintenance` |
 | `frontend/pool-chemistry-card.js` | Custom Lovelace Card inkl. Aktionen, Statusanzeige und optionalem LayZSpa-Panel |
-| `weather.py` | Backend-Abruf und Normalisierung der Wetter-Entity sowie optionaler UV-Sensor fuer Chemie-Logik und Wetterkarte |
+| `weather.py` | Backend-Abruf und Normalisierung der Wetter-Entity sowie optionaler UV-Sensor für Chemie-Logik und Wetterkarte |
 
 ---
 
@@ -605,7 +605,7 @@ Wichtige Semantik im aktuellen Stand:
 - `true` bedeutet: es laeuft genau jetzt ein aktiver manueller BLE-Abruf mit bestehender Verbindung
 - `false` bedeutet: aktuell keine BLE-Verbindung aktiv
 
-Das ist **kein Dauer-Connection-Status**. Die Integration haelt die BLE-Verbindung nicht offen, sondern verbindet sich nur kurz fuer den One-shot-Abruf und trennt danach wieder. Die Karte kombiniert dafuer den Backend-Wert mit ihrem lokalen In-Flight-Status, damit der Benutzer den Connect bereits waehrend des laufenden Abrufs als gruen sieht.
+Das ist **kein Dauer-Connection-Status**. Die Integration hält die BLE-Verbindung nicht offen, sondern verbindet sich nur kurz für den One-shot-Abruf und trennt danach wieder. Die Karte kombiniert dafür den Backend-Wert mit ihrem lokalen In-Flight-Status, damit der Benutzer den Connect bereits während des laufenden Abrufs als grün sieht.
 
 ---
 
@@ -693,9 +693,9 @@ Eingänge:
 ### Aktuelle Faktoren
 
 Die Basisdosis wird aus `untere Zielgrenze - Ist`, Volumen und Wirkstoffanteil berechnet.
-Alle Zusatzlogiken arbeiten als zusaetzliche Zielkonzentration in `mg/l`
+Alle Zusatzlogiken arbeiten als zusätzliche Zielkonzentration in `mg/l`
 (Temperatur, offenes Becken, Nutzung, Stoßchlorung). Erst ganz am Ende wird
-die benoetigte Gesamtkonzentration ueber das konfigurierte Poolvolumen und den
+die benötigte Gesamtkonzentration über das konfigurierte Poolvolumen und den
 Wirkstoffanteil in Gramm Produkt umgerechnet.
 
 #### Temperatur-Zuschlag
@@ -778,7 +778,7 @@ Für die Karte werden detaillierte Teilwerte geliefert:
 
 ### Chlor-Lernanalyse
 
-Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestaetigte Chlorzugaben in der lokalen `maintenance_history`. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der taegliche Chlorverlust bestimmt wird.
+Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen `maintenance_history`. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der tägliche Chlorverlust bestimmt wird.
 
 Ausgegeben werden:
 
@@ -790,7 +790,7 @@ Ausgegeben werden:
 - `chlor_stability`
 - `chlor_stability_attributes`
 
-Intervalle unter 3 Stunden, ueber 7 Tagen, negative Verbrauchswerte und extreme Ausreisser ueber `5 mg/l/d` werden verworfen. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase.
+Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase.
 
 ### pH-Berechnung
 
@@ -817,7 +817,7 @@ factor_up = ph_up_dosage / 10.0 / 0.1
 
 Die finale Empfehlung wird zentral im Coordinator erstellt.
 
-Vor den normalen Warnregeln greift zusaetzlich ein Nachmess-Schutz:
+Vor den normalen Warnregeln greift zusätzlich ein Nachmess-Schutz:
 
 ```text
 wenn empfohlene Chemie bereits nach der letzten Messung protokolliert wurde
@@ -1129,13 +1129,13 @@ Die Karte:
 - zeigt Messquellen
 - zeigt BLE-Verbindungsstatus
 - integriert den PoolLab-Abrufbutton
-- zeigt einen Wartezustand nach bestaetigten Chemiezugaben
+- zeigt einen Wartezustand nach bestätigten Chemiezugaben
 - protokolliert Chemie- und Wartungsaktionen
 - zeigt Filterwartung
 - zeigt Berechnungsdetails
 - zeigt letzte Aktivitäten
 - zeigt Cloud-Messhistorie
-- zeigt optional Wetter heute und morgen aus einer `weather`-Entitaet
+- zeigt optional Wetter heute und morgen aus einer `weather`-Entität
 - unterstützt optional ein LayZSpa-Panel
 
 ### Neue PoolLab-Abruf-UI
@@ -1146,7 +1146,7 @@ Die Messwertetabelle nutzt die Spalten:
 Messwert | Ist | Ziel | Quelle
 ```
 
-Chemiewerte zeigen Istwerte und Zielbereiche getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Zusaetzlich enthaelt die Tabelle zwei relevante Status-/Aktionszeilen:
+Chemiewerte zeigen Istwerte und Zielbereiche getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Zusätzlich enthält die Tabelle zwei relevante Status-/Aktionszeilen:
 
 - `BT Verbindung`
 - `PoolLab Abruf`
@@ -1188,7 +1188,7 @@ Darstellung:
 - grün: `Bluetooth: Ja`
 - rot: `Bluetooth: Nein`
 
-Die Anzeige ist damit bewusst live und springt nach dem Disconnect wieder zurueck.
+Die Anzeige ist damit bewusst live und springt nach dem Disconnect wieder zurück.
 
 ### Badeampel
 
@@ -1200,11 +1200,11 @@ Die Karte berechnet aus den vorhandenen Empfehlungssensor-Attributen eine einfac
 🔴 Nicht empfohlen
 ```
 
-Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, Stosschlor, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser, Regen-/Windhinweisen oder hoher UV-Belastung. Gruen wird nur angezeigt, wenn keine roten oder gelben Gruende vorliegen.
+Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, Stoßchlor, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser, Regen-/Windhinweisen oder hoher UV-Belastung. Grün wird nur angezeigt, wenn keine roten oder gelben Gründe vorliegen.
 
 ### Nachmess-Zustand in der Karte
 
-Die Karte wertet zusaetzlich diese Attribute aus:
+Die Karte wertet zusätzlich diese Attribute aus:
 
 - `awaiting_retest`
 - `awaiting_retest_chlor`
@@ -1224,26 +1224,26 @@ Im Karten-Editor gibt es aktuell nur noch die optionalen LayZSpa-Felder:
 Ziel-Temperatur Steuerung
 ```
 
-Der Empfehlungssensor, die Wetter-Entitaet und der PoolLab-Abruf-Button werden nicht im Karten-Editor geaendert. Fuer LayZSpa kann zusaetzlich eine `number.*`- oder `climate.*`-Entitaet fuer die Zieltemperatur-Steuerung hinterlegt werden.
+Der Empfehlungssensor, die Wetter-Entität und der PoolLab-Abruf-Button werden nicht im Karten-Editor geändert. Für LayZSpa kann zusätzlich eine `number.*`- oder `climate.*`-Entität für die Zieltemperatur-Steuerung hinterlegt werden.
 
 ### Wetter-Forecast in der Karte
 
-Wenn eine `weather`-Entitaet konfiguriert ist, rendert die Karte einen Block fuer heute und morgen.
+Wenn eine `weather`-Entität konfiguriert ist, rendert die Karte einen Block für heute und morgen.
 
-Die Wettersektion ist als einklappbares Panel umgesetzt. In der Kopfzeile steht eine kompakte Zusammenfassung fuer heute, kommasepariert aus Zustand, Temperatur, UV, Regen und Wind, sofern die jeweiligen Werte verfuegbar sind.
+Die Wettersektion ist als einklappbares Panel umgesetzt. In der Kopfzeile steht eine kompakte Zusammenfassung für heute, kommasepariert aus Zustand, Temperatur, UV, Regen und Wind, sofern die jeweiligen Werte verfügbar sind.
 
 Abrufreihenfolge:
 
-1. Direktes `attributes.forecast` der Wetter-Entitaet
-2. Falls leer: Backend-Abruf ueber Home Assistants Wetter-Service mit `type: daily`
+1. Direktes `attributes.forecast` der Wetter-Entität
+2. Falls leer: Backend-Abruf über Home Assistants Wetter-Service mit `type: daily`
 3. Optionaler UV-Wert aus separat konfiguriertem `uv_sensor`
-4. Falls weiterhin leer: Fallback auf Coordinator-Attribute fuer das heutige Wetter
+4. Falls weiterhin leer: Fallback auf Coordinator-Attribute für das heutige Wetter
 
-Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch ueber den Wetter-Service bereitstellen. Fuer UV kann zusaetzlich eine eigene Sensor-Entity konfiguriert werden, wenn der Wetter-Provider den UV-Index nicht im Daily-Forecast liefert. Die normalisierten Forecast-Tage werden vom Coordinator als `weather_forecast_days` an den Empfehlungssensor und von dort an die Karte weitergereicht. Wenn auch dort kein Daily-Forecast verfuegbar ist, zeigt die Karte zumindest die heutigen Wetterdaten aus dem Coordinator bzw. aus den aktuellen Weather-Entity-Attributen.
+Damit bleibt die Karte kompatibel mit Integrationen, die Tagesvorhersagen nicht dauerhaft im Entity-Attribut halten, sondern nur dynamisch über den Wetter-Service bereitstellen. Für UV kann zusätzlich eine eigene Sensor-Entity konfiguriert werden, wenn der Wetter-Provider den UV-Index nicht im Daily-Forecast liefert. Die normalisierten Forecast-Tage werden vom Coordinator als `weather_forecast_days` an den Empfehlungssensor und von dort an die Karte weitergereicht. Wenn auch dort kein Daily-Forecast verfügbar ist, zeigt die Karte zumindest die heutigen Wetterdaten aus dem Coordinator bzw. aus den aktuellen Weather-Entity-Attributen.
 
 Die Frontend-Ressource wird mit der Manifest-Version als Cachebuster registriert, damit Kartenfixes nach einem Update zuverlaessig neu geladen werden.
 
-Fuer die Darstellung nutzt die Karte aktuell vor allem:
+Für die Darstellung nutzt die Karte aktuell vor allem:
 
 - `condition`
 - `temperature`
@@ -1280,15 +1280,15 @@ angezeigt.
 
 ### LayZSpa
 
-Die LayZSpa-Sektion ist weiterhin optional und rein frontend-getrieben. Sie arbeitet mit vorhandenen Home Assistant Entitaeten und nicht mit eigener Backend-Logik der Integration.
+Die LayZSpa-Sektion ist weiterhin optional und rein frontend-getrieben. Sie arbeitet mit vorhandenen Home Assistant Entitäten und nicht mit eigener Backend-Logik der Integration.
 
 Aktueller Stand:
 
 - Anzeige von Ist- und Zieltemperatur
 - optionale Zieltemperatur-Steuerung unterhalb der Temperaturanzeige
-- Steuerung ueber `layzspa.temp_target_control`
-- unterstuetzt `number.*` und `climate.*`
-- Schrittweite sowie Min-/Max-Grenzen werden aus der Zielentitaet uebernommen
+- Steuerung über `layzspa.temp_target_control`
+- unterstützt `number.*` und `climate.*`
+- Schrittweite sowie Min-/Max-Grenzen werden aus der Zielentität übernommen
 
 ---
 
@@ -1421,7 +1421,7 @@ Die folgenden Punkte waren in älteren Dokumentationen teils anders beschrieben 
 - Das **Cloud-Intervall ist wieder konfigurierbar** und läuft weiterhin zyklisch.
 - Die Lovelace-Karte enthält jetzt einen **integrierten PoolLab-Abruf-Button**.
 - Der Karten-Editor bietet keine eigene `fetch_button_entity` mehr an; die Karte nutzt den automatisch erkannten PoolLab-Abruf-Button.
-- `bluetooth_connected` ist jetzt ein Live-Status nur fuer den aktiven BLE-Abruf und keine persistente "letzter Erfolg"-Anzeige mehr.
+- `bluetooth_connected` ist jetzt ein Live-Status nur für den aktiven BLE-Abruf und keine persistente "letzter Erfolg"-Anzeige mehr.
 - Die Karte kennt jetzt einen expliziten Nachmess-Zustand nach Chemiezugaben.
 - Das LayZSpa-Panel kann optional die Zieltemperatur direkt verstellen.
 

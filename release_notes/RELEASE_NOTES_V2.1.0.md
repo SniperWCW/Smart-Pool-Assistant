@@ -2,17 +2,17 @@
 
 ## Highlights
 
-- Die Integration lernt ab jetzt den persoenlichen Chlorverbrauch des Pools.
-- Neue Sensoren zeigen Chlorverbrauch ueber 24h, 7d und 14d.
-- Ein neuer Stabilitaets-Sensor bewertet Lernphase, Verbrauchsspanne und Vorhersagequalitaet.
+- Die Integration lernt ab jetzt den persönlichen Chlorverbrauch des Pools.
+- Neue Sensoren zeigen Chlorverbrauch über 24h, 7d und 14d.
+- Ein neuer Stabilitäts-Sensor bewertet Lernphase, Verbrauchsspanne und Vorhersagequalität.
 
 ## Details
 
 ### Lernhistorie
 
 - Neue Chlor-Messpunkte werden lokal in der bestehenden Home-Assistant-Storage-Historie gespeichert.
-- Bestaetigte Chlorzugaben werden separat gespeichert.
-- Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben beruecksichtigt.
+- Bestätigte Chlorzugaben werden separat gespeichert.
+- Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben berücksichtigt.
 - Die Analyse bleibt lokal und nutzt keine externe API.
 
 ### Neue Sensoren
@@ -24,7 +24,7 @@
 - `sensor.pool_chlor_vorhersagequalitaet`
 - `sensor.pool_chlor_stabilitaet`
 
-### Stabilitaetsattribute
+### Stabilitätsattribute
 
 `sensor.pool_chlor_stabilitaet` liefert unter anderem:
 
@@ -37,11 +37,11 @@
 - `personal_chlor_factor`
 - `learning_phase`
 
-### Ausreisserfilter
+### Ausreißerfilter
 
-- Intervalle unter 3 Stunden oder ueber 7 Tagen werden ignoriert.
+- Intervalle unter 3 Stunden oder über 7 Tagen werden ignoriert.
 - Negative Verbrauchswerte werden ignoriert.
-- Extreme Verbrauchswerte ueber `5 mg/l/d` werden ignoriert.
+- Extreme Verbrauchswerte über `5 mg/l/d` werden ignoriert.
 - Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
 
 ### Dokumentation / Versionierung
