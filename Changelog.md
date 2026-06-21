@@ -1,10 +1,11 @@
 # Changelog - Smart Pool Assistant
 
-## [Unreleased]
+## [2.1.1] - 2026-06-21
 
 - **pH-Stabilitätsanalyse**: Neue lokale Lernhistorie für pH-Messpunkte sowie pH-Plus- und pH-Minus-Korrekturen.
 - **pH-Drift-Sensoren**: Neue Sensoren für `24h`, `7d` und `14d` in `pH/d`.
 - **pH-Trend und Stabilität**: Neuer Trend (`rising`, `falling`, `stable`, `learning`) und Stabilitäts-Sensor mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalität.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.1.1.md` auf den aktuellen Stand gebracht.
 
 ## [2.1.0] - 2026-06-20
 
