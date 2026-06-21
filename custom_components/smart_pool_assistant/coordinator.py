@@ -29,6 +29,11 @@ from .chlorine_learning import (
     record_chlor_dose,
     record_chlor_measurement,
 )
+from .ph_learning import (
+    calculate_ph_learning,
+    record_ph_correction,
+    record_ph_measurement,
+)
 from .maintenance import (
     activity_text,
     collect_last_activities,
@@ -273,6 +278,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         )
         if m_type == "chlor":
             record_chlor_dose(self.maintenance_history, now.isoformat(), amount)
+        elif m_type in ("ph_plus", "ph_minus"):
+            record_ph_correction(self.maintenance_history, now.isoformat(), m_type, amount)
 
         await self._store.async_save(self.maintenance_history)
 
@@ -620,7 +627,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         weather_forecast_days = weather_data.get("forecast_days") if isinstance(weather_data, dict) else []
         if c_ist is not None and last_meas_raw:
             record_chlor_measurement(self.maintenance_history, last_meas_raw, c_ist)
+        if ph_ist is not None and last_meas_raw:
+            record_ph_measurement(self.maintenance_history, last_meas_raw, ph_ist)
         chlorine_learning = calculate_chlorine_learning(
+            self.maintenance_history,
+            conf,
+            self._parse_ts_aware,
+            dt_util.now(),
+        )
+        ph_learning = calculate_ph_learning(
             self.maintenance_history,
             conf,
             self._parse_ts_aware,
@@ -685,6 +700,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "chlor_breakdown_uv_adj": 0.0,
                 "history": self.maintenance_history,
                 **chlorine_learning,
+                **ph_learning,
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
 
@@ -843,4 +859,5 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "filter_replace_status": filter_replace_status,
             "filter_replace_interval": filter_replace_interval,
             **chlorine_learning,
+            **ph_learning,
         }

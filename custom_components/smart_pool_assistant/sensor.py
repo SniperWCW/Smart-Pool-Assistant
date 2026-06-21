@@ -39,6 +39,12 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "Persoenlicher Chlorfaktor", "personal_chlor_factor", None, "mdi:brain"),
         PoolAssistantSensor(coordinator, "Chlor Vorhersagequalitaet", "chlor_prediction_quality", None, "mdi:star-check"),
         PoolAssistantChlorStabilitySensor(coordinator),
+        PoolAssistantSensor(coordinator, "pH Drift 24h", "ph_drift_24h", "pH/d", "mdi:chart-line"),
+        PoolAssistantSensor(coordinator, "pH Drift 7d", "ph_drift_7d", "pH/d", "mdi:chart-line"),
+        PoolAssistantSensor(coordinator, "pH Drift 14d", "ph_drift_14d", "pH/d", "mdi:chart-line"),
+        PoolAssistantSensor(coordinator, "pH Vorhersagequalitaet", "ph_prediction_quality", None, "mdi:star-check"),
+        PoolAssistantSensor(coordinator, "pH Trend", "ph_trend", None, "mdi:trending-up"),
+        PoolAssistantPhStabilitySensor(coordinator),
         PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
         PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
         PoolAssistantSensor(coordinator, "Cyanursäure", "cyanuric_acid", "ppm", "mdi:shield-check"),
@@ -100,6 +106,24 @@ class PoolAssistantChlorStabilitySensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self):
         return self.coordinator.data.get("chlor_stability_attributes")
 
+
+class PoolAssistantPhStabilitySensor(CoordinatorEntity, SensorEntity):
+    """Representation of learned pH stability."""
+
+    def __init__(self, coordinator: SmartPoolCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_name = "Pool pH Stabilitaet"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_ph_stability"
+        self._attr_icon = "mdi:chart-bell-curve"
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("ph_stability")
+
+    @property
+    def extra_state_attributes(self):
+        return self.coordinator.data.get("ph_stability_attributes")
+
 class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     """Status sensor for recommendation text."""
 
@@ -151,6 +175,13 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_prediction_quality": data.get("chlor_prediction_quality"),
             "chlor_stability": data.get("chlor_stability"),
             "chlor_stability_attributes": data.get("chlor_stability_attributes"),
+            "ph_drift_24h": data.get("ph_drift_24h"),
+            "ph_drift_7d": data.get("ph_drift_7d"),
+            "ph_drift_14d": data.get("ph_drift_14d"),
+            "ph_prediction_quality": data.get("ph_prediction_quality"),
+            "ph_stability": data.get("ph_stability"),
+            "ph_trend": data.get("ph_trend"),
+            "ph_stability_attributes": data.get("ph_stability_attributes"),
             "chlor_breakdown_base": data.get("chlor_breakdown_base"),
             "chlor_breakdown_shock_adj": data.get("chlor_breakdown_shock_adj"),
             "chlor_breakdown_temp_adj": data.get("chlor_breakdown_temp_adj"),

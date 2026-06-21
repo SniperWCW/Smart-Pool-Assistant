@@ -792,6 +792,22 @@ Ausgegeben werden:
 
 Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase.
 
+### pH-Lernanalyse
+
+Die Datei `ph_learning.py` speichert neue pH-Messpunkte sowie bestätigte pH-Plus- und pH-Minus-Zugaben in der lokalen `maintenance_history`. Zwischen zwei Messpunkten wird die erwartete Korrekturwirkung der pH-Aktionen herausgerechnet, bevor die natürliche pH-Drift pro Tag bestimmt wird.
+
+Ausgegeben werden:
+
+- `ph_drift_24h`
+- `ph_drift_7d`
+- `ph_drift_14d`
+- `ph_prediction_quality`
+- `ph_stability`
+- `ph_trend`
+- `ph_stability_attributes`
+
+Intervalle unter 3 Stunden, über 7 Tagen und extreme Drift-Ausreißer über `1 pH/d` werden verworfen. Bis drei verwertbare Intervalle vorhanden sind, meldet `ph_stability` die Lernphase.
+
 ### pH-Berechnung
 
 Aktuelle Ausgaben:

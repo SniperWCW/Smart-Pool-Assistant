@@ -10,6 +10,7 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und 
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
 - Konservative Dosierempfehlungen passend zu Messlöffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
 - Lernende Chloranalyse mit persönlichem Chlorfaktor, Verbrauch über 24h/7d/14d und Stabilitätsbewertung.
+- pH-Stabilitätsanalyse mit bereinigter Drift über 24h/7d/14d, Trend und Vorhersagequalität.
 - Optionale Wetterintegration über eine Home-Assistant-`weather`-Entität mit Vorhersage für heute und morgen, inklusive Backend-Forecast-Fallback für Provider wie Tomorrow.io.
 - Optionaler separater `UV`-Sensor für Provider, die den UV-Index nicht im Daily-Forecast liefern.
 - Die Wetterkarte nutzt bevorzugt vom Backend vorbereitete Forecast-Tagesdaten und fällt erst danach auf heutige Coordinator-Wetterwerte zurück.
@@ -112,6 +113,18 @@ Berechnet werden:
 
 Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
 
+### pH-Stabilitätsanalyse
+
+Die Integration speichert neue pH-Messpunkte sowie bestätigte pH-Plus- und pH-Minus-Zugaben. Daraus entstehen bereinigte Drift-Intervalle, bei denen die erwartete Korrekturwirkung der Zugaben herausgerechnet wird.
+
+Berechnet werden:
+
+- pH-Drift über 24 Stunden, 7 Tage und 14 Tage in `pH/d`
+- pH-Trend als `rising`, `falling`, `stable` oder `learning`
+- pH-Stabilität mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalität
+
+Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
+
 ## Frontend: Pool Chemistry Card
 
 Die Integration registriert automatisch eine Custom Card:
@@ -159,6 +172,12 @@ Die Integration stellt unter anderem bereit:
 - `sensor.pool_persoenlicher_chlorfaktor`
 - `sensor.pool_chlor_vorhersagequalitaet`
 - `sensor.pool_chlor_stabilitaet`
+- `sensor.pool_ph_drift_24h`
+- `sensor.pool_ph_drift_7d`
+- `sensor.pool_ph_drift_14d`
+- `sensor.pool_ph_vorhersagequalitaet`
+- `sensor.pool_ph_trend`
+- `sensor.pool_ph_stabilitaet`
 - `sensor.pool_empfehlung`
 - `sensor.poollab_batterie`
 - `sensor.pool_filter_reinigung_fallig`
