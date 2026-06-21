@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-21  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-21 auf Basis von `manifest.json` Version `2.1.3`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, einheitlichen einklappbaren Frontend-Panels und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-21 auf Basis von `manifest.json` Version `2.1.4`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, einheitlichen einklappbaren Frontend-Panels, zusammengeführter kritischer Badeampel-Statusbox und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],

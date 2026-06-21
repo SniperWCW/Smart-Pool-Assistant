@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.4] - 2026-06-21
+
+- **Doppelte Warnbox zusammengeführt**: Wenn Status und Badeampel denselben kritischen Chlor-Grund anzeigen, wird in der Lovelace-Karte nur noch eine rote Box dargestellt.
+- **Chlor-Warntext vereinheitlicht**: Die Badeampel nutzt bei zu hohem Chlor jetzt denselben Text `Chlor zu hoch` wie der allgemeine Status.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V2.1.4.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.3] - 2026-06-21
 
 - **Einheitliches Frontend-Layout**: `LayzSpa`, `Aktuelle Messwerte`, `Filter Wartung` und `Status & Nutzung` nutzen nun denselben einklappbaren Panel-Aufbau wie `Wetter` und `Stabilität`.

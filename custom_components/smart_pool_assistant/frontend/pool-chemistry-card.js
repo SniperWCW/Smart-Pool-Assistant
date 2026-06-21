@@ -790,7 +790,7 @@ class PoolChemistryCard extends HTMLElement {
       const chlorLowDiff = chlorRange.low - chlor;
       const chlorHighDiff = chlor - chlorRange.high;
       if (chlor <= 0.3) issues.push("Chlor sehr niedrig");
-      else if (chlor >= 5 || chlorHighDiff > 0.9) issues.push("Chlor deutlich zu hoch");
+      else if (chlor >= 5 || chlorHighDiff > 0.9) issues.push("Chlor zu hoch");
       else if (chlorLowDiff > 0.3) warnings.push("Chlor niedrig");
       else if (chlorHighDiff > 0.3) warnings.push("Chlor erhöht");
     }
@@ -841,6 +841,19 @@ class PoolChemistryCard extends HTMLElement {
       title: "Baden empfohlen",
       detail: "Werte im grünen Bereich",
     };
+  }
+
+  _shouldMergeBathingAdvice(statusText, statusClass, bathingAdvice) {
+    if (statusClass !== "critical" || bathingAdvice.className !== "critical") return false;
+
+    const normalizedStatus = String(statusText || "")
+      .toLowerCase()
+      .replace(/chlor deutlich zu hoch/g, "chlor zu hoch");
+    const normalizedDetail = String(bathingAdvice.detail || "")
+      .toLowerCase()
+      .replace(/chlor deutlich zu hoch/g, "chlor zu hoch");
+
+    return normalizedStatus.includes("chlor zu hoch") && normalizedDetail.includes("chlor zu hoch");
   }
 
   set hass(hass) {
@@ -1011,6 +1024,13 @@ class PoolChemistryCard extends HTMLElement {
               font-weight: 500;
               opacity: 0.78;
               line-height: 1.25;
+            }
+            .status-detail {
+              font-size: 0.82em;
+              font-weight: 500;
+              opacity: 0.78;
+              line-height: 1.25;
+              margin-top: 3px;
             }
             @media (max-width: 620px) {
               .top-status-grid {
@@ -1521,16 +1541,31 @@ class PoolChemistryCard extends HTMLElement {
         statusClass = (statusText.includes('hoch') || statusText.includes('Stoß')) ? 'critical' : 'warning';
     }
 
-    statusBox.className = `status-box ${statusClass}`;
-    statusBox.textContent = statusText;
-
     const bathingBox = this.querySelector('#bathing-box');
     const bathingAdvice = this._getBathingAdvice(attr);
-    bathingBox.className = `status-box bathing-box ${bathingAdvice.className}`;
-    bathingBox.innerHTML = `
-      <div class="bathing-title">${bathingAdvice.icon} ${bathingAdvice.title}</div>
-      <div class="bathing-detail">${bathingAdvice.detail}</div>
-    `;
+    const mergeBathingAdvice = this._shouldMergeBathingAdvice(statusText, statusClass, bathingAdvice);
+
+    statusBox.className = `status-box ${statusClass}`;
+    statusBox.style.gridColumn = mergeBathingAdvice ? '1 / -1' : '';
+    statusBox.textContent = '';
+    const statusTitle = document.createElement('div');
+    statusTitle.textContent = statusText;
+    statusBox.appendChild(statusTitle);
+    if (mergeBathingAdvice) {
+      const statusDetail = document.createElement('div');
+      statusDetail.className = 'status-detail';
+      statusDetail.textContent = `${bathingAdvice.icon} ${bathingAdvice.title}`;
+      statusBox.appendChild(statusDetail);
+    }
+
+    bathingBox.style.display = mergeBathingAdvice ? 'none' : '';
+    if (!mergeBathingAdvice) {
+      bathingBox.className = `status-box bathing-box ${bathingAdvice.className}`;
+      bathingBox.innerHTML = `
+        <div class="bathing-title">${bathingAdvice.icon} ${bathingAdvice.title}</div>
+        <div class="bathing-detail">${bathingAdvice.detail}</div>
+      `;
+    }
 
     // LayzSpa Panel Rendering
     this._updateLayzSpaPanel();
@@ -2243,7 +2278,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.1.3 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.1.4 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
