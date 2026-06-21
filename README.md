@@ -2,7 +2,7 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.1.5**
+**Aktueller Release-Stand: V2.1.6**
 
 ## Hauptfunktionen
 
@@ -150,7 +150,7 @@ layzspa:
 
 `temp_target_control` ist optional und kann auf eine `number.*`- oder `climate.*`-Entität zeigen. Wenn gesetzt, blendet die Karte unterhalb der Temperaturanzeige eine direkte Zieltemperatur-Steuerung ein.
 
-Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, Stoßchlor oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
+Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
 
 Die Karte zeigt zusätzlich eine einklappbare Sektion **Stabilität**. Die Kopfzeile fasst Chlor- und pH-Status inklusive Lernfortschritt oder Vorhersagequalität zusammen; aufgeklappt erscheinen 24h-/7d-/14d-Werte, Min/Max, persönlicher Chlorfaktor und pH-Trend.
 

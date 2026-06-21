@@ -801,7 +801,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_erhoeher_total": ph_erhoeher_g,
             "data_source": data_source,
             "ph_diff": ph_diff,
-            "is_shock": (c_ist is not None and c_ist < 0.5),
+            "is_shock": (c_ist is not None and 3.0 <= float(c_ist) <= 5.0),
             "is_error": False,
             "last_calculation": dt_util.as_local(self._parse_ts_aware(new_calc_ts)).strftime("%d.%m.%Y %H:%M Uhr"),
             "last_calculation_raw": new_calc_ts,

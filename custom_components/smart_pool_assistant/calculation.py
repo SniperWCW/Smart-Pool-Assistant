@@ -175,7 +175,7 @@ def calculate_pool_chemistry(
         "ph_senker_total": ph_senker_ml,
         "ph_erhoeher_total": ph_erhoeher_g,
         "ph_diff": ph_diff,
-        "is_shock": (c_ist is not None and c_ist < 0.5),
+        "is_shock": (c_ist is not None and 3.0 <= float(c_ist) <= 5.0),
         "chlor_target": c_min,
         "chlor_min": c_min,
         "chlor_max": c_max,
@@ -275,7 +275,9 @@ def build_recommendation(
             warnings.append("pH zu niedrig")
 
     if current_c is not None:
-        if current_c < 0.5:
+        if 3.0 <= current_c <= 5.0:
+            warnings.append("Chlor im Sto\u00dfchlorbereich")
+        elif current_c < 0.5:
             warnings.append("Sto\u00dfchlorung empfohlen")
         elif current_c > (target_c_max + 0.2):
             warnings.append("Chlor zu hoch")

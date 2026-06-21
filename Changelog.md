@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.6] - 2026-06-21
+
+- **Bugfix Stoßchlor-Semantik**: `is_shock` steht jetzt für einen gemessenen Chlorwert im Stoßchlorbereich von `3,0 bis 5,0 mg/l`, nicht mehr für zu niedrigen Chlorwert.
+- **Badeampel korrigiert**: Die Karte zeigt nicht mehr `Stoßchlor aktiv` nach einer Empfehlung oder Zugabe, sondern bei passendem Messwert `Chlor im Stoßchlorbereich`.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V2.1.6.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.5] - 2026-06-21
 
 - **Gemeinsame Statusbox**: Status und Badeampel werden oben in der Lovelace-Karte als eine gemeinsame Box mit zwei Spalten dargestellt.

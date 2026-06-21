@@ -782,15 +782,12 @@ class PoolChemistryCard extends HTMLElement {
     if (isFromStorage || !Number.isFinite(chlor) || !Number.isFinite(ph)) {
       issues.push("aktuelle Chlor-/pH-Messung fehlt");
     }
-    if (attr.is_shock === true) {
-      issues.push("Stoßchlor aktiv");
-    }
-
     if (Number.isFinite(chlor) && chlorRange) {
       const chlorLowDiff = chlorRange.low - chlor;
       const chlorHighDiff = chlor - chlorRange.high;
       if (chlor <= 0.3) issues.push("Chlor sehr niedrig");
-      else if (chlor >= 5 || chlorHighDiff > 0.9) issues.push("Chlor zu hoch");
+      else if (attr.is_shock === true) issues.push("Chlor im Stoßchlorbereich");
+      else if (chlor > 5 || chlorHighDiff > 0.9) issues.push("Chlor zu hoch");
       else if (chlorLowDiff > 0.3) warnings.push("Chlor niedrig");
       else if (chlorHighDiff > 0.3) warnings.push("Chlor erhöht");
     }
@@ -878,8 +875,6 @@ class PoolChemistryCard extends HTMLElement {
     this._renderSignature = renderSignature;
 
     const hist = attr.history || {};
-    const isShock = attr.is_shock === true;
-
     // Erstelle das Skelett der Karte nur einmal
     if (!this.content) {
       this.innerHTML = `
@@ -2282,7 +2277,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.1.5 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.1.6 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

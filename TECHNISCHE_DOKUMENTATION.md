@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-21  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-21 auf Basis von `manifest.json` Version `2.1.5`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-21 auf Basis von `manifest.json` Version `2.1.6`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -854,6 +854,7 @@ pH < ph_min - 0.1 -> "pH zu niedrig"
 ### Chlor
 
 ```text
+3.0 <= chlor <= 5.0 -> "Chlor im Stoßchlorbereich"
 chlor < 0.5 -> "Stoßchlorung empfohlen"
 chlor > chlor_max + 0.2 -> "Chlor zu hoch"
 chlor < chlor_min - 0.2 und chlor_dose > 0 -> "Chlor nachdosieren"
@@ -1216,7 +1217,7 @@ Die Karte berechnet aus den vorhandenen Empfehlungssensor-Attributen eine einfac
 🔴 Nicht empfohlen
 ```
 
-Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, Stoßchlor, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser, Regen-/Windhinweisen oder hoher UV-Belastung. Grün wird nur angezeigt, wenn keine roten oder gelben Gründe vorliegen.
+Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser, Regen-/Windhinweisen oder hoher UV-Belastung. Grün wird nur angezeigt, wenn keine roten oder gelben Gründe vorliegen.
 
 ### Nachmess-Zustand in der Karte
 
