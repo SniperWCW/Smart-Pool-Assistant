@@ -152,6 +152,8 @@ layzspa:
 
 Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, Stoßchlor oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
 
+Die Karte zeigt zusätzlich eine einklappbare Sektion **Stabilität**. Die Kopfzeile fasst Chlor- und pH-Status inklusive Lernfortschritt oder Vorhersagequalität zusammen; aufgeklappt erscheinen 24h-/7d-/14d-Werte, Min/Max, persönlicher Chlorfaktor und pH-Trend.
+
 Im visuellen Karten-Editor bleiben nur die LayZSpa-Optionen editierbar. Wetter-Entität und UV-Sensor werden in der Integration konfiguriert; Empfehlungssensor und PoolLab-Abruf-Button werden von der Karte fest bzw. automatisch verwendet.
 
 ## Entitäten

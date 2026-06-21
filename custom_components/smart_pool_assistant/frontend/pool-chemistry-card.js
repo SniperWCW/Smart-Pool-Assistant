@@ -4,6 +4,7 @@ class PoolChemistryCard extends HTMLElement {
     this._layzspa_expanded = false;
     this._poollabFetchInFlight = false;
     this._poollabFetchClientError = null;
+    this._stability_expanded = false;
     this._weatherForecastCache = {};
     this._weatherForecastInFlight = {};
     this._weatherForecastRetryDelayMs = 5 * 60 * 1000;
@@ -353,6 +354,146 @@ class PoolChemistryCard extends HTMLElement {
 
     const diff = num < range.low ? range.low - num : num - range.high;
     return diff <= criticalTolerance ? "status-warning" : "status-critical";
+  }
+
+  _isKnownValue(value) {
+    return value !== undefined && value !== null && value !== "" && value !== "unknown" && value !== "unavailable";
+  }
+
+  _formatLearningNumber(value, suffix = "", digits = 2, signed = false) {
+    if (!this._isKnownValue(value)) return "Nicht genügend Daten";
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "Nicht genügend Daten";
+    const formatted = num.toLocaleString("de-DE", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+      signDisplay: signed ? "exceptZero" : "auto",
+    });
+    return `${formatted}${suffix}`;
+  }
+
+  _formatLearningStars(value) {
+    if (!this._isKnownValue(value)) return "Noch keine Bewertung";
+    if (typeof value === "string" && /^[*-]{5}$/.test(value)) {
+      return value.replaceAll("*", "★").replaceAll("-", "☆");
+    }
+    const quality = Number(value);
+    if (!Number.isFinite(quality) || quality <= 0) return "Noch keine Bewertung";
+    const rounded = Math.max(0, Math.min(5, Math.round(quality)));
+    return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+  }
+
+  _getLearningSampleCount(value) {
+    const samples = Number(value);
+    return Number.isFinite(samples) && samples > 0 ? samples : 0;
+  }
+
+  _getLearningStatusLabel(status) {
+    const labels = {
+      learning: "Lernphase",
+      stable: "Stabil",
+      variable: "Schwankend",
+      unstable: "Instabil",
+    };
+    return labels[status] || "Nicht genügend Daten";
+  }
+
+  _getPhTrendLabel(trend) {
+    const labels = {
+      learning: "Lernphase",
+      stable: "stabil",
+      rising: "steigt",
+      falling: "fällt",
+    };
+    return labels[trend] || "Nicht genügend Daten";
+  }
+
+  _getLearningSummary(kind, data) {
+    const samples = this._getLearningSampleCount(data?.samples);
+    const status = this._getLearningStatusLabel(data?.status);
+    const stars = this._formatLearningStars(data?.quality);
+    if (samples < 3) {
+      return `${kind}: Lernphase ${samples}/3`;
+    }
+    return `${kind}: ${status} ${stars}`;
+  }
+
+  _renderStabilitySection() {
+    const container = this.querySelector('#stability-section');
+    if (!container) return;
+
+    const attr = this._lastAttr || {};
+    const chlorAttr = attr.chlor_stability_attributes || {};
+    const phAttr = attr.ph_stability_attributes || {};
+    const chlorSamples = this._getLearningSampleCount(chlorAttr.samples);
+    const phSamples = this._getLearningSampleCount(phAttr.samples);
+    const chlorQuality = chlorAttr.prediction_quality ?? attr.chlor_prediction_quality;
+    const phQuality = phAttr.prediction_quality ?? attr.ph_prediction_quality;
+    const chlorStatus = attr.chlor_stability || "learning";
+    const phStatus = attr.ph_stability || "learning";
+    const phTrend = phAttr.trend || attr.ph_trend;
+
+    const chlorData = { samples: chlorSamples, status: chlorStatus, quality: chlorQuality };
+    const phData = { samples: phSamples, status: phStatus, quality: phQuality };
+    const summary = `${this._getLearningSummary("Chlor", chlorData)} · ${this._getLearningSummary("pH", phData)}`;
+
+    const renderMetric = (label, value) => `
+      <div class="stability-metric">
+        <span>${label}</span>
+        <b>${value}</b>
+      </div>
+    `;
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div class="stability-panel ${this._stability_expanded ? 'expanded' : ''}">
+        <div class="stability-header" id="stability-header">
+          <div class="stability-title"><ha-icon icon="mdi:chart-bell-curve"></ha-icon> Stabilität</div>
+          <div class="stability-summary">${summary}</div>
+          <ha-icon icon="${this._stability_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+        </div>
+        <div class="stability-content">
+          <div class="stability-grid">
+            <div class="stability-card">
+              <div class="stability-card-head">
+                <div>
+                  <div class="stability-card-title">Chlor</div>
+                  <div class="stability-card-sub">${chlorSamples < 3 ? `Lernphase: ${chlorSamples} von 3 Intervallen` : this._getLearningStatusLabel(chlorStatus)}</div>
+                </div>
+                <div class="stability-stars">${this._formatLearningStars(chlorQuality)}</div>
+              </div>
+              ${renderMetric("Ø 14 Tage", this._formatLearningNumber(chlorAttr.average_daily_loss ?? attr.chlor_consumption_14d, " mg/l/d", 2))}
+              ${renderMetric("24h", this._formatLearningNumber(attr.chlor_consumption_24h, " mg/l/d", 2))}
+              ${renderMetric("7 Tage", this._formatLearningNumber(attr.chlor_consumption_7d, " mg/l/d", 2))}
+              ${renderMetric("Min / Max", `${this._formatLearningNumber(chlorAttr.min_daily_loss, " mg/l/d", 2)} / ${this._formatLearningNumber(chlorAttr.max_daily_loss, " mg/l/d", 2)}`)}
+              ${renderMetric("Persönlicher Faktor", this._formatLearningNumber(chlorAttr.personal_chlor_factor ?? attr.personal_chlor_factor, "", 2))}
+            </div>
+            <div class="stability-card">
+              <div class="stability-card-head">
+                <div>
+                  <div class="stability-card-title">pH</div>
+                  <div class="stability-card-sub">${phSamples < 3 ? `Lernphase: ${phSamples} von 3 Intervallen` : this._getLearningStatusLabel(phStatus)}</div>
+                </div>
+                <div class="stability-stars">${this._formatLearningStars(phQuality)}</div>
+              </div>
+              ${renderMetric("Ø 14 Tage", this._formatLearningNumber(phAttr.average_daily_drift ?? attr.ph_drift_14d, " pH/d", 3, true))}
+              ${renderMetric("24h", this._formatLearningNumber(attr.ph_drift_24h, " pH/d", 3, true))}
+              ${renderMetric("7 Tage", this._formatLearningNumber(attr.ph_drift_7d, " pH/d", 3, true))}
+              ${renderMetric("Min / Max", `${this._formatLearningNumber(phAttr.min_daily_drift, " pH/d", 3, true)} / ${this._formatLearningNumber(phAttr.max_daily_drift, " pH/d", 3, true)}`)}
+              ${renderMetric("Trend", this._getPhTrendLabel(phTrend))}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const header = this.querySelector('#stability-header');
+    if (header) {
+      header.onclick = () => {
+        this._stability_expanded = !this._stability_expanded;
+        this._renderStabilitySection();
+      };
+    }
   }
 
   _normalizeForecastResponse(response, entityId) {
@@ -769,6 +910,7 @@ class PoolChemistryCard extends HTMLElement {
             </div>
 
             <div id="weather-forecast-section" class="measurements-section" style="display: none;"></div>
+            <div id="stability-section" class="measurements-section" style="display: none;"></div>
 
             <div id="layzspa-container"></div>
 
@@ -1100,6 +1242,22 @@ class PoolChemistryCard extends HTMLElement {
               color: var(--warning-color, #FF9800);
               font-weight: 600;
             }
+            .stability-panel { border: 1px solid var(--divider-color); border-radius: 8px; overflow: hidden; background: var(--card-background-color); }
+            .stability-header { padding: 10px 12px; background: var(--secondary-background-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+            .stability-title { display: flex; align-items: center; gap: 8px; font-weight: bold; flex: 0 0 auto; }
+            .stability-title ha-icon { color: var(--primary-color); --mdc-icon-size: 20px; }
+            .stability-summary { flex: 1; min-width: 0; text-align: right; font-size: 0.9em; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .stability-content { display: none; padding: 12px; border-top: 1px solid var(--divider-color); }
+            .stability-panel.expanded .stability-content { display: block; }
+            .stability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+            .stability-card { border: 1px solid var(--divider-color); border-radius: 8px; padding: 10px; background: var(--card-background-color); }
+            .stability-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+            .stability-card-title { font-weight: 700; }
+            .stability-card-sub { margin-top: 2px; font-size: 0.82em; color: var(--secondary-text-color); }
+            .stability-stars { color: var(--warning-color, #FF9800); font-size: 0.92em; white-space: nowrap; }
+            .stability-metric { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid rgba(127,127,127,0.16); font-size: 0.9em; }
+            .stability-metric span { color: var(--secondary-text-color); }
+            .stability-metric b { text-align: right; overflow-wrap: anywhere; }
             .history-table .table-row .table-label { min-width: 0; }
             .history-table .table-row .table-value { font-weight: 600; }
             .footer { margin-top: 14px; font-size: 0.8em; color: var(--secondary-text-color); text-align: center; }
@@ -1144,15 +1302,18 @@ class PoolChemistryCard extends HTMLElement {
             .info-row-container > * { flex: 1; min-width: 250px; margin-top: 0 !important; }
 
             @media (max-width: 640px) {
-              .weather-header {
+              .weather-header,
+              .stability-header {
                 display: grid;
                 grid-template-columns: minmax(0, 1fr) auto;
                 gap: 4px 10px;
               }
-              .weather-title {
+              .weather-title,
+              .stability-title {
                 min-width: 0;
               }
-              .weather-summary {
+              .weather-summary,
+              .stability-summary {
                 grid-column: 1 / -1;
                 grid-row: 2;
                 text-align: left;
@@ -1161,7 +1322,8 @@ class PoolChemistryCard extends HTMLElement {
                 text-overflow: clip;
                 line-height: 1.35;
               }
-              .weather-header > ha-icon:last-child {
+              .weather-header > ha-icon:last-child,
+              .stability-header > ha-icon:last-child {
                 grid-column: 2;
                 grid-row: 1;
               }
@@ -1528,6 +1690,7 @@ class PoolChemistryCard extends HTMLElement {
       </div>
     `;
     this._renderWeatherSection();
+    this._renderStabilitySection();
     const fetchButton = this.querySelector('#btn-poollab-fetch');
     if (fetchButton) {
       fetchButton.onclick = () => this._pressPoolLabFetchButton();

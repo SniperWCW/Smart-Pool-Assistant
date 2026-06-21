@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [Unreleased]
+
+- **Stabilität in der Lovelace-Karte**: Neuer einklappbarer Frontend-Block für Chlor- und pH-Stabilität mit Kopfzeile für Status/Qualität, Fortschritt in der Lernphase und Detailwerten nach dem Aufklappen.
+- **Lesbare Lernphasen-Fallbacks**: Fehlende Lernwerte werden in der Karte als `Nicht genügend Daten` bzw. `Noch keine Bewertung` angezeigt statt als rohe `unknown`-Werte.
+
 ## [2.1.1] - 2026-06-21
 
 - **pH-Stabilitätsanalyse**: Neue lokale Lernhistorie für pH-Messpunkte sowie pH-Plus- und pH-Minus-Korrekturen.
