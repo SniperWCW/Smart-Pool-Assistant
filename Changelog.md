@@ -2,6 +2,8 @@
 
 ## [2.1.6] - 2026-06-21
 
+- **LayZSpa Heizzeit-Prognose**: Das Panel zeigt jetzt optional `Auf Wunschtemperatur` mit ETA auf Basis der Home-Assistant-Historie der letzten 24/48h bzw. konfigurierbarer Stunden.
+- **Fallback-Heizrate**: Wenn noch nicht genug Heizverlauf vorhanden ist, nutzt die Karte eine konfigurierbare Fallback-Rate statt fixer Template-Werte und kennzeichnet diese in der Detailzeile.
 - **Bugfix Stoßchlor-Semantik**: `is_shock` steht jetzt für einen gemessenen Chlorwert im Stoßchlorbereich von `3,0 bis 5,0 mg/l`, nicht mehr für zu niedrigen Chlorwert.
 - **Badeampel korrigiert**: Die Karte zeigt nicht mehr `Stoßchlor aktiv` nach einer Empfehlung oder Zugabe, sondern bei passendem Messwert `Chlor im Stoßchlorbereich`.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V2.1.6.md` auf den aktuellen Stand gebracht.

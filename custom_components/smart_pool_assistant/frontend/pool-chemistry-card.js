@@ -13,6 +13,8 @@ class PoolChemistryCard extends HTMLElement {
     this._weatherForecastRetryDelayMs = 5 * 60 * 1000;
     this._renderSignature = null;
     this._poolLabFetchButtonEntityCache = null;
+    this._layzspaHeatEtaCache = {};
+    this._layzspaHeatEtaInFlight = {};
   }
 
   setConfig(config) {
@@ -1457,6 +1459,10 @@ class PoolChemistryCard extends HTMLElement {
             .lz-temp-btn { height: 34px; min-width: 34px; border-radius: 999px; border: 1px solid rgba(3, 169, 244, 0.35); background: rgba(3, 169, 244, 0.14); color: var(--primary-color); font-size: 1.1em; font-weight: 700; cursor: pointer; }
             .lz-temp-btn:hover { background: rgba(3, 169, 244, 0.22); }
             .lz-temp-btn:disabled { opacity: 0.5; cursor: default; }
+            .lz-heat-eta { background: var(--secondary-background-color); padding: 8px 10px; border-radius: 8px; text-align: center; }
+            .lz-eta-main { font-size: 1.05em; font-weight: 700; margin-top: 2px; }
+            .lz-eta-detail { font-size: 0.78em; color: var(--secondary-text-color); margin-top: 2px; }
+            .lz-eta-muted { color: var(--secondary-text-color); }
             .lz-rssi-excellent { color: #4CAF50; }
             .lz-rssi-good { color: #8BC34A; }
             .lz-rssi-fair { color: #FFC107; }
@@ -1917,9 +1923,178 @@ class PoolChemistryCard extends HTMLElement {
     }
   }
 
+  _getLayzSpaHeatEtaConfig(cfg) {
+    const etaCfg = cfg?.heat_eta || {};
+    return {
+      enabled: etaCfg.enabled !== false,
+      historyHours: this._clampNumber(parseFloat(etaCfg.history_hours), 6, 168, 48),
+      fallbackRate: this._clampNumber(parseFloat(etaCfg.fallback_rate_c_per_hour), 0.1, 10, 3),
+    };
+  }
+
+  _clampNumber(value, min, max, fallback) {
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(max, Math.max(min, value));
+  }
+
+  _formatLayzSpaDuration(hoursValue) {
+    if (!Number.isFinite(hoursValue) || hoursValue < 0) return "--";
+    const totalMinutes = Math.max(1, Math.ceil(hoursValue * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) return `${minutes} min`;
+    if (minutes <= 0) return `${hours} h`;
+    return `${hours} h ${minutes} min`;
+  }
+
+  _getLayzSpaHeatEta(cfg, currentTemp, targetTemp, heaterState) {
+    const etaCfg = this._getLayzSpaHeatEtaConfig(cfg);
+    if (!etaCfg.enabled || !cfg?.temp_current || !cfg?.heater) return null;
+
+    if (!Number.isFinite(currentTemp) || !Number.isFinite(targetTemp)) {
+      return {
+        label: "Auf Wunschtemperatur",
+        value: "--",
+        detail: "Temperaturdaten fehlen",
+        cssClass: "lz-eta-muted",
+      };
+    }
+
+    const delta = targetTemp - currentTemp;
+    if (delta <= 0) {
+      return {
+        label: "Auf Wunschtemperatur",
+        value: "Erreicht",
+        detail: "Zieltemperatur erreicht",
+        cssClass: "status-ok",
+      };
+    }
+
+    const cacheKey = `${cfg.temp_current}|${cfg.heater}|${etaCfg.historyHours}`;
+    const cache = this._layzspaHeatEtaCache[cacheKey];
+    const rate = cache?.rate;
+    const hasLearnedRate = Number.isFinite(rate) && rate > 0;
+    const effectiveRate = hasLearnedRate ? rate : etaCfg.fallbackRate;
+    const duration = this._formatLayzSpaDuration(delta / effectiveRate);
+    const heaterOn = heaterState === "on";
+    const source = hasLearnedRate
+      ? `${rate.toFixed(1).replace(".", ",")} °C/h aus ${cache.historyHours}h Verlauf`
+      : `${etaCfg.fallbackRate.toFixed(1).replace(".", ",")} °C/h Fallback`;
+
+    this._ensureLayzSpaHeatEtaHistory(cfg, etaCfg, cacheKey);
+
+    return {
+      label: "Auf Wunschtemperatur",
+      value: `ca. ${duration}`,
+      detail: heaterOn ? source : `Heizung aus · ${source}`,
+      cssClass: heaterOn ? (hasLearnedRate ? "status-ok" : "status-warning") : "lz-eta-muted",
+    };
+  }
+
+  async _ensureLayzSpaHeatEtaHistory(cfg, etaCfg, cacheKey) {
+    if (!this._hass?.callWS || this._layzspaHeatEtaInFlight[cacheKey]) return;
+
+    const cache = this._layzspaHeatEtaCache[cacheKey];
+    const cacheAgeMs = cache?.fetchedAt ? Date.now() - cache.fetchedAt : Infinity;
+    if (cacheAgeMs < 10 * 60 * 1000) return;
+
+    this._layzspaHeatEtaInFlight[cacheKey] = true;
+    const end = new Date();
+    const start = new Date(end.getTime() - etaCfg.historyHours * 60 * 60 * 1000);
+
+    try {
+      const history = await this._hass.callWS({
+        type: "history/history_during_period",
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        entity_ids: [cfg.temp_current, cfg.heater],
+        minimal_response: false,
+        no_attributes: true,
+      });
+      const rateInfo = this._calculateLayzSpaHeatRate(history, cfg.temp_current, cfg.heater);
+      this._layzspaHeatEtaCache[cacheKey] = {
+        ...rateInfo,
+        historyHours: etaCfg.historyHours,
+        fetchedAt: Date.now(),
+      };
+    } catch (err) {
+      this._layzspaHeatEtaCache[cacheKey] = {
+        rate: null,
+        historyHours: etaCfg.historyHours,
+        fetchedAt: Date.now(),
+        error: err?.message || "history unavailable",
+      };
+    } finally {
+      delete this._layzspaHeatEtaInFlight[cacheKey];
+      if (this.config?.layzspa === cfg) this._updateLayzSpaPanel();
+    }
+  }
+
+  _calculateLayzSpaHeatRate(history, tempEntityId, heaterEntityId) {
+    const series = Array.isArray(history) ? history : [];
+    const tempSeries = series.find((items) => items?.[0]?.entity_id === tempEntityId) || [];
+    const heaterSeries = series.find((items) => items?.[0]?.entity_id === heaterEntityId) || [];
+    const tempPoints = tempSeries
+      .map((entry) => ({
+        ts: Date.parse(entry.last_changed || entry.last_updated),
+        value: parseFloat(entry.state),
+      }))
+      .filter((entry) => Number.isFinite(entry.ts) && Number.isFinite(entry.value))
+      .sort((a, b) => a.ts - b.ts);
+    const heaterPoints = heaterSeries
+      .map((entry) => ({
+        ts: Date.parse(entry.last_changed || entry.last_updated),
+        state: entry.state,
+      }))
+      .filter((entry) => Number.isFinite(entry.ts))
+      .sort((a, b) => a.ts - b.ts);
+
+    if (tempPoints.length < 2 || heaterPoints.length < 1) {
+      return { rate: null, heatedHours: 0, gainedTemp: 0 };
+    }
+
+    let heaterIndex = 0;
+    let gainedTemp = 0;
+    let heatedHours = 0;
+
+    const heaterStateAt = (ts) => {
+      if (!heaterPoints[heaterIndex] || heaterPoints[heaterIndex].ts > ts) return null;
+      while (heaterIndex + 1 < heaterPoints.length && heaterPoints[heaterIndex + 1].ts <= ts) {
+        heaterIndex += 1;
+      }
+      return heaterPoints[heaterIndex]?.state;
+    };
+
+    for (let i = 1; i < tempPoints.length; i += 1) {
+      const previous = tempPoints[i - 1];
+      const current = tempPoints[i];
+      const deltaHours = (current.ts - previous.ts) / 3600000;
+      const deltaTemp = current.value - previous.value;
+      if (deltaHours < 0.03 || deltaHours > 4) continue;
+      if (deltaTemp <= 0.02) continue;
+      const rate = deltaTemp / deltaHours;
+      if (rate > 8) continue;
+      const heaterOn = heaterStateAt(previous.ts) === "on" || heaterStateAt(current.ts) === "on";
+      if (!heaterOn) continue;
+      gainedTemp += deltaTemp;
+      heatedHours += deltaHours;
+    }
+
+    if (heatedHours < 0.33 || gainedTemp < 0.2) {
+      return { rate: null, heatedHours, gainedTemp };
+    }
+
+    return {
+      rate: gainedTemp / heatedHours,
+      heatedHours,
+      gainedTemp,
+    };
+  }
+
   _updateLayzSpaPanel() {
     const cfg = this.config.layzspa;
     const container = this.querySelector('#layzspa-container');
+    if (!container) return;
     if (!cfg || !cfg.connection) {
       container.innerHTML = '';
       return;
@@ -1938,6 +2113,7 @@ class PoolChemistryCard extends HTMLElement {
     const rssi = this._getRSSIInfo(get(cfg.rssi)?.state);
     const tempCurrentValue = parseFloat(get(cfg.temp_current)?.state);
     const tempTargetValue = tempControl?.currentValue ?? parseFloat(get(cfg.temp_target)?.state);
+    const heatEta = this._getLayzSpaHeatEta(cfg, tempCurrentValue, tempTargetValue, heater?.state);
 
     container.innerHTML = `
       <div class="layzspa-panel ${this._layzspa_expanded ? 'expanded' : ''}">
@@ -1976,6 +2152,13 @@ class PoolChemistryCard extends HTMLElement {
               <div class="lz-temp-val lz-temp-target">${formatTemp(tempTargetValue)}</div>
             </div>
           </div>
+          ${heatEta ? `
+            <div class="lz-heat-eta">
+              <span class="lz-label">${heatEta.label}</span>
+              <div class="lz-eta-main ${heatEta.cssClass}">${heatEta.value}</div>
+              <div class="lz-eta-detail">${heatEta.detail}</div>
+            </div>
+          ` : ''}
           ${tempControl ? `
             <div class="lz-temp-adjust">
               <button class="lz-temp-btn ${!isConnected ? 'lz-disabled' : ''}" id="lz-temp-down" ${!isConnected ? 'disabled' : ''}>-</button>
@@ -2178,6 +2361,20 @@ class PoolChemistryCardEditor extends HTMLElement {
 
     if (configValue.startsWith("lz_")) {
       const key = configValue.replace("lz_", "");
+      if (key.startsWith("heat_eta_")) {
+        const heatEtaKey = key.replace("heat_eta_", "");
+        const parsedValue = heatEtaKey === "enabled" ? !!value : parseFloat(value);
+        if (heatEtaKey !== "enabled" && !Number.isFinite(parsedValue)) return;
+        newConfig.layzspa = {
+          ...(newConfig.layzspa || {}),
+          heat_eta: {
+            ...(newConfig.layzspa?.heat_eta || {}),
+            [heatEtaKey]: parsedValue,
+          },
+        };
+        this._dispatchConfigChanged(newConfig);
+        return;
+      }
       if (this._config.layzspa && this._config.layzspa[key] === value) return;
       newConfig.layzspa = { ...newConfig.layzspa, [key]: value };
     } else {
@@ -2219,10 +2416,27 @@ class PoolChemistryCardEditor extends HTMLElement {
             <ha-switch id="lz-enabled-switch"></ha-switch>
           </div>
           <div id="lz-pickers" style="display: none; flex-direction: column; gap: 8px; padding-left: 12px; border-left: 2px solid var(--primary-color);"></div>
+          <div id="lz-heat-eta-options" style="display: none; flex-direction: column; gap: 8px; padding-left: 12px; border-left: 2px solid var(--divider-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span>Auf Wunschtemperatur anzeigen</span>
+              <ha-switch id="lz-heat-eta-enabled"></ha-switch>
+            </div>
+            <ha-textfield id="lz-heat-eta-history" label="Verlauf in Stunden" type="number" min="6" max="168"></ha-textfield>
+            <ha-textfield id="lz-heat-eta-fallback" label="Fallback-Heizrate °C/h" type="number" min="0.1" max="10" step="0.1"></ha-textfield>
+          </div>
         </div>
       `;
 
       this.querySelector('#lz-enabled-switch').addEventListener('change', (ev) => this._toggleLayzSpa(ev));
+      this.querySelector('#lz-heat-eta-enabled').addEventListener('change', (ev) => {
+        this._valueChanged({ target: { configValue: "lz_heat_eta_enabled" }, detail: { value: ev.target.checked } });
+      });
+      this.querySelector('#lz-heat-eta-history').addEventListener('change', (ev) => {
+        this._valueChanged({ target: { configValue: "lz_heat_eta_history_hours" }, detail: { value: ev.target.value } });
+      });
+      this.querySelector('#lz-heat-eta-fallback').addEventListener('change', (ev) => {
+        this._valueChanged({ target: { configValue: "lz_heat_eta_fallback_rate_c_per_hour" }, detail: { value: ev.target.value } });
+      });
       this._initialized = true;
     }
 
@@ -2245,9 +2459,11 @@ class PoolChemistryCardEditor extends HTMLElement {
       ];
 
     const lzPickersContainer = this.querySelector('#lz-pickers');
+    const lzHeatEtaContainer = this.querySelector('#lz-heat-eta-options');
     if (lzPickersContainer) {
       const isEnabled = !!this._config.layzspa?.enabled;
       lzPickersContainer.style.display = isEnabled ? 'flex' : 'none';
+      if (lzHeatEtaContainer) lzHeatEtaContainer.style.display = isEnabled ? 'flex' : 'none';
 
       if (isEnabled) {
         pickersDef.forEach(p => {
@@ -2269,6 +2485,14 @@ class PoolChemistryCardEditor extends HTMLElement {
             picker.value = currentValue;
           }
         });
+
+        const heatEtaConfig = this._config.layzspa?.heat_eta || {};
+        const heatEtaEnabled = this.querySelector('#lz-heat-eta-enabled');
+        const heatEtaHistory = this.querySelector('#lz-heat-eta-history');
+        const heatEtaFallback = this.querySelector('#lz-heat-eta-fallback');
+        if (heatEtaEnabled) heatEtaEnabled.checked = heatEtaConfig.enabled !== false;
+        if (heatEtaHistory) heatEtaHistory.value = heatEtaConfig.history_hours ?? 48;
+        if (heatEtaFallback) heatEtaFallback.value = heatEtaConfig.fallback_rate_c_per_hour ?? 3;
       }
     }
   }

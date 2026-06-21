@@ -10,6 +10,8 @@
 
 - Die Badeampel zeigt nicht mehr `Stoßchlor aktiv`.
 - Bei passendem Messwert erscheint stattdessen `Chlor im Stoßchlorbereich`.
+- Das LayZSpa-Panel kann jetzt `Auf Wunschtemperatur` anzeigen.
+- Die Restdauer wird aus der Home-Assistant-Historie von Ist-Temperatur und Heizstatus berechnet; bei zu wenig Verlauf greift eine konfigurierbare Fallback-Heizrate.
 
 ## Dokumentation / Versionierung
 

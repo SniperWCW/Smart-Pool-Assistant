@@ -1306,6 +1306,10 @@ Aktueller Stand:
 - Steuerung über `layzspa.temp_target_control`
 - unterstützt `number.*` und `climate.*`
 - Schrittweite sowie Min-/Max-Grenzen werden aus der Zielentität übernommen
+- optionale Heizzeit-Prognose `Auf Wunschtemperatur` über `layzspa.heat_eta`
+- die Prognose nutzt die Home-Assistant-Historie von Ist-Temperatur und Heizung über die Frontend-WebSocket-API
+- reale Heizraten werden nur aus plausiblen Temperaturanstiegen während Heizphasen abgeleitet
+- bei zu wenig Verlauf wird `fallback_rate_c_per_hour` genutzt und in der Detailzeile als Fallback kenntlich gemacht
 
 ---
 

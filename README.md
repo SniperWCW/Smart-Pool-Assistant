@@ -28,7 +28,7 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und 
 - Fachlich sauberer Nachmess-Workflow: Nach jeder bestätigten Chlor- oder pH-Zugabe zeigt die Integration **Warten auf erneute Messung**, bis neue Werte vorliegen.
 - Getrennte Quellenlogik für Bluetooth, Cloud, manuelle Sensoren und Speicher-Fallback.
 - Persistente Historie für letzte Werte, letzte Aktionen, letzte Cloud-Messwerte und Filterwartung.
-- LayZSpa-Panel mit Anzeige von Verbindung, RSSI, Pumpe, Heizung, Luftblasen, Ist-/Zieltemperatur und optionaler Zieltemperatur-Steuerung per `+` / `-`.
+- LayZSpa-Panel mit Anzeige von Verbindung, RSSI, Pumpe, Heizung, Luftblasen, Ist-/Zieltemperatur, optionaler Zieltemperatur-Steuerung per `+` / `-` und Heizzeit-Prognose `Auf Wunschtemperatur`.
 - Benachrichtigungen für Chemie-Follow-up und Filterwartung, optional an zwei Notify-Ziele.
 - Re-Konfiguration über Config Flow / Options Flow.
 
@@ -146,9 +146,15 @@ layzspa:
   temp_current: sensor.layzspa_temp_c
   temp_target: sensor.layzspa_target_temp_c
   temp_target_control: number.layzspa_target_temp_c
+  heat_eta:
+    enabled: true
+    history_hours: 48
+    fallback_rate_c_per_hour: 3
 ```
 
 `temp_target_control` ist optional und kann auf eine `number.*`- oder `climate.*`-Entität zeigen. Wenn gesetzt, blendet die Karte unterhalb der Temperaturanzeige eine direkte Zieltemperatur-Steuerung ein.
+
+`heat_eta` ist optional. Die Karte lädt dafür im Frontend die Home-Assistant-Historie von Ist-Temperatur und Heizung, berechnet daraus die reale Heizrate während Heizphasen und zeigt die geschätzte Restdauer bis zur Zieltemperatur. Wenn noch nicht genug Verlauf vorhanden ist, wird `fallback_rate_c_per_hour` verwendet und als Fallback gekennzeichnet.
 
 Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
 
