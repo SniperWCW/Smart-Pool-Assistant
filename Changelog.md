@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.3] - 2026-06-21
+
+- **Einheitliches Frontend-Layout**: `LayzSpa`, `Aktuelle Messwerte`, `Filter Wartung` und `Status & Nutzung` nutzen nun denselben einklappbaren Panel-Aufbau wie `Wetter` und `Stabilität`.
+- **Messwerte neu positioniert**: `Aktuelle Messwerte` stehen jetzt direkt unterhalb der Stabilitätssektion.
+- **Kompakte Panel-Zusammenfassungen**: Messwerte, Filterstatus und Nutzung zeigen ihren wichtigsten Zustand direkt in der Kopfzeile.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Banner und neue `release_notes/RELEASE_NOTES_V2.1.3.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.2] - 2026-06-21
 
 - **Stabilität in der Lovelace-Karte**: Neuer einklappbarer Frontend-Block für Chlor- und pH-Stabilität mit Kopfzeile für Status/Qualität, Fortschritt in der Lernphase und Detailwerten nach dem Aufklappen.

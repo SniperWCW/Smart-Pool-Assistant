@@ -5,6 +5,9 @@ class PoolChemistryCard extends HTMLElement {
     this._poollabFetchInFlight = false;
     this._poollabFetchClientError = null;
     this._stability_expanded = false;
+    this._measurements_expanded = false;
+    this._filter_expanded = false;
+    this._usage_expanded = false;
     this._weatherForecastCache = {};
     this._weatherForecastInFlight = {};
     this._weatherForecastRetryDelayMs = 5 * 60 * 1000;
@@ -909,8 +912,20 @@ class PoolChemistryCard extends HTMLElement {
               </div>
             </div>
 
-            <div id="weather-forecast-section" class="measurements-section" style="display: none;"></div>
-            <div id="stability-section" class="measurements-section" style="display: none;"></div>
+            <div id="weather-forecast-section" class="measurements-section panel-section" style="display: none;"></div>
+            <div id="stability-section" class="measurements-section panel-section" style="display: none;"></div>
+            <div class="measurements-section panel-section">
+              <div class="card-panel ${this._measurements_expanded ? 'expanded' : ''}" id="measurements-panel">
+                <div class="card-panel-header" id="measurements-header">
+                  <div class="card-panel-title"><ha-icon icon="mdi:gauge"></ha-icon> Aktuelle Messwerte</div>
+                  <div id="measurements-summary" class="card-panel-summary"></div>
+                  <ha-icon id="measurements-toggle-icon" icon="${this._measurements_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+                </div>
+                <div class="card-panel-content">
+                  <div id="measurements-table" class="metrics-table"></div>
+                </div>
+              </div>
+            </div>
 
             <div id="layzspa-container"></div>
 
@@ -924,34 +939,46 @@ class PoolChemistryCard extends HTMLElement {
                 <div id="api-history-list" class="history-table" style="margin-top: 8px;"></div>
               </details>
             </div>
-            <div class="measurements-section">
-              <div class="section-title">📅 Aktuelle Messwerte:</div>
-              <div id="measurements-table" class="metrics-table"></div>
-            </div>
-            <div class="measurements-section">
-              <div class="section-title">⚙️ Filter Wartung:</div>
-              <div id="filter-maintenance-grid" class="m-grid">
-                <div class="m-item">
-                  <b>Reinigung:</b> <span id="filter-clean-hours">--</span> Stunden her <small>(Empf. alle <span id="filter-clean-interval">--</span> Stunden)</small>
-                  <button id="btn-filter-clean" class="small-btn">Gereinigt</button>
+            <div class="measurements-section panel-section">
+              <div class="card-panel ${this._filter_expanded ? 'expanded' : ''}" id="filter-panel">
+                <div class="card-panel-header" id="filter-header">
+                  <div class="card-panel-title"><ha-icon icon="mdi:air-filter"></ha-icon> Filter Wartung</div>
+                  <div id="filter-summary" class="card-panel-summary"></div>
+                  <ha-icon id="filter-toggle-icon" icon="${this._filter_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
                 </div>
-                <div class="m-item">
-                  <b>Wechsel:</b> <span id="filter-replace-days">--</span> Tage her <small>(Empf. alle <span id="filter-replace-interval">--</span> Tage)</small>
-                  <button id="btn-filter-replace" class="small-btn">Gewechselt</button>
+                <div class="card-panel-content">
+                  <div id="filter-maintenance-grid" class="m-grid">
+                    <div class="m-item">
+                      <b>Reinigung:</b> <span id="filter-clean-hours">--</span> Stunden her <small>(Empf. alle <span id="filter-clean-interval">--</span> Stunden)</small>
+                      <button id="btn-filter-clean" class="small-btn">Gereinigt</button>
+                    </div>
+                    <div class="m-item">
+                      <b>Wechsel:</b> <span id="filter-replace-days">--</span> Tage her <small>(Empf. alle <span id="filter-replace-interval">--</span> Tage)</small>
+                      <button id="btn-filter-replace" class="small-btn">Gewechselt</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="measurements-section" style="margin-bottom: 12px;">
-              <div class="section-title">🏖️ Status & Nutzung:</div>
-              <div class="log-input" style="justify-content: space-between;">
-                <div style="display: flex; gap: 8px; align-items: center;">
-                  <ha-icon id="icon-covered" icon="mdi:pool"></ha-icon>
-                  <button id="btn-toggle-cover" class="small-btn" style="margin-left:0;">--</button>
+            <div class="measurements-section panel-section" style="margin-bottom: 12px;">
+              <div class="card-panel ${this._usage_expanded ? 'expanded' : ''}" id="usage-panel">
+                <div class="card-panel-header" id="usage-header">
+                  <div class="card-panel-title"><ha-icon icon="mdi:pool"></ha-icon> Status & Nutzung</div>
+                  <div id="usage-summary" class="card-panel-summary"></div>
+                  <ha-icon id="usage-toggle-icon" icon="${this._usage_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
                 </div>
-                <div id="usage-modes" class="usage-grid">
-                  <button class="mode-btn" data-mode="0"><ha-icon icon="mdi:sleep"></ha-icon> Keine</button>
-                  <button class="mode-btn" data-mode="1"><ha-icon icon="mdi:account-group"></ha-icon> Normal</button>
-                  <button class="mode-btn" data-mode="2"><ha-icon icon="mdi:party-popper"></ha-icon> Party</button>
+                <div class="card-panel-content">
+                  <div class="log-input" style="justify-content: space-between;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <ha-icon id="icon-covered" icon="mdi:pool"></ha-icon>
+                      <button id="btn-toggle-cover" class="small-btn" style="margin-left:0;">--</button>
+                    </div>
+                    <div id="usage-modes" class="usage-grid">
+                      <button class="mode-btn" data-mode="0"><ha-icon icon="mdi:sleep"></ha-icon> Keine</button>
+                      <button class="mode-btn" data-mode="1"><ha-icon icon="mdi:account-group"></ha-icon> Normal</button>
+                      <button class="mode-btn" data-mode="2"><ha-icon icon="mdi:party-popper"></ha-icon> Party</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1024,6 +1051,7 @@ class PoolChemistryCard extends HTMLElement {
             }
             .log-input button:hover { opacity: 0.8; }
             .measurements-section { background: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-top: 16px; }
+            .panel-section { padding: 0; background: transparent; }
             .section-title { font-size: 0.9em; font-weight: bold; margin-bottom: 8px; opacity: 0.8; }
             .m-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; font-size: 1em; }
             .m-item { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
@@ -1258,6 +1286,13 @@ class PoolChemistryCard extends HTMLElement {
             .stability-metric { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid rgba(127,127,127,0.16); font-size: 0.9em; }
             .stability-metric span { color: var(--secondary-text-color); }
             .stability-metric b { text-align: right; overflow-wrap: anywhere; }
+            .card-panel { border: 1px solid var(--divider-color); border-radius: 8px; overflow: hidden; background: var(--card-background-color); }
+            .card-panel-header { padding: 10px 12px; background: var(--secondary-background-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+            .card-panel-title { display: flex; align-items: center; gap: 8px; font-weight: bold; flex: 0 0 auto; }
+            .card-panel-title ha-icon { color: var(--primary-color); --mdc-icon-size: 20px; }
+            .card-panel-summary { flex: 1; min-width: 0; text-align: right; font-size: 0.9em; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .card-panel-content { display: none; padding: 12px; border-top: 1px solid var(--divider-color); }
+            .card-panel.expanded .card-panel-content { display: block; }
             .history-table .table-row .table-label { min-width: 0; }
             .history-table .table-row .table-value { font-weight: 600; }
             .footer { margin-top: 14px; font-size: 0.8em; color: var(--secondary-text-color); text-align: center; }
@@ -1303,27 +1338,36 @@ class PoolChemistryCard extends HTMLElement {
 
             @media (max-width: 640px) {
               .weather-header,
-              .stability-header {
+              .stability-header,
+              .card-panel-header,
+              .layzspa-header {
                 display: grid;
                 grid-template-columns: minmax(0, 1fr) auto;
                 gap: 4px 10px;
               }
               .weather-title,
-              .stability-title {
+              .stability-title,
+              .card-panel-title,
+              .layzspa-title {
                 min-width: 0;
               }
               .weather-summary,
-              .stability-summary {
+              .stability-summary,
+              .card-panel-summary,
+              .layzspa-connection-badge {
                 grid-column: 1 / -1;
                 grid-row: 2;
                 text-align: left;
+                justify-content: flex-start;
                 white-space: normal;
                 overflow: visible;
                 text-overflow: clip;
                 line-height: 1.35;
               }
               .weather-header > ha-icon:last-child,
-              .stability-header > ha-icon:last-child {
+              .stability-header > ha-icon:last-child,
+              .card-panel-header > ha-icon:last-child,
+              .layzspa-header > ha-icon:last-child {
                 grid-column: 2;
                 grid-row: 1;
               }
@@ -1359,11 +1403,12 @@ class PoolChemistryCard extends HTMLElement {
 
             /* LayzSpa Panel Styles */
             .layzspa-panel { border: 1px solid var(--divider-color); border-radius: 8px; margin-top: 16px; overflow: hidden; background: var(--card-background-color); }
-            .layzspa-header { padding: 10px 12px; background: var(--secondary-background-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-            .layzspa-title { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+            .layzspa-header { padding: 10px 12px; background: var(--secondary-background-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+            .layzspa-title { display: flex; align-items: center; gap: 8px; font-weight: bold; flex: 0 0 auto; }
+            .layzspa-title ha-icon { color: var(--primary-color); --mdc-icon-size: 20px; }
             .layzspa-content { display: none; padding: 12px; flex-direction: column; gap: 12px; border-top: 1px solid var(--divider-color); }
             .layzspa-panel.expanded .layzspa-content { display: flex; }
-            .layzspa-connection-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85em; opacity: 0.8; }
+            .layzspa-connection-badge { flex: 1; min-width: 0; display: flex; justify-content: flex-end; align-items: center; gap: 8px; text-align: right; font-size: 0.9em; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .layzspa-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
             .connected .layzspa-dot { background: var(--success-color, #4CAF50); box-shadow: 0 0 4px var(--success-color); }
             .disconnected .layzspa-dot { background: var(--error-color, #F44336); }
@@ -1449,6 +1494,9 @@ class PoolChemistryCard extends HTMLElement {
       });
       this.querySelector('#btn-filter-clean').onclick = () => this._handleAdd('filter_clean');
       this.querySelector('#btn-filter-replace').onclick = () => this._handleAdd('filter_replace');
+      this.querySelector('#measurements-header').onclick = () => this._toggleCardPanel('measurements');
+      this.querySelector('#filter-header').onclick = () => this._toggleCardPanel('filter');
+      this.querySelector('#usage-header').onclick = () => this._toggleCardPanel('usage');
     }
 
     // Aktualisiere nur die dynamischen Inhalte
@@ -1639,6 +1687,10 @@ class PoolChemistryCard extends HTMLElement {
       ? '<span class="bt-badge connected"><span class="bt-dot"></span>Bluetooth: Ja</span>'
       : '<span class="bt-badge disconnected"><span class="bt-dot"></span>Bluetooth: Nein</span>';
     const fetchUi = this._getPoolLabFetchUi(attr);
+    const measurementsSummary = this.querySelector('#measurements-summary');
+    if (measurementsSummary) {
+      measurementsSummary.textContent = `Chlor ${c_ist} mg/l, pH ${ph_ist}, ${t_ist}°C`;
+    }
 
     // Helper to get colored text for filter status
     const getColoredDays = (days, status) => {
@@ -1707,6 +1759,12 @@ class PoolChemistryCard extends HTMLElement {
     this.querySelector('#filter-clean-interval').textContent = cleanInterval !== null ? cleanInterval : '--';
     this.querySelector('#filter-replace-days').innerHTML = getColoredDays(daysSinceReplace, replaceStatus);
     this.querySelector('#filter-replace-interval').textContent = replaceInterval !== null ? replaceInterval : '--';
+    const filterSummary = this.querySelector('#filter-summary');
+    if (filterSummary) {
+      const cleanText = hoursSinceClean !== null && hoursSinceClean !== undefined ? `${hoursSinceClean}h` : '--';
+      const replaceText = daysSinceReplace !== null && daysSinceReplace !== undefined ? `${daysSinceReplace}d` : '--';
+      filterSummary.textContent = `Reinigung ${cleanText}, Wechsel ${replaceText}`;
+    }
 
     // Cloud History Display
     const apiHistorySection = this.querySelector('#api-history-section');
@@ -1802,9 +1860,14 @@ class PoolChemistryCard extends HTMLElement {
     iconCover.icon = attr.pool_covered ? 'mdi:pool' : 'mdi:sun-side';
 
     const usageModes = ["none", "normal", "party"];
+    const usageLabels = { none: "Keine", normal: "Normal", party: "Party" };
     this.querySelectorAll('.mode-btn').forEach(btn => {
       btn.className = `mode-btn ${usageModes[btn.dataset.mode] === attr.usage_mode ? 'active' : ''}`;
     });
+    const usageSummary = this.querySelector('#usage-summary');
+    if (usageSummary) {
+      usageSummary.textContent = `${attr.pool_covered ? 'Abgedeckt' : 'Offen'}, Nutzung ${usageLabels[attr.usage_mode] || 'Keine'}`;
+    }
 
     // Fallback auf den letzten Update-Zeitpunkt der Entität selbst, falls das Attribut fehlt
     const lastCalcRaw = attr.last_calculation_raw || rec.last_updated;
@@ -1849,8 +1912,8 @@ class PoolChemistryCard extends HTMLElement {
           <div class="layzspa-connection-badge ${isConnected ? 'connected' : 'disconnected'}">
             <span class="layzspa-dot"></span>
             ${isConnected ? 'Verbunden' : 'Getrennt'}
-            <ha-icon icon="${this._layzspa_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
           </div>
+          <ha-icon icon="${this._layzspa_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
         </div>
         <div class="layzspa-content">
           <div class="layzspa-info-row">
@@ -2041,6 +2104,20 @@ class PoolChemistryCard extends HTMLElement {
     }
   }
 
+  _toggleCardPanel(key) {
+    const stateKey = `_${key}_expanded`;
+    this[stateKey] = !this[stateKey];
+
+    const panel = this.querySelector(`#${key}-panel`);
+    const icon = this.querySelector(`#${key}-toggle-icon`);
+    if (panel) {
+      panel.classList.toggle('expanded', this[stateKey]);
+    }
+    if (icon) {
+      icon.icon = this[stateKey] ? 'mdi:chevron-up' : 'mdi:chevron-down';
+    }
+  }
+
   getCardSize() {
     return 3;
   }
@@ -2166,7 +2243,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.1.2 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.1.3 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
