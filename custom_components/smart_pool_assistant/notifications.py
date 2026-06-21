@@ -24,21 +24,26 @@ async def async_send_notification(
     conf: dict,
     message: str,
     notification_id: str,
+    title: str = "Smart Pool Assistant",
+    data: dict | None = None,
 ) -> None:
     """Send a persistent and/or service notification."""
     if conf.get(CONF_PERSISTENT_NOTIFICATION):
         await hass.services.async_call("persistent_notification", "create", {
-            "title": "Smart Pool Assistant",
+            "title": title,
             "message": message,
             "notification_id": f"{DOMAIN}_{notification_id}",
         })
 
     for service in _notify_services(conf):
         domain, service_name = service.split(".", 1)
-        await hass.services.async_call(domain, service_name, {
-            "title": "Smart Pool Assistant",
+        service_data = {
+            "title": title,
             "message": message,
-        })
+        }
+        if data:
+            service_data["data"] = data
+        await hass.services.async_call(domain, service_name, service_data)
 
 
 async def async_send_follow_up(
@@ -51,6 +56,35 @@ async def async_send_follow_up(
         conf,
         "Die Einwirkzeit ist um. Bitte Pool-Werte erneut pr\u00fcfen!",
         "follow_up",
+    )
+
+
+async def async_send_pool_connection_lost(
+    hass: HomeAssistant,
+    conf: dict,
+    offline_minutes: int,
+) -> None:
+    """Send the pool connection lost notification."""
+    await async_send_notification(
+        hass,
+        conf,
+        (
+            f"Achtung: Der Pool ist seit {offline_minutes} Minuten offline. "
+            "Automatisierungen (Reset/Heizung) sind eventuell eingeschraenkt."
+        ),
+        "pool_connection_lost",
+        title="Pool: Verbindung verloren",
+        data={
+            "tag": "pool-connection-status",
+            "group": "pool-maintenance",
+            "color": "#F44336",
+            "notification_icon": "mdi:wifi-off",
+            "url": "/dashboard-zuhause/pool",
+            "clickAction": "/dashboard-zuhause/pool",
+            "push": {
+                "interruption_level": "active",
+            },
+        },
     )
 
 

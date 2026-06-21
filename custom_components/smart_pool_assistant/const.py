@@ -20,6 +20,8 @@ CONF_NOTIFY_SERVICE = "notify_service"
 CONF_NOTIFY_SERVICE_2 = "notify_service_2"
 CONF_PERSISTENT_NOTIFICATION = "persistent_notification"
 CONF_FOLLOW_UP_TIME = "follow_up_time"
+CONF_POOL_CONNECTION_SENSOR = "pool_connection_sensor"
+CONF_POOL_CONNECTION_OFFLINE_DELAY = "pool_connection_offline_delay"
 
 # Filter Maintenance
 CONF_FILTER_CLEAN_INTERVAL = "filter_clean_interval" # Days

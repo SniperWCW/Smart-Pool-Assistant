@@ -18,8 +18,9 @@ from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_PH_TARGET, CONF_PH_MIN, CONF_PH_MAX,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
-    CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION
-    , CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
+    CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
+    CONF_POOL_CONNECTION_SENSOR, CONF_POOL_CONNECTION_OFFLINE_DELAY,
+    CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
     CONF_WEATHER_ENTITY, CONF_UV_SENSOR,
@@ -160,6 +161,7 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Optional(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Optional(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Optional(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
+        vol.Optional(CONF_POOL_CONNECTION_SENSOR, default=defaults.get(CONF_POOL_CONNECTION_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "binary_sensor"}),
         vol.Optional(CONF_WEATHER_ENTITY, default=defaults.get(CONF_WEATHER_ENTITY, vol.UNDEFINED)): selector.EntitySelector({"domain": "weather"}),
         vol.Optional(CONF_UV_SENSOR, default=defaults.get(CONF_UV_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Required(CONF_POOL_VOLUME, default=defaults.get(CONF_POOL_VOLUME, 0.916)): selector.NumberSelector(
@@ -191,6 +193,9 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Optional(CONF_PERSISTENT_NOTIFICATION, default=defaults.get(CONF_PERSISTENT_NOTIFICATION, False)): selector.BooleanSelector(),
         vol.Optional(CONF_FOLLOW_UP_TIME, default=defaults.get(CONF_FOLLOW_UP_TIME, 60)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1)
+        ),
+        vol.Optional(CONF_POOL_CONNECTION_OFFLINE_DELAY, default=defaults.get(CONF_POOL_CONNECTION_OFFLINE_DELAY, 5)): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1, min=1, max=120)
         ),
         vol.Required(CONF_FILTER_CLEAN_INTERVAL, default=defaults.get(CONF_FILTER_CLEAN_INTERVAL, 24)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="Stunden", step=1, min=1)

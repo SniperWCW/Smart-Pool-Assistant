@@ -2,7 +2,7 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.1.6**
+**Aktueller Release-Stand: V2.1.7**
 
 ## Hauptfunktionen
 
@@ -29,7 +29,7 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und 
 - Getrennte Quellenlogik für Bluetooth, Cloud, manuelle Sensoren und Speicher-Fallback.
 - Persistente Historie für letzte Werte, letzte Aktionen, letzte Cloud-Messwerte und Filterwartung.
 - LayZSpa-Panel mit Anzeige von Verbindung, RSSI, Pumpe, Heizung, Luftblasen, Ist-/Zieltemperatur, optionaler Zieltemperatur-Steuerung per `+` / `-` und Heizzeit-Prognose `Auf Wunschtemperatur`.
-- Benachrichtigungen für Chemie-Follow-up und Filterwartung, optional an zwei Notify-Ziele.
+- Benachrichtigungen für Chemie-Follow-up, Filterwartung und optional verlorene Pool-Verbindung, optional an zwei Notify-Ziele.
 - Re-Konfiguration über Config Flow / Options Flow.
 
 ## Installation
@@ -57,6 +57,7 @@ Wichtige Konfigurationspunkte:
 - **PoolLab API-Key**: Aktiviert die zyklische Cloud-Aktualisierung und dient ohne BLE optional auch als manuelle Abrufquelle.
 - **Cloud-Update-Intervall**: Zyklischer Cloud-Abruf in Minuten, Standard `5`, Bereich `1-60`.
 - **Manuelle Sensoren**: Chlor, pH und optional Temperatur.
+- **Pool-Verbindung**: Optionaler Binary Sensor, der nach konfigurierbarer Offline-Wartezeit eine Benachrichtigung ausloest.
 - **Poolvolumen**: Wassermenge in m3.
 - **Zielbereiche**: Chlor Minimum/Maximum und pH Minimum/Maximum.
 - **Wirkstoffanteil**: Wirkstoffanteil des Chlorprodukts.

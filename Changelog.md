@@ -1,5 +1,14 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.7] - 2026-06-21
+
+- **Pool-Verbindungswarnung**: Im Config Flow und Options Flow kann jetzt ein Binary Sensor fuer die Pool-/LayZSpa-Verbindung hinterlegt werden.
+- **Offline-Benachrichtigung**: Wenn die Verbindung nach der konfigurierten Wartezeit weiterhin `off` oder `unavailable` ist, sendet die Integration eine Meldung an die hinterlegten Notify-Ziele und optional als HA-Benachrichtigung.
+- **Keine Wiederholspam-Meldungen**: Pro Offline-Phase wird nur einmal benachrichtigt; bei `on` wird der Status zurueckgesetzt.
+- **Follow-up-Erinnerungen stabilisiert**: Persistente Chemie-Follow-ups werden nach Neustarts robuster nachgeholt und nicht doppelt versendet.
+- **LayZSpa-Heizzeit-Prognose veroeffentlicht**: Die Karte zeigt optional die ETA bis zur Wunschtemperatur auf Basis der Home-Assistant-Historie oder einer Fallback-Heizrate.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.1.7.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.6] - 2026-06-21
 
 - **LayZSpa Heizzeit-Prognose**: Das Panel zeigt jetzt optional `Auf Wunschtemperatur` mit ETA auf Basis der Home-Assistant-Historie der letzten 24/48h bzw. konfigurierbarer Stunden.

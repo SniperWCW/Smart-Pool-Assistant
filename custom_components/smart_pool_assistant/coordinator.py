@@ -18,6 +18,7 @@ from .const import (
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
     CONF_FILTER_REPLACE_YELLOW_THRESHOLD, CONF_FILTER_REPLACE_RED_THRESHOLD,
     CONF_WEATHER_ENTITY, CONF_UV_SENSOR,
+    CONF_POOL_CONNECTION_SENSOR, CONF_POOL_CONNECTION_OFFLINE_DELAY,
 )
 from .calculation import (
     build_recommendation,
@@ -45,6 +46,7 @@ from .maintenance import (
 )
 from .notifications import (
     async_check_filter_notifications,
+    async_send_pool_connection_lost,
     async_send_follow_up,
     async_send_notification,
 )
@@ -85,6 +87,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self._poollab_fetch_lock = asyncio.Lock()
         self._poollab_fetch_requested = False
         self._next_poollab_fetch_allowed_at = None
+        self._pool_connection_offline_cancel = None
         # Standardwerte für neue Logik initialisieren
         self.pool_covered = True
         self.usage_mode = "none" # none, normal, party
@@ -211,19 +214,99 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     def async_setup_event_listeners(self):
         """Set up listeners for entity state changes."""
         conf = self.config
+        unsubscribers = []
         entities = []
         # Nur Entitäten überwachen, die auch wirklich konfiguriert wurden
         for key in [CONF_CHLOR_SENSOR, CONF_PH_SENSOR]:
             if eid := conf.get(key):
                 entities.append(eid)
 
-        if not entities:
+        if entities:
+            unsubscribers.append(
+                async_track_state_change_event(
+                    self.hass, entities, self._handle_state_change
+                )
+            )
+        else:
             _LOGGER.debug("No manual sensors configured, relying solely on API/Cloud")
-            return lambda: None
 
-        return async_track_state_change_event(
-            self.hass, entities, self._handle_state_change
+        if connection_entity := conf.get(CONF_POOL_CONNECTION_SENSOR):
+            unsubscribers.append(
+                async_track_state_change_event(
+                    self.hass, [connection_entity], self._handle_pool_connection_change
+                )
+            )
+            self._schedule_pool_connection_check(connection_entity)
+
+        def unsubscribe_all():
+            if self._pool_connection_offline_cancel:
+                self._pool_connection_offline_cancel()
+                self._pool_connection_offline_cancel = None
+            for unsubscribe in unsubscribers:
+                unsubscribe()
+
+        return unsubscribe_all
+
+    async def _handle_pool_connection_change(self, event):
+        """Schedule or reset the pool connection lost notification."""
+        entity_id = event.data.get("entity_id")
+        self._schedule_pool_connection_check(entity_id)
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is not None and state.state == "on":
+            await self._store.async_save(self.maintenance_history)
+
+    def _schedule_pool_connection_check(self, entity_id: str | None) -> None:
+        """Schedule an offline check for the configured pool connection entity."""
+        if not entity_id:
+            return
+
+        state = self.hass.states.get(entity_id)
+        if state is not None and state.state == "on":
+            if self._pool_connection_offline_cancel:
+                self._pool_connection_offline_cancel()
+                self._pool_connection_offline_cancel = None
+            self.maintenance_history.pop("pool_connection_lost_notified", None)
+            return
+
+        if state is None or state.state not in ("off", "unavailable"):
+            return
+
+        if self.maintenance_history.get("pool_connection_lost_notified"):
+            return
+
+        if self._pool_connection_offline_cancel:
+            self._pool_connection_offline_cancel()
+
+        delay_minutes = self._pool_connection_offline_delay_minutes()
+        self._pool_connection_offline_cancel = async_call_later(
+            self.hass,
+            delay_minutes * 60,
+            self._async_check_pool_connection_offline,
         )
+
+    def _pool_connection_offline_delay_minutes(self) -> int:
+        """Return the configured pool connection offline delay in minutes."""
+        try:
+            return max(1, int(self.config.get(CONF_POOL_CONNECTION_OFFLINE_DELAY, 5)))
+        except (TypeError, ValueError):
+            return 5
+
+    async def _async_check_pool_connection_offline(self, _now) -> None:
+        """Send a notification if the pool connection is still offline."""
+        self._pool_connection_offline_cancel = None
+        entity_id = self.config.get(CONF_POOL_CONNECTION_SENSOR)
+        state = self.hass.states.get(entity_id) if entity_id else None
+
+        if state is None or state.state not in ("off", "unavailable"):
+            return
+
+        if self.maintenance_history.get("pool_connection_lost_notified"):
+            return
+
+        delay_minutes = self._pool_connection_offline_delay_minutes()
+        await async_send_pool_connection_lost(self.hass, self.config, delay_minutes)
+        self.maintenance_history["pool_connection_lost_notified"] = dt_util.now().isoformat()
+        await self._store.async_save(self.maintenance_history)
 
     def _collect_last_activities(self) -> list[dict]:
         """Build a compact activity list from stored maintenance actions."""
