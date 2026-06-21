@@ -297,7 +297,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def _send_follow_up(self, _):
-        await async_send_follow_up(self.hass, self.config)
+        await self._async_check_follow_up_notification()
 
     def _get_time_since_last_action(self, action_key: str, in_hours: bool = False) -> int | None:
         """Calculate time since last action (hours or days)."""
@@ -306,6 +306,54 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     def _get_action_dt(self, action_key: str):
         """Return the aware timestamp of a stored maintenance action."""
         return get_action_dt(self.maintenance_history, action_key, self._parse_ts_aware)
+
+    def _get_latest_chemical_action(self):
+        """Return raw timestamp and datetime for the latest chemical action."""
+        candidates = []
+        for action_key in ("chlor", "ph_plus", "ph_minus"):
+            action = self.maintenance_history.get(action_key)
+            if not isinstance(action, dict):
+                continue
+            raw_ts = action.get("raw_ts")
+            action_dt = self._parse_ts_aware(raw_ts)
+            if raw_ts and action_dt:
+                candidates.append((action_dt, raw_ts))
+
+        if not candidates:
+            return None
+
+        action_dt, raw_ts = max(candidates, key=lambda item: item[0])
+        return raw_ts, action_dt
+
+    async def _async_check_follow_up_notification(self) -> None:
+        """Send a missed chemical follow-up reminder based on persisted history."""
+        try:
+            delay_minutes = float(self.config.get(CONF_FOLLOW_UP_TIME, 0) or 0)
+        except (TypeError, ValueError):
+            delay_minutes = 0
+
+        if delay_minutes <= 0:
+            return
+
+        latest_action = self._get_latest_chemical_action()
+        if latest_action is None:
+            return
+
+        action_raw, action_dt = latest_action
+        last_measurement_dt = self._parse_ts_aware(self.maintenance_history.get("last_measurement_raw"))
+        if last_measurement_dt and last_measurement_dt > action_dt:
+            return
+
+        if self.maintenance_history.get("last_follow_up_action_raw") == action_raw:
+            return
+
+        if dt_util.now() < action_dt + timedelta(minutes=delay_minutes):
+            return
+
+        await async_send_follow_up(self.hass, self.config)
+        self.maintenance_history["last_follow_up_action_raw"] = action_raw
+        self.maintenance_history["last_follow_up_sent_raw"] = dt_util.now().isoformat()
+        await self._store.async_save(self.maintenance_history)
 
     async def _async_update_data(self):
         def get_state_info(entity_id: str):
@@ -643,6 +691,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         )
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
+        await self._async_check_follow_up_notification()
+
         if c_ist is None and ph_ist is None:
             await self._store.async_save(self.maintenance_history)
             return {
@@ -770,6 +820,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         )
 
         await async_check_filter_notifications(self.hass, conf, self.maintenance_history)
+        await self._async_check_follow_up_notification()
 
         recommendation = build_recommendation(
             awaiting_retest,

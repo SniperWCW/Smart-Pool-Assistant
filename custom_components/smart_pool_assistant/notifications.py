@@ -45,14 +45,13 @@ async def async_send_follow_up(
     hass: HomeAssistant,
     conf: dict,
 ) -> None:
-    """Send the chemical follow-up notification if a notify service is configured."""
-    if _notify_services(conf):
-        await async_send_notification(
-            hass,
-            conf,
-            "Die Einwirkzeit ist um. Bitte Pool-Werte erneut pr\u00fcfen!",
-            "follow_up",
-        )
+    """Send the chemical follow-up notification."""
+    await async_send_notification(
+        hass,
+        conf,
+        "Die Einwirkzeit ist um. Bitte Pool-Werte erneut pr\u00fcfen!",
+        "follow_up",
+    )
 
 
 async def async_check_filter_notifications(
