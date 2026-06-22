@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.10] - 2026-06-22
+
+- **Bugfix PoolLab-BLE-Verbindungsaufbau**: Der zusätzliche 15-Sekunden-Timeout um `establish_connection(...)` wurde entfernt, damit `bleak-retry-connector` seine eigene Retry- und Safety-Timeout-Logik wieder vollständig nutzen kann.
+- **Cleanup bleibt erhalten**: Das robuste Stoppen von Notifications und explizite Trennen der BLE-Verbindung aus `2.1.9` bleibt unverändert aktiv.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.1.10.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.9] - 2026-06-22
 
 - **Bugfix PoolLab-BLE-Timeouts**: Der PoolLab-BLE-Client trennt nach Timeout oder Abbruch jetzt explizit Notifications und Verbindung.

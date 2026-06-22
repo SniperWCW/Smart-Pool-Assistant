@@ -17,7 +17,6 @@ SIGNAL_UUID = "c2296c06-c7e0-4657-b42e-c8330826454c"  # Notify (Signal)
 
 PREAMBLE = 0xAB
 STATUS_OK = 0
-CONNECT_TIMEOUT = 15.0
 
 
 @dataclass
@@ -143,10 +142,7 @@ class PoolLabBLEClient:
         client: BleakClient | None = None
         notifications_started = False
         try:
-            client = await asyncio.wait_for(
-                establish_connection(BleakClient, self._device, self._device.address),
-                timeout=CONNECT_TIMEOUT,
-            )
+            client = await establish_connection(BleakClient, self._device, self._device.address)
             _LOGGER.debug("BLE connection established to PoolLab: %s", self._device.address)
         except Exception:
             _LOGGER.exception(
