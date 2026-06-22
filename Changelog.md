@@ -1,5 +1,14 @@
 # Changelog - Smart Pool Assistant
 
+## [2.2.0] - 2026-06-22
+
+- **Persönlicher Chlor-Dosierfaktor**: Bestätigte Chlorzugaben und Nachmessungen werden jetzt als eigene Lernstrecke ausgewertet. Ab mindestens zwei verwertbaren Paaren fließt der persönliche Dosierfaktor direkt in die Chlorempfehlung ein.
+- **Chlor-Prognose**: Neue Vorhersage für Tagesverlust sowie Zeit bis zur Zieluntergrenze oder bis `0,6 mg/l`, inklusive Konfidenz, Prognosebasis und kontextgewichteter Lernhistorie.
+- **Kontextlernen erweitert**: Chlor-Messpunkte und Chlorzugaben speichern jetzt zusätzlich Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV und optional Pumpenlaufzeit.
+- **Optionale Pumpen-Entität**: Config Flow und Options Flow unterstützen jetzt `pump_entity` als `switch.*` oder `binary_sensor.*`, damit die Prognose reale Pumpenlaufzeit berücksichtigen kann.
+- **Lovelace-Karte erweitert**: Die Stabilitätssektion zeigt jetzt Dosierfaktor, effektiven Wirkstoffanteil, Prognosehorizont, Konfidenz und Basis. Zusätzlich erscheint die aktuelle Chlor-Prognose direkt im Chlor-Empfehlungsblock.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V2.2.0.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.11] - 2026-06-22
 
 - **Eigenes Diagnose-Logfile**: Die Integration schreibt jetzt ein rotierendes DEBUG-Log nach `smart_pool_assistant_logs/smart_pool_assistant.log` im Home-Assistant-Konfigurationsverzeichnis.

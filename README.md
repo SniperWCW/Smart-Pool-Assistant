@@ -2,14 +2,15 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.1.11**
+**Aktueller Release-Stand: V2.2.0**
 
 ## Hauptfunktionen
 
 - Präzise Chlor-Berechnung über volumenbezogene Zielbereiche mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
 - Konservative Dosierempfehlungen passend zu Messlöffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
-- Lernende Chloranalyse mit persönlichem Chlorfaktor, Verbrauch über 24h/7d/14d und Stabilitätsbewertung.
+- Lernende Chloranalyse mit persönlichem Chlorfaktor, persönlichem Dosierfaktor, Verbrauch über 24h/7d/14d und Stabilitätsbewertung.
+- Neue Chlor-Prognose mit geschätzter Zeit bis zur Zieluntergrenze oder bis `0,6 mg/l`, inklusive Konfidenz und Kontextgewichtung.
 - pH-Stabilitätsanalyse mit bereinigter Drift über 24h/7d/14d, Trend und Vorhersagequalität.
 - Optionale Wetterintegration über eine Home-Assistant-`weather`-Entität mit Vorhersage für heute und morgen, inklusive Backend-Forecast-Fallback für Provider wie Tomorrow.io.
 - Optionaler separater `UV`-Sensor für Provider, die den UV-Index nicht im Daily-Forecast liefern.
@@ -57,6 +58,7 @@ Wichtige Konfigurationspunkte:
 - **PoolLab API-Key**: Aktiviert die zyklische Cloud-Aktualisierung und dient ohne BLE optional auch als manuelle Abrufquelle.
 - **Cloud-Update-Intervall**: Zyklischer Cloud-Abruf in Minuten, Standard `5`, Bereich `1-60`.
 - **Manuelle Sensoren**: Chlor, pH und optional Temperatur.
+- **Pumpe**: Optionaler `switch.*` oder `binary_sensor.*` für Pumpenlaufzeit in der Chlor-Prognose.
 - **Pool-Verbindung**: Optionaler Binary Sensor, der nach konfigurierbarer Offline-Wartezeit eine Benachrichtigung ausloest.
 - **Poolvolumen**: Wassermenge in m3.
 - **Zielbereiche**: Chlor Minimum/Maximum und pH Minimum/Maximum.
@@ -105,12 +107,15 @@ Die pH-Berechnung ermittelt anhand Zielbereich, Poolvolumen und Produktdosierung
 
 ### Lernende Chloranalyse
 
-Die Integration speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Daraus entstehen bereinigte Verbrauchsintervalle, bei denen Zugaben zwischen zwei Messungen rechnerisch berücksichtigt werden.
+Die Integration speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Dabei werden zusätzliche Kontextdaten wie Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV und optional Pumpenlaufzeit mitgespeichert. Daraus entstehen bereinigte Verbrauchsintervalle, bei denen Zugaben zwischen zwei Messungen rechnerisch berücksichtigt werden.
 
 Berechnet werden:
 
 - Chlorverbrauch über 24 Stunden, 7 Tage und 14 Tage in `mg/l/d`
 - persönlicher Chlorfaktor gegen einen konservativen Basisverlust von `0,8 mg/l/d`
+- persönlicher Chlor-Dosierfaktor aus bestätigten Zugabe-/Nachmess-Paaren
+- effektiver Wirkstoffanteil auf Basis der real beobachteten Dosierwirkung
+- Chlor-Prognose für den erwarteten Abfall unter die Zieluntergrenze bzw. unter `0,6 mg/l`
 - Chlor-Stabilität mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalität
 
 Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
@@ -160,7 +165,9 @@ layzspa:
 
 Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
 
-Die Karte zeigt zusätzlich eine einklappbare Sektion **Stabilität**. Die Kopfzeile fasst Chlor- und pH-Status inklusive Lernfortschritt oder Vorhersagequalität zusammen; aufgeklappt erscheinen 24h-/7d-/14d-Werte, Min/Max, persönlicher Chlorfaktor und pH-Trend.
+Die Karte zeigt zusätzlich eine einklappbare Sektion **Stabilität**. Die Kopfzeile fasst Chlor- und pH-Status inklusive Lernfortschritt oder Vorhersagequalität zusammen; aufgeklappt erscheinen 24h-/7d-/14d-Werte, Min/Max, persönlicher Chlorfaktor, persönlicher Dosierfaktor, effektiver Wirkstoffanteil, Chlor-Prognose, Konfidenz und pH-Trend.
+
+Direkt im Chlor-Empfehlungsblock blendet die Karte außerdem die aktuelle Chlor-Prognose mit Konfidenz ein, sobald genügend Lernhistorie vorhanden ist.
 
 Im visuellen Karten-Editor bleiben nur die LayZSpa-Optionen editierbar. Wetter-Entität und UV-Sensor werden in der Integration konfiguriert; Empfehlungssensor und PoolLab-Abruf-Button werden von der Karte fest bzw. automatisch verwendet.
 
@@ -180,7 +187,13 @@ Die Integration stellt unter anderem bereit:
 - `sensor.pool_chlorverbrauch_7d`
 - `sensor.pool_chlorverbrauch_14d`
 - `sensor.pool_persoenlicher_chlorfaktor`
+- `sensor.pool_persoenlicher_chlor_dosierfaktor`
 - `sensor.pool_chlor_vorhersagequalitaet`
+- `sensor.pool_chlor_dosierqualitaet`
+- `sensor.pool_chlor_prognose_tagesverlust`
+- `sensor.pool_chlor_bis_minimum`
+- `sensor.pool_chlor_bis_0_6`
+- `sensor.pool_chlor_prognose`
 - `sensor.pool_chlor_stabilitaet`
 - `sensor.pool_ph_drift_24h`
 - `sensor.pool_ph_drift_7d`

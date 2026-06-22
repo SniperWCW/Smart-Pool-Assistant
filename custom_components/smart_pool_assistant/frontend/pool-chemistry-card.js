@@ -423,20 +423,50 @@ class PoolChemistryCard extends HTMLElement {
     return `${kind}: ${status} ${stars}`;
   }
 
+  _formatForecastDuration(hoursValue) {
+    if (!Number.isFinite(hoursValue) || hoursValue < 0) return "Nicht genÃ¼gend Daten";
+    if (hoursValue <= 0.2) return "jetzt";
+    const totalMinutes = Math.max(1, Math.round(hoursValue * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) return `${minutes} min`;
+    if (minutes <= 0) return `${hours} h`;
+    return `${hours} h ${minutes} min`;
+  }
+
   _renderStabilitySection() {
     const container = this.querySelector('#stability-section');
     if (!container) return;
 
     const attr = this._lastAttr || {};
     const chlorAttr = attr.chlor_stability_attributes || {};
+    const doseAttr = attr.chlor_dose_factor_attributes || {};
+    const forecastAttr = attr.chlor_forecast_attributes || {};
     const phAttr = attr.ph_stability_attributes || {};
     const chlorSamples = this._getLearningSampleCount(chlorAttr.samples);
+    const doseSamples = this._getLearningSampleCount(doseAttr.samples);
     const phSamples = this._getLearningSampleCount(phAttr.samples);
     const chlorQuality = chlorAttr.prediction_quality ?? attr.chlor_prediction_quality;
+    const doseQuality = attr.chlor_dose_prediction_quality;
     const phQuality = phAttr.prediction_quality ?? attr.ph_prediction_quality;
     const chlorStatus = attr.chlor_stability || "learning";
     const phStatus = attr.ph_stability || "learning";
     const phTrend = phAttr.trend || attr.ph_trend;
+    const forecastMessage = attr.chlor_forecast_message || "Keine Prognose verfÃ¼gbar";
+    const forecastConfidenceLabels = {
+      high: "hoch",
+      medium: "mittel",
+      low: "niedrig",
+      learning: "Lernphase",
+      unknown: "unbekannt",
+    };
+    const forecastBasisLabels = {
+      similar_intervals: "Ã¤hnliche Intervalle",
+      "14d_average": "14-Tage-Mittel",
+      learning: "Lernphase",
+      no_measurement: "keine Messung",
+      insufficient: "zu wenig Daten",
+    };
 
     const chlorData = { samples: chlorSamples, status: chlorStatus, quality: chlorQuality };
     const phData = { samples: phSamples, status: phStatus, quality: phQuality };
@@ -472,6 +502,14 @@ class PoolChemistryCard extends HTMLElement {
               ${renderMetric("7 Tage", this._formatLearningNumber(attr.chlor_consumption_7d, " mg/l/d", 2))}
               ${renderMetric("Min / Max", `${this._formatLearningNumber(chlorAttr.min_daily_loss, " mg/l/d", 2)} / ${this._formatLearningNumber(chlorAttr.max_daily_loss, " mg/l/d", 2)}`)}
               ${renderMetric("Persönlicher Faktor", this._formatLearningNumber(chlorAttr.personal_chlor_factor ?? attr.personal_chlor_factor, "", 2))}
+              ${renderMetric("Dosierfaktor", this._formatLearningNumber(attr.personal_chlor_dose_factor, "", 2))}
+              ${renderMetric("Effektiver Wirkstoff", this._formatLearningNumber(attr.effective_chlor_content, "", 3))}
+              ${renderMetric("Dosierqualität", `${this._formatLearningStars(doseQuality)} · ${doseSamples} Samples`)}
+              ${renderMetric("Prognose", forecastMessage)}
+              ${renderMetric("Bis Minimum", this._formatForecastDuration(Number(attr.chlor_hours_to_min)))}
+              ${renderMetric("Bis 0,6 mg/l", this._formatForecastDuration(Number(attr.chlor_hours_to_critical_low)))}
+              ${renderMetric("Konfidenz", forecastConfidenceLabels[attr.chlor_forecast_confidence] || "unbekannt")}
+              ${renderMetric("Basis", forecastBasisLabels[attr.chlor_forecast_basis] || forecastAttr.basis || "unbekannt")}
             </div>
             <div class="stability-card">
               <div class="stability-card-head">
@@ -892,6 +930,7 @@ class PoolChemistryCard extends HTMLElement {
                 <div class="rec-content">
                   <div id="chlor-rec"></div>
                   <div id="chlor-hist" class="hist-text"></div>
+                  <div id="chlor-forecast" class="forecast-text"></div>
                   <details class="chlor-breakdown-details">
                     <summary>Berechnungsdetails</summary>
                     <div id="chlor-breakdown-info"></div>
@@ -1051,6 +1090,15 @@ class PoolChemistryCard extends HTMLElement {
             .rec-content { flex: 1; }
             .rec-row > ha-icon { color: var(--primary-color); --mdc-icon-size: 28px; margin-top: 2px; }
             .hist-text { font-size: 0.85em; opacity: 0.7; font-style: italic; margin-top: 2px; min-height: 1.2em; }
+            .forecast-text {
+              margin-top: 6px;
+              padding: 8px 10px;
+              border-radius: 8px;
+              background: rgba(33, 150, 243, 0.10);
+              color: var(--primary-text-color);
+              font-size: 0.9em;
+              line-height: 1.35;
+            }
             .log-input { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
             .log-input input {
               flex: 1 1 80px;
@@ -1600,6 +1648,25 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
+    const chlorForecastNode = this.querySelector('#chlor-forecast');
+    if (chlorForecastNode) {
+      const forecastMessage = attr.chlor_forecast_message;
+      const forecastConfidence = attr.chlor_forecast_confidence;
+      if (forecastMessage) {
+        const confidenceLabel = {
+          high: 'hoch',
+          medium: 'mittel',
+          low: 'niedrig',
+          learning: 'Lernphase',
+          unknown: 'unbekannt',
+        }[forecastConfidence] || 'unbekannt';
+        chlorForecastNode.style.display = 'block';
+        chlorForecastNode.textContent = `${forecastMessage} Konfidenz: ${confidenceLabel}.`;
+      } else {
+        chlorForecastNode.style.display = 'none';
+        chlorForecastNode.textContent = '';
+      }
+    }
 
     let phText = isFromStorage ? "<i>Warte auf neue Messung...</i>" : "Warte auf Messwerte...";
     if (attr.ph_ist !== null && attr.ph_ist !== undefined && !isFromStorage) {
@@ -2501,7 +2568,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.1.11 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.2.0 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

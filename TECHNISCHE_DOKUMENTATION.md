@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-22  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-22 auf Basis von `manifest.json` Version `2.1.11`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung und optimierter Lovelace-Renderlogik
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-22 auf Basis von `manifest.json` Version `2.2.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung und optimierter Lovelace-Renderlogik
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.1.11",
+  "version": "2.2.0",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -185,6 +185,7 @@ CONF_UPDATE_INTERVAL = "update_interval"
 CONF_CHLOR_SENSOR = "chlor_sensor"
 CONF_PH_SENSOR = "ph_sensor"
 CONF_TEMP_SENSOR = "temp_sensor"
+CONF_PUMP_ENTITY = "pump_entity"
 CONF_POOL_VOLUME = "pool_volume"
 CONF_CHLOR_TARGET = "chlor_target"
 CONF_PH_TARGET = "ph_target"
@@ -299,6 +300,7 @@ Das aktuelle Formular deckt folgende Bereiche ab:
 - `chlor_sensor`
 - `ph_sensor`
 - `temp_sensor`
+- `pump_entity`
 
 #### Aktualisierung
 
@@ -778,7 +780,7 @@ Für die Karte werden detaillierte Teilwerte geliefert:
 
 ### Chlor-Lernanalyse
 
-Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen `maintenance_history`. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der tägliche Chlorverlust bestimmt wird.
+Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen `maintenance_history`. Neben Zeitstempel und Chlorwert werden dabei auch Kontextdaten wie Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV sowie optional Pumpenlaufzeit mitgeführt. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der tägliche Chlorverlust bestimmt wird.
 
 Ausgegeben werden:
 
@@ -786,11 +788,19 @@ Ausgegeben werden:
 - `chlor_consumption_7d`
 - `chlor_consumption_14d`
 - `personal_chlor_factor`
+- `personal_chlor_dose_factor`
+- `chlor_dose_prediction_quality`
+- `effective_chlor_content`
+- `chlor_forecast_daily_loss`
+- `chlor_hours_to_min`
+- `chlor_hours_to_critical_low`
+- `chlor_forecast_message`
+- `chlor_forecast_attributes`
 - `chlor_prediction_quality`
 - `chlor_stability`
 - `chlor_stability_attributes`
 
-Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase.
+Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Für den Dosierfaktor werden zusätzlich nur saubere Zugabe-/Nachmess-Paare innerhalb eines sinnvollen Zeitfensters verwendet. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase; der Dosierfaktor greift erst ab mindestens zwei verwertbaren Paaren aktiv in die Berechnung ein.
 
 ### pH-Lernanalyse
 
@@ -1085,6 +1095,10 @@ Wichtige aktuelle Attribute:
 - `filter_clean_status`
 - `filter_replace_status`
 - `chlor_breakdown_*`
+- `personal_chlor_dose_factor`
+- `chlor_dose_factor_attributes`
+- `effective_chlor_content`
+- `chlor_forecast_*`
 
 ---
 
@@ -1147,6 +1161,7 @@ Die Karte:
 - zeigt BLE-Verbindungsstatus
 - integriert den PoolLab-Abrufbutton
 - zeigt einen Wartezustand nach bestätigten Chemiezugaben
+- zeigt die aktuelle Chlor-Prognose direkt im Empfehlungsblock
 - protokolliert Chemie- und Wartungsaktionen
 - zeigt Filterwartung
 - zeigt Berechnungsdetails

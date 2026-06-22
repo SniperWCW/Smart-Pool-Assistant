@@ -60,6 +60,7 @@ def calculate_pool_chemistry(
     pool_covered: bool,
     usage_mode: str,
     weather_today: dict | None,
+    chlor_dose_factor: float | None = None,
 ) -> dict:
     """Calculate dosage recommendations and detailed chemistry breakdowns."""
     volumen = conf.get(CONF_POOL_VOLUME, 1.0)
@@ -69,6 +70,8 @@ def calculate_pool_chemistry(
 
     if wirkstoff <= 0:
         wirkstoff = 0.56
+    if chlor_dose_factor and chlor_dose_factor > 0:
+        wirkstoff *= chlor_dose_factor
 
     volume_m3 = max(float(volumen), 0.0)
 
@@ -192,6 +195,7 @@ def calculate_pool_chemistry(
         "chlor_breakdown_min_dose_applied": round(min_dose, 2) if (s_g > 0 and raw_chlor < min_dose) else 0.0,
         "weather_note": weather_note,
         "volume_m3": volume_m3,
+        "effective_chlor_content": round(wirkstoff, 3),
     }
 
 

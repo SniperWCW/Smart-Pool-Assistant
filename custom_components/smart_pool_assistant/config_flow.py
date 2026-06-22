@@ -16,6 +16,7 @@ from homeassistant.components.bluetooth import (
 
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
+    CONF_PUMP_ENTITY,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_PH_TARGET, CONF_PH_MIN, CONF_PH_MAX,
     CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
@@ -161,6 +162,7 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Optional(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Optional(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
         vol.Optional(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
+        vol.Optional(CONF_PUMP_ENTITY, default=defaults.get(CONF_PUMP_ENTITY, vol.UNDEFINED)): selector.EntitySelector({"domain": ["switch", "binary_sensor"]}),
         vol.Optional(CONF_POOL_CONNECTION_SENSOR, default=defaults.get(CONF_POOL_CONNECTION_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "binary_sensor"}),
         vol.Optional(CONF_WEATHER_ENTITY, default=defaults.get(CONF_WEATHER_ENTITY, vol.UNDEFINED)): selector.EntitySelector({"domain": "weather"}),
         vol.Optional(CONF_UV_SENSOR, default=defaults.get(CONF_UV_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),

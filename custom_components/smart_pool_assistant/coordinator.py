@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_state_change_event
@@ -13,6 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
+    CONF_PUMP_ENTITY,
     CONF_FOLLOW_UP_TIME,
     CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
     CONF_FILTER_CLEAN_YELLOW_THRESHOLD, CONF_FILTER_CLEAN_RED_THRESHOLD,
@@ -128,6 +129,44 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     def config(self):
         """Return combined config from data and options."""
         return {**self.entry.data, **self.entry.options}
+
+    def _pump_tracking_state(self) -> tuple[str | None, bool | None]:
+        """Return configured pump entity and current active state."""
+        entity_id = self.config.get(CONF_PUMP_ENTITY)
+        if not entity_id:
+            return None, None
+        state = self.hass.states.get(entity_id)
+        if state is None:
+            return entity_id, None
+        return entity_id, state.state == "on"
+
+    def _sync_pump_runtime_tracking(self, now: object | None = None) -> float | None:
+        """Persist a cumulative pump runtime counter for learning snapshots."""
+        entity_id, pump_active = self._pump_tracking_state()
+        if not entity_id:
+            return None
+
+        now_dt = now if isinstance(now, datetime) else dt_util.now()
+        tracking = self.maintenance_history.get("pump_tracking")
+        tracking = dict(tracking) if isinstance(tracking, dict) else {}
+
+        total_hours = float(tracking.get("total_hours") or 0.0)
+        last_sync_dt = self._parse_ts_aware(tracking.get("last_sync_raw"))
+        last_state = tracking.get("last_state")
+        if last_sync_dt and last_state == "on":
+            elapsed_hours = (now_dt - last_sync_dt).total_seconds() / 3600.0
+            if 0 <= elapsed_hours <= 24 * 14:
+                total_hours += elapsed_hours
+
+        tracking["total_hours"] = round(total_hours, 3)
+        tracking["last_sync_raw"] = now_dt.isoformat()
+        tracking["last_state"] = "on" if pump_active else "off"
+        self.maintenance_history["pump_tracking"] = tracking
+        return tracking["total_hours"]
+
+    def _current_pump_runtime_hours(self, now: object | None = None) -> float | None:
+        """Return the up-to-date cumulative pump runtime hours."""
+        return self._sync_pump_runtime_tracking(now)
 
     def _get_next_poollab_fetch_allowed_at(self) -> str | None:
         """Return the next allowed fetch timestamp if the cooldown is still active."""
@@ -251,6 +290,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             )
             self._schedule_pool_connection_check(connection_entity)
 
+        if pump_entity := conf.get(CONF_PUMP_ENTITY):
+            unsubscribers.append(
+                async_track_state_change_event(
+                    self.hass, [pump_entity], self._handle_pump_change
+                )
+            )
+            self._sync_pump_runtime_tracking()
+
         def unsubscribe_all():
             if self._pool_connection_offline_cancel:
                 self._pool_connection_offline_cancel()
@@ -267,6 +314,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         state = self.hass.states.get(entity_id) if entity_id else None
         if state is not None and state.state == "on":
             await self._store.async_save(self.maintenance_history)
+
+    async def _handle_pump_change(self, _event):
+        """Persist pump runtime deltas on every state change."""
+        self._sync_pump_runtime_tracking()
+        await self._store.async_save(self.maintenance_history)
 
     def _schedule_pool_connection_check(self, entity_id: str | None) -> None:
         """Schedule an offline check for the configured pool connection entity."""
@@ -330,6 +382,24 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.usage_mode,
         )
 
+    async def _build_learning_context(self, *, temperature: float | None = None, now: object | None = None) -> dict:
+        """Collect the current context for chlorine learning snapshots."""
+        weather_data = await async_get_weather_data(self.hass, self.config, limit=2)
+        weather_today = weather_data.get("today") if isinstance(weather_data, dict) else None
+        _, pump_active = self._pump_tracking_state()
+        pump_runtime_hours_total = self._current_pump_runtime_hours(now)
+        return {
+            "temperature": temperature,
+            "pool_covered": self.pool_covered,
+            "usage_mode": self.usage_mode,
+            "uv_index": weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
+            "weather_condition": weather_today.get("condition") if isinstance(weather_today, dict) else None,
+            "precipitation_probability": weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
+            "precipitation_amount": weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
+            "pump_runtime_hours_total": pump_runtime_hours_total,
+            "pump_active": pump_active,
+        }
+
     async def _handle_state_change(self, event):
         """Handle state changes of source entities."""
         new_state = event.data.get("new_state")
@@ -379,7 +449,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.usage_mode,
         )
         if m_type == "chlor":
-            record_chlor_dose(self.maintenance_history, now.isoformat(), amount)
+            temp_value = self.data.get("temp_ist") if isinstance(self.data, dict) else None
+            learning_context = await self._build_learning_context(temperature=temp_value, now=now)
+            record_chlor_dose(
+                self.maintenance_history,
+                now.isoformat(),
+                amount,
+                **learning_context,
+            )
         elif m_type in ("ph_plus", "ph_minus"):
             record_ph_correction(self.maintenance_history, now.isoformat(), m_type, amount)
 
@@ -807,11 +884,26 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         dt_last_chlor_action = self._get_action_dt("chlor")
         dt_last_ph_plus_action = self._get_action_dt("ph_plus")
         dt_last_ph_minus_action = self._get_action_dt("ph_minus")
+        pump_runtime_hours_total = self._current_pump_runtime_hours()
+        _, pump_active = self._pump_tracking_state()
         weather_data = await async_get_weather_data(self.hass, conf, limit=2)
         weather_today = weather_data.get("today") if isinstance(weather_data, dict) else None
         weather_forecast_days = weather_data.get("forecast_days") if isinstance(weather_data, dict) else []
         if c_ist is not None and last_meas_raw:
-            record_chlor_measurement(self.maintenance_history, last_meas_raw, c_ist)
+            record_chlor_measurement(
+                self.maintenance_history,
+                last_meas_raw,
+                c_ist,
+                temperature=temp_ist,
+                pool_covered=self.pool_covered,
+                usage_mode=self.usage_mode,
+                uv_index=weather_today.get("uv_index") if isinstance(weather_today, dict) else None,
+                weather_condition=weather_today.get("condition") if isinstance(weather_today, dict) else None,
+                precipitation_probability=weather_today.get("precipitation_probability") if isinstance(weather_today, dict) else None,
+                precipitation_amount=weather_today.get("precipitation_amount") if isinstance(weather_today, dict) else None,
+                pump_runtime_hours_total=pump_runtime_hours_total,
+                pump_active=pump_active,
+            )
         if ph_ist is not None and last_meas_raw:
             record_ph_measurement(self.maintenance_history, last_meas_raw, ph_ist)
         chlorine_learning = calculate_chlorine_learning(
@@ -819,7 +911,17 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             conf,
             self._parse_ts_aware,
             dt_util.now(),
+            current_chlorine=c_ist,
+            current_temperature=temp_ist,
+            pool_covered=self.pool_covered,
+            usage_mode=self.usage_mode,
+            weather_today=weather_today,
+            pump_active=pump_active,
         )
+        learned_dose_factor = None
+        dose_factor_attrs = chlorine_learning.get("chlor_dose_factor_attributes")
+        if isinstance(dose_factor_attrs, dict) and int(dose_factor_attrs.get("samples") or 0) >= 2:
+            learned_dose_factor = chlorine_learning.get("personal_chlor_dose_factor")
         ph_learning = calculate_ph_learning(
             self.maintenance_history,
             conf,
@@ -899,6 +1001,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.pool_covered,
             self.usage_mode,
             weather_today,
+            learned_dose_factor,
         )
         s_g = chemistry["chlor_dose"]
         chlor_pre = chemistry["chlor_pre"]
@@ -920,6 +1023,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         chlor_breakdown_bather_adj = chemistry["chlor_breakdown_bather_adj"]
         chlor_breakdown_sum_raw = chemistry["chlor_breakdown_sum_raw"]
         chlor_breakdown_min_dose_applied = chemistry["chlor_breakdown_min_dose_applied"]
+        effective_chlor_content = chemistry["effective_chlor_content"]
 
         retest_status = calculate_retest_status(
             s_g,
@@ -1017,6 +1121,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
             "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
             "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
+            "effective_chlor_content": effective_chlor_content,
             "poollab_fetch_result": poollab_fetch_result,
             "poollab_fetch_error": poollab_fetch_error,
             "last_poollab_fetch_requested_at": self.maintenance_history.get("last_poollab_fetch_requested_at"),
