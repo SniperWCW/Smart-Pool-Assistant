@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.9] - 2026-06-22
+
+- **Bugfix PoolLab-BLE-Timeouts**: Der PoolLab-BLE-Client trennt nach Timeout oder Abbruch jetzt explizit Notifications und Verbindung.
+- **Stabilerer ESP32-Bluetooth-Proxy-Betrieb**: Der BLE-Client nutzt den von `establish_connection(...)` gelieferten Client direkt und vermeidet eine doppelte Connect-/Disconnect-Verwaltung.
+- **Separates Connect-Timeout**: Der Verbindungsaufbau bekommt ein eigenes Timeout, damit der Befehlsfluss nicht mitten im Home-Assistant-Bluetooth-Connect-State abgebrochen wird.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.1.9.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.8] - 2026-06-22
 
 - **Bugfix Home-Assistant-Event-Loop**: Die Manifest-Version fuer den Frontend-Cachebuster wird jetzt ueber `hass.async_add_executor_job(...)` gelesen.
