@@ -1,6 +1,8 @@
 """Button platform for explicit PoolLab fetches."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -9,6 +11,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_API_KEY, CONF_BLE_ADDRESS, DOMAIN
 from .coordinator import SmartPoolCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -54,4 +58,8 @@ class PoolLabFetchButton(CoordinatorEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Fetch PoolLab data exactly once."""
+        _LOGGER.debug(
+            "PoolLab fetch button pressed: entry_id=%s",
+            self.coordinator.entry.entry_id,
+        )
         await self.coordinator.async_fetch_poollab_measurements()

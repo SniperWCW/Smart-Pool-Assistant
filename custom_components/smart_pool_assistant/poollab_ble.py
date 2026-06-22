@@ -299,4 +299,10 @@ class PoolLabBLEClient:
             if existing is None or m.timestamp > existing.timestamp:
                 latest[m.measure_type] = m
 
+        _LOGGER.debug(
+            "PoolLab BLE read complete: battery=%s parsed_measurements=%s latest_types=%s",
+            battery,
+            len(all_measurements),
+            sorted(latest.keys()),
+        )
         return PoolLabData(battery=battery, measurements=latest)

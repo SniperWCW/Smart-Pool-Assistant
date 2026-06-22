@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.11] - 2026-06-22
+
+- **Eigenes Diagnose-Logfile**: Die Integration schreibt jetzt ein rotierendes DEBUG-Log nach `smart_pool_assistant_logs/smart_pool_assistant.log` im Home-Assistant-Konfigurationsverzeichnis.
+- **PoolLab-Abrufe detaillierter nachvollziehbar**: Buttondruck, BLE-Geräteauflösung, Verbindungsdaten, Rohantworten, ausgewählte Messwerte, Cloud-Auswahl, Quellenpriorisierung und Wartungsaktionen werden im Diagnose-Log protokolliert.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.1.11.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.10] - 2026-06-22
 
 - **Bugfix PoolLab-BLE-Verbindungsaufbau**: Der zusätzliche 15-Sekunden-Timeout um `establish_connection(...)` wurde entfernt, damit `bleak-retry-connector` seine eigene Retry- und Safety-Timeout-Logik wieder vollständig nutzen kann.

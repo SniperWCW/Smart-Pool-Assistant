@@ -11,6 +11,7 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
+from .diagnostics_log import setup_file_logging
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 _LOGGER = logging.getLogger(__name__)
@@ -37,6 +38,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Pool Assistant from a config entry."""
+    log_path = await hass.async_add_executor_job(
+        setup_file_logging,
+        hass.config.path("smart_pool_assistant_logs"),
+    )
+    _LOGGER.info("Smart Pool Assistant diagnostic file logging active: %s", log_path)
+
     coordinator = SmartPoolCoordinator(hass, entry)
 
     # Update-Listener für Konfigurationsänderungen
@@ -98,5 +105,6 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        _LOGGER.debug("Unloading Smart Pool Assistant config entry: entry_id=%s", entry.entry_id)
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

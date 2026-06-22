@@ -40,12 +40,14 @@ async def async_fetch_poollab_cloud_measurements(session, api_key: str) -> PoolL
         timeout=10,
     ) as resp:
         if resp.status != 200:
+            _LOGGER.debug("PoolLab Cloud request failed with HTTP status %s", resp.status)
             return PoolLabCloudResult()
 
         result = await resp.json()
 
     cloud_data = result.get("data", {}).get("CloudAccount")
     if not cloud_data or not cloud_data.get("Accounts"):
+        _LOGGER.debug("PoolLab Cloud response did not contain accounts")
         return PoolLabCloudResult()
 
     measurements = list(cloud_data["Accounts"][0].get("Measurements", []))
@@ -77,6 +79,14 @@ async def async_fetch_poollab_cloud_measurements(session, api_key: str) -> PoolL
         if cloud_result.chlor is not None and cloud_result.ph is not None:
             break
 
+    _LOGGER.debug(
+        "PoolLab Cloud values selected: chlor=%s ph=%s temp=%s measurement_raw=%s last_measurements=%s",
+        cloud_result.chlor,
+        cloud_result.ph,
+        cloud_result.temperature,
+        cloud_result.measurement_raw,
+        cloud_result.last_measurements,
+    )
     return cloud_result
 
 
