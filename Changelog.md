@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.1.8] - 2026-06-22
+
+- **Bugfix Home-Assistant-Event-Loop**: Die Manifest-Version fuer den Frontend-Cachebuster wird jetzt ueber `hass.async_add_executor_job(...)` gelesen.
+- **Keine Blocking-Warnung beim Setup**: Der synchrone `open()`-Aufruf fuer `manifest.json` laeuft nicht mehr direkt im Event Loop.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.1.8.md` auf den aktuellen Stand gebracht.
+
 ## [2.1.7] - 2026-06-21
 
 - **Pool-Verbindungswarnung**: Im Config Flow und Options Flow kann jetzt ein Binary Sensor fuer die Pool-/LayZSpa-Verbindung hinterlegt werden.

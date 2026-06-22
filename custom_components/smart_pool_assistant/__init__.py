@@ -16,18 +16,24 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 _LOGGER = logging.getLogger(__name__)
 
 
-def _manifest_version(hass: HomeAssistant) -> str:
-    """Return the integration manifest version for frontend cache busting."""
-    manifest_path = hass.config.path("custom_components/smart_pool_assistant/manifest.json")
+def _read_manifest_version(manifest_path: str) -> str:
+    """Read the integration manifest version for frontend cache busting."""
     try:
         with open(manifest_path, encoding="utf-8") as manifest_file:
             return json.load(manifest_file).get("version", "1")
     except (OSError, ValueError):
         return "1"
 
+async def _async_manifest_version(hass: HomeAssistant) -> str:
+    """Return the integration manifest version without blocking the event loop."""
+    manifest_path = hass.config.path("custom_components/smart_pool_assistant/manifest.json")
+    return await hass.async_add_executor_job(_read_manifest_version, manifest_path)
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Smart Pool Assistant component."""
     return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Pool Assistant from a config entry."""
@@ -74,7 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Sagt dem Frontend, dass es die JS-Datei laden soll (Cache-Busting inkludiert)
             if "frontend" in hass.config.components:
                 from homeassistant.components.frontend import add_extra_js_url
-                add_extra_js_url(hass, f"{url_path}?v={_manifest_version(hass)}")
+                add_extra_js_url(hass, f"{url_path}?v={await _async_manifest_version(hass)}")
             
             hass.data[DOMAIN]["static_path_registered"] = True
         except RuntimeError:
@@ -87,6 +93,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(entry.entry_id)
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
