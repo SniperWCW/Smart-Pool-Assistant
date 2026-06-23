@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.2.1] - 2026-06-23
+
+- **Badetemperatur-Schwellen angepasst**: Die Temperaturgrenzen für die Badebewertung wurden nachgezogen.
+- **Filterwechsel setzt Reinigung mit zurück**: Ein protokollierter Filterwechsel startet jetzt auch das Reinigungsintervall sauber neu, damit Anzeige, Sensoren und Benachrichtigungen konsistent bleiben.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.2.1.md` auf den aktuellen Stand gebracht.
+
 ## [2.2.0] - 2026-06-22
 
 - **Persönlicher Chlor-Dosierfaktor**: Bestätigte Chlorzugaben und Nachmessungen werden jetzt als eigene Lernstrecke ausgewertet. Ab mindestens zwei verwertbaren Paaren fließt der persönliche Dosierfaktor direkt in die Chlorempfehlung ein.
