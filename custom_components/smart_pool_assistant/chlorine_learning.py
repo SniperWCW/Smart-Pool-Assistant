@@ -6,6 +6,7 @@ from statistics import mean
 from typing import Callable
 
 from .const import CONF_CHLOR_CONTENT, CONF_CHLOR_MIN, CONF_CHLOR_TARGET, CONF_POOL_VOLUME
+from .maintenance import CONTEXT_HISTORY_KEY
 
 
 MEASUREMENTS_KEY = "chlor_learning_measurements"
@@ -18,6 +19,9 @@ MAX_DOSE_EFFECT_HOURS = 48.0
 DEFAULT_DAILY_LOSS = 0.8
 DEFAULT_DOSE_FACTOR = 1.0
 CRITICAL_LOW_CHLOR = 0.6
+CONTEXT_OPEN_FACTOR = 0.35
+CONTEXT_USAGE_NORMAL_FACTOR = 0.25
+CONTEXT_USAGE_PARTY_FACTOR = 0.7
 
 
 def record_chlor_measurement(
@@ -136,23 +140,27 @@ def calculate_chlorine_learning(
 
     measurements = _load_measurements(history, parse_ts, now)
     doses = _load_doses(history, parse_ts, now)
-    intervals = _build_intervals(measurements, doses, volume, chlor_content)
+    context_events = _load_context_events(history, parse_ts, now)
+    intervals = _build_intervals(measurements, doses, volume, chlor_content, context_events)
 
     last_24h = _period_stats(intervals, now, timedelta(hours=24))
     last_7d = _period_stats(intervals, now, timedelta(days=7))
     last_14d = _period_stats(intervals, now, timedelta(days=14))
+    last_14d_context = _period_stats(intervals, now, timedelta(days=14), value_key="context_adjusted_daily_loss")
 
     avg_loss = last_14d["average_daily_loss"]
     factor = round(avg_loss / DEFAULT_DAILY_LOSS, 2) if avg_loss is not None else None
     prediction_quality = _prediction_quality(intervals)
+    context_prediction_quality = _prediction_quality(intervals, value_key="context_adjusted_daily_loss")
     quality_stars = _quality_stars(prediction_quality)
+    context_quality_stars = _quality_stars(context_prediction_quality)
     sample_count = last_14d["samples"]
 
     if sample_count < 3:
         stability = "learning"
-    elif prediction_quality >= 4:
+    elif context_prediction_quality >= 4:
         stability = "stable"
-    elif prediction_quality >= 3:
+    elif context_prediction_quality >= 3:
         stability = "variable"
     else:
         stability = "unstable"
@@ -189,11 +197,21 @@ def calculate_chlorine_learning(
             "samples": sample_count,
             "prediction_quality": prediction_quality,
             "prediction_quality_stars": quality_stars,
+            "context_prediction_quality": context_prediction_quality,
+            "context_prediction_quality_stars": context_quality_stars,
+            "context_average_daily_loss": last_14d_context["average_daily_loss"],
+            "context_min_daily_loss": last_14d_context["min_daily_loss"],
+            "context_max_daily_loss": last_14d_context["max_daily_loss"],
             "personal_chlor_factor": factor,
             "learning_phase": sample_count < 3,
             "baseline_daily_loss": DEFAULT_DAILY_LOSS,
             "personal_dose_factor": dose_factor_stats["personal_chlor_dose_factor"],
             "dose_factor_samples": dose_factor_stats["samples"],
+            "average_open_ratio": _average_interval_value(intervals, "open_ratio"),
+            "average_covered_ratio": _average_interval_value(intervals, "covered_ratio"),
+            "average_usage_none_ratio": _average_interval_value(intervals, "usage_none_ratio"),
+            "average_usage_normal_ratio": _average_interval_value(intervals, "usage_normal_ratio"),
+            "average_usage_party_ratio": _average_interval_value(intervals, "usage_party_ratio"),
         },
         **dose_factor_stats,
         **forecast,
@@ -378,11 +396,33 @@ def _load_doses(
     return result
 
 
+def _load_context_events(
+    history: dict,
+    parse_ts: Callable[[str | None], datetime | None],
+    now: datetime,
+) -> list[dict]:
+    cutoff = now - timedelta(days=21)
+    result = []
+    for item in history.get(CONTEXT_HISTORY_KEY, []):
+        if not isinstance(item, dict):
+            continue
+        dt = parse_ts(item.get("raw_ts"))
+        if dt and dt >= cutoff:
+            result.append({
+                "dt": dt,
+                "pool_covered": _bool_optional(item.get("pool_covered")),
+                "usage_mode": _clean_usage_mode(item.get("usage_mode")),
+            })
+    result.sort(key=lambda item: item["dt"])
+    return result
+
+
 def _build_intervals(
     measurements: list[dict],
     doses: list[dict],
     volume: float,
     chlor_content: float,
+    context_events: list[dict],
 ) -> list[dict]:
     intervals = []
     if volume <= 0:
@@ -405,13 +445,18 @@ def _build_intervals(
             continue
 
         pump_runtime_delta = _pump_runtime_delta(previous, current)
+        context_ratios = _context_ratios(previous, current, context_events)
+        context_adjusted_loss = _context_adjusted_daily_loss(
+            round(daily_loss, 3),
+            context_ratios,
+        )
         intervals.append({
             "end": current["dt"],
             "daily_loss": round(daily_loss, 3),
             "hours": round(hours, 2),
             "temperature": _average_numeric(previous.get("temperature"), current.get("temperature")),
-            "pool_covered": _prefer_value(previous.get("pool_covered"), current.get("pool_covered")),
-            "usage_mode": _prefer_value(previous.get("usage_mode"), current.get("usage_mode")),
+            "pool_covered": _dominant_covered_state(context_ratios),
+            "usage_mode": _dominant_usage_mode(context_ratios),
             "uv_index": _average_numeric(previous.get("uv_index"), current.get("uv_index")),
             "precipitation_probability": _max_numeric(
                 previous.get("precipitation_probability"),
@@ -423,6 +468,12 @@ def _build_intervals(
             ),
             "pump_runtime_hours": pump_runtime_delta,
             "pump_runtime_ratio": round(pump_runtime_delta / hours, 3) if pump_runtime_delta is not None else None,
+            "covered_ratio": context_ratios["covered_ratio"],
+            "open_ratio": context_ratios["open_ratio"],
+            "usage_none_ratio": context_ratios["usage_none_ratio"],
+            "usage_normal_ratio": context_ratios["usage_normal_ratio"],
+            "usage_party_ratio": context_ratios["usage_party_ratio"],
+            "context_adjusted_daily_loss": context_adjusted_loss,
         })
 
     return intervals
@@ -474,9 +525,19 @@ def _build_dose_effects(
     return effects
 
 
-def _period_stats(intervals: list[dict], now: datetime, period: timedelta) -> dict:
+def _period_stats(
+    intervals: list[dict],
+    now: datetime,
+    period: timedelta,
+    *,
+    value_key: str = "daily_loss",
+) -> dict:
     cutoff = now - period
-    values = [item["daily_loss"] for item in intervals if item["end"] >= cutoff]
+    values = [
+        item[value_key]
+        for item in intervals
+        if item["end"] >= cutoff and item.get(value_key) is not None
+    ]
     if not values:
         return {
             "average_daily_loss": None,
@@ -533,8 +594,12 @@ def _dose_factor_stats(effects: list[dict], chlor_content: float) -> dict:
     }
 
 
-def _prediction_quality(intervals: list[dict]) -> int:
-    recent = [item["daily_loss"] for item in intervals[-8:]]
+def _prediction_quality(intervals: list[dict], *, value_key: str = "daily_loss") -> int:
+    recent = [
+        item[value_key]
+        for item in intervals[-8:]
+        if item.get(value_key) is not None
+    ]
     return _prediction_quality_from_values(recent)
 
 
@@ -591,6 +656,117 @@ def _pump_runtime_delta(previous: dict, current: dict) -> float | None:
     if delta < 0:
         return None
     return round(delta, 3)
+
+
+def _context_ratios(previous: dict, current: dict, context_events: list[dict]) -> dict:
+    start_dt = previous["dt"]
+    end_dt = current["dt"]
+    total_seconds = max((end_dt - start_dt).total_seconds(), 1.0)
+    state = _context_state_at(
+        start_dt,
+        context_events,
+        default_covered=_prefer_value(previous.get("pool_covered"), current.get("pool_covered")),
+        default_usage=_prefer_value(previous.get("usage_mode"), current.get("usage_mode")) or "none",
+    )
+    covered_seconds = 0.0
+    usage_seconds = {"none": 0.0, "normal": 0.0, "party": 0.0}
+    cursor = start_dt
+
+    for event in context_events:
+        event_dt = event["dt"]
+        if event_dt <= start_dt or event_dt >= end_dt:
+            continue
+        segment_seconds = (event_dt - cursor).total_seconds()
+        if segment_seconds > 0:
+            covered_seconds += _covered_seconds(segment_seconds, state["pool_covered"])
+            _add_usage_seconds(usage_seconds, state["usage_mode"], segment_seconds)
+        state = {
+            "pool_covered": _prefer_value(event.get("pool_covered"), state["pool_covered"]),
+            "usage_mode": _prefer_value(event.get("usage_mode"), state["usage_mode"]),
+        }
+        cursor = event_dt
+
+    tail_seconds = (end_dt - cursor).total_seconds()
+    if tail_seconds > 0:
+        covered_seconds += _covered_seconds(tail_seconds, state["pool_covered"])
+        _add_usage_seconds(usage_seconds, state["usage_mode"], tail_seconds)
+
+    covered_ratio = round(covered_seconds / total_seconds, 3)
+    open_ratio = round(max(0.0, 1.0 - covered_ratio), 3)
+    return {
+        "covered_ratio": covered_ratio,
+        "open_ratio": open_ratio,
+        "usage_none_ratio": round(usage_seconds["none"] / total_seconds, 3),
+        "usage_normal_ratio": round(usage_seconds["normal"] / total_seconds, 3),
+        "usage_party_ratio": round(usage_seconds["party"] / total_seconds, 3),
+    }
+
+
+def _context_state_at(
+    dt: datetime,
+    context_events: list[dict],
+    *,
+    default_covered: bool | None,
+    default_usage: str | None,
+) -> dict:
+    state = {
+        "pool_covered": True if default_covered is None else default_covered,
+        "usage_mode": default_usage or "none",
+    }
+    for event in context_events:
+        if event["dt"] > dt:
+            break
+        state = {
+            "pool_covered": _prefer_value(event.get("pool_covered"), state["pool_covered"]),
+            "usage_mode": _prefer_value(event.get("usage_mode"), state["usage_mode"]),
+        }
+    return state
+
+
+def _covered_seconds(segment_seconds: float, pool_covered: bool | None) -> float:
+    if pool_covered is True:
+        return segment_seconds
+    return 0.0
+
+
+def _add_usage_seconds(target: dict[str, float], usage_mode: str | None, segment_seconds: float) -> None:
+    usage_key = usage_mode if usage_mode in target else "none"
+    target[usage_key] += segment_seconds
+
+
+def _dominant_covered_state(context_ratios: dict) -> bool | None:
+    covered_ratio = context_ratios.get("covered_ratio")
+    open_ratio = context_ratios.get("open_ratio")
+    if covered_ratio is None or open_ratio is None:
+        return None
+    return covered_ratio >= open_ratio
+
+
+def _dominant_usage_mode(context_ratios: dict) -> str | None:
+    usage_ratios = {
+        "none": context_ratios.get("usage_none_ratio"),
+        "normal": context_ratios.get("usage_normal_ratio"),
+        "party": context_ratios.get("usage_party_ratio"),
+    }
+    valid_ratios = {key: value for key, value in usage_ratios.items() if value is not None}
+    if not valid_ratios:
+        return None
+    return max(valid_ratios, key=valid_ratios.get)
+
+
+def _context_adjusted_daily_loss(daily_loss: float, context_ratios: dict) -> float:
+    context_multiplier = 1.0
+    context_multiplier += float(context_ratios.get("open_ratio") or 0.0) * CONTEXT_OPEN_FACTOR
+    context_multiplier += float(context_ratios.get("usage_normal_ratio") or 0.0) * CONTEXT_USAGE_NORMAL_FACTOR
+    context_multiplier += float(context_ratios.get("usage_party_ratio") or 0.0) * CONTEXT_USAGE_PARTY_FACTOR
+    return round(daily_loss / max(context_multiplier, 0.5), 3)
+
+
+def _average_interval_value(intervals: list[dict], key: str) -> float | None:
+    values = [float(item[key]) for item in intervals if item.get(key) is not None]
+    if not values:
+        return None
+    return round(mean(values), 3)
 
 
 def _latest_measurement_before(measurements: list[dict], dt: datetime) -> dict | None:

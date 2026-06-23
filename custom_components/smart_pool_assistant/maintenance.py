@@ -8,6 +8,8 @@ from homeassistant.util import dt as dt_util
 
 
 VISIBLE_ACTIVITY_TYPES = ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace")
+CONTEXT_HISTORY_KEY = "pool_context_history"
+MAX_CONTEXT_HISTORY_ITEMS = 240
 
 
 def activity_text(
@@ -85,6 +87,39 @@ def normalize_loaded_history(
             entry = dict(entry)
             entry["amount"] = None
             history[key] = entry
+
+    context_history = history.get(CONTEXT_HISTORY_KEY)
+    if isinstance(context_history, list):
+        normalized_context: list[dict] = []
+        changed = False
+        last_key: tuple[str | None, bool | None, str | None] | None = None
+        for entry in context_history:
+            if not isinstance(entry, dict):
+                changed = True
+                continue
+            raw_ts = entry.get("raw_ts")
+            if not isinstance(raw_ts, str) or not raw_ts:
+                changed = True
+                continue
+            normalized_entry = {
+                "raw_ts": raw_ts,
+                "pool_covered": _bool_optional(entry.get("pool_covered")),
+                "usage_mode": _clean_usage_mode(entry.get("usage_mode")),
+            }
+            entry_key = (
+                normalized_entry["raw_ts"],
+                normalized_entry["pool_covered"],
+                normalized_entry["usage_mode"],
+            )
+            if entry_key == last_key:
+                changed = True
+                continue
+            normalized_context.append(normalized_entry)
+            last_key = entry_key
+            if normalized_entry != entry:
+                changed = True
+        if changed:
+            history[CONTEXT_HISTORY_KEY] = normalized_context[-MAX_CONTEXT_HISTORY_ITEMS:]
 
     history.pop("bluetooth_connected", None)
 
@@ -197,6 +232,7 @@ def update_maintenance_history(
         history["filter_clean"] = dict(history_entry)
 
     if m_type in ("set_covered", "set_usage"):
+        _append_context_history(history, now, pool_covered, usage_mode)
         return pool_covered, usage_mode, None
 
     if m_type in VISIBLE_ACTIVITY_TYPES:
@@ -282,3 +318,41 @@ def _maintenance_label_and_unit(m_type: str | None) -> tuple[str, str]:
     if m_type == "filter_replace":
         return "Filter getauscht", ""
     return "", ""
+
+
+def _append_context_history(
+    history: dict,
+    now: datetime,
+    pool_covered: bool,
+    usage_mode: str,
+) -> None:
+    """Persist a compact timeline of context state changes for learning."""
+    events = history.get(CONTEXT_HISTORY_KEY)
+    events = list(events) if isinstance(events, list) else []
+    event = {
+        "raw_ts": now.isoformat(),
+        "pool_covered": pool_covered,
+        "usage_mode": usage_mode,
+    }
+    if events:
+        previous = events[-1]
+        if (
+            isinstance(previous, dict)
+            and previous.get("pool_covered") == pool_covered
+            and previous.get("usage_mode") == usage_mode
+        ):
+            return
+    events.append(event)
+    history[CONTEXT_HISTORY_KEY] = events[-MAX_CONTEXT_HISTORY_ITEMS:]
+
+
+def _bool_optional(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
+def _clean_usage_mode(value: object) -> str | None:
+    if isinstance(value, str) and value in {"none", "normal", "party"}:
+        return value
+    return None

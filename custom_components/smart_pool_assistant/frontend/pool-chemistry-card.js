@@ -446,7 +446,7 @@ class PoolChemistryCard extends HTMLElement {
     const chlorSamples = this._getLearningSampleCount(chlorAttr.samples);
     const doseSamples = this._getLearningSampleCount(doseAttr.samples);
     const phSamples = this._getLearningSampleCount(phAttr.samples);
-    const chlorQuality = chlorAttr.prediction_quality ?? attr.chlor_prediction_quality;
+    const chlorQuality = chlorAttr.context_prediction_quality ?? chlorAttr.prediction_quality ?? attr.chlor_prediction_quality;
     const doseQuality = attr.chlor_dose_prediction_quality;
     const phQuality = phAttr.prediction_quality ?? attr.ph_prediction_quality;
     const chlorStatus = attr.chlor_stability || "learning";

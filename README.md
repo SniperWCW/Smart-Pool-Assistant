@@ -9,8 +9,8 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und 
 - Präzise Chlor-Berechnung über volumenbezogene Zielbereiche mit Stoßchlor-Ziel, Temperatur-, Abdeckungs- und Nutzungszuschlag.
 - Transparente Dosierlogik mit Breakdown direkt in der Lovelace-Karte.
 - Konservative Dosierempfehlungen passend zu Messlöffeln mit `1`, `2,5`, `5`, `7,5` und `15 g/ml`.
-- Lernende Chloranalyse mit persönlichem Chlorfaktor, persönlichem Dosierfaktor, Verbrauch über 24h/7d/14d und Stabilitätsbewertung.
-- Neue Chlor-Prognose mit geschätzter Zeit bis zur Zieluntergrenze oder bis `0,6 mg/l`, inklusive Konfidenz und Kontextgewichtung.
+- Lernende Chloranalyse mit persönlichem Chlorfaktor, persönlichem Dosierfaktor, Verbrauch über 24h/7d/14d und kontextbereinigter Stabilitätsbewertung.
+- Neue Chlor-Prognose mit geschätzter Zeit bis zur Zieluntergrenze oder bis `0,6 mg/l`, inklusive Konfidenz, Kontextgewichtung und zeitanteiliger Bewertung von Abdeckung und Nutzung.
 - pH-Stabilitätsanalyse mit bereinigter Drift über 24h/7d/14d, Trend und Vorhersagequalität.
 - Optionale Wetterintegration über eine Home-Assistant-`weather`-Entität mit Vorhersage für heute und morgen, inklusive Backend-Forecast-Fallback für Provider wie Tomorrow.io.
 - Optionaler separater `UV`-Sensor für Provider, die den UV-Index nicht im Daily-Forecast liefern.
@@ -107,7 +107,7 @@ Die pH-Berechnung ermittelt anhand Zielbereich, Poolvolumen und Produktdosierung
 
 ### Lernende Chloranalyse
 
-Die Integration speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Dabei werden zusätzliche Kontextdaten wie Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV und optional Pumpenlaufzeit mitgespeichert. Daraus entstehen bereinigte Verbrauchsintervalle, bei denen Zugaben zwischen zwei Messungen rechnerisch berücksichtigt werden.
+Die Integration speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen Home-Assistant-Storage-Historie. Dabei werden zusätzliche Kontextdaten wie Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV und optional Pumpenlaufzeit mitgespeichert. Statuswechsel von Abdeckung und Nutzung laufen jetzt zusätzlich als eigener Verlauf mit, sodass ein Intervall zeitanteilig ausgewertet werden kann, z. B. `5 h offen / 19 h abgedeckt` oder `2 h normal genutzt`.
 
 Berechnet werden:
 
@@ -116,9 +116,11 @@ Berechnet werden:
 - persönlicher Chlor-Dosierfaktor aus bestätigten Zugabe-/Nachmess-Paaren
 - effektiver Wirkstoffanteil auf Basis der real beobachteten Dosierwirkung
 - Chlor-Prognose für den erwarteten Abfall unter die Zieluntergrenze bzw. unter `0,6 mg/l`
-- Chlor-Stabilität mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Vorhersagequalität
+- Chlor-Stabilität mit Durchschnitt, Minimum, Maximum, Stichprobenzahl, roher Vorhersagequalität und kontextbereinigter Stabilitätsqualität
 
 Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
+
+Für die Stabilität bleibt der angezeigte 24h/7d/14d-Verbrauch roh beobachtet. Die Stabilitätsbewertung selbst nutzt zusätzlich eine heuristisch kontextbereinigte Reihe, damit Intervalle mit viel offener Abdeckung oder intensiver Nutzung die Stabilitätsampel nicht mehr unnötig verschlechtern.
 
 ### pH-Stabilitätsanalyse
 

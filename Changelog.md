@@ -2,6 +2,8 @@
 
 ## [2.2.1] - 2026-06-23
 
+- **Zeitgewichteter Kontextverlauf**: `set_covered` und `set_usage` werden jetzt als eigener Verlauf gespeichert, damit Lernintervalle anteilig `offen/abgedeckt` und `none/normal/party` auswerten koennen.
+- **Chlor-Stabilitaet kontextbereinigt**: Die Stabilitaetsbewertung nutzt neben dem rohen Tagesverlust jetzt auch eine heuristisch normalisierte Reihe, damit hohe Nutzung oder offene Abdeckung die Stabilitaetsampel nicht unnoetig verzerren.
 - **Badetemperatur-Schwellen angepasst**: Die Temperaturgrenzen für die Badebewertung wurden nachgezogen.
 - **Filterwechsel setzt Reinigung mit zurück**: Ein protokollierter Filterwechsel startet jetzt auch das Reinigungsintervall sauber neu, damit Anzeige, Sensoren und Benachrichtigungen konsistent bleiben.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.2.1.md` auf den aktuellen Stand gebracht.

@@ -780,7 +780,7 @@ Für die Karte werden detaillierte Teilwerte geliefert:
 
 ### Chlor-Lernanalyse
 
-Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen `maintenance_history`. Neben Zeitstempel und Chlorwert werden dabei auch Kontextdaten wie Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV sowie optional Pumpenlaufzeit mitgeführt. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der tägliche Chlorverlust bestimmt wird.
+Die Datei `chlorine_learning.py` speichert neue Chlor-Messpunkte und bestätigte Chlorzugaben in der lokalen `maintenance_history`. Neben Zeitstempel und Chlorwert werden dabei auch Kontextdaten wie Temperatur, Abdeckung, Nutzungsmodus, Wetter/UV sowie optional Pumpenlaufzeit mitgeführt. Statuswechsel aus `set_covered` und `set_usage` werden zusätzlich als eigener Kontextverlauf gespeichert. Zwischen zwei Messpunkten wird die rechnerische Wirkung der dazwischenliegenden Chlorzugaben addiert, bevor der tägliche Chlorverlust bestimmt wird. Abdeckung und Nutzung werden innerhalb eines Intervalls zeitanteilig ausgewertet, statt nur als einzelnes End-Label.
 
 Ausgegeben werden:
 
@@ -800,7 +800,7 @@ Ausgegeben werden:
 - `chlor_stability`
 - `chlor_stability_attributes`
 
-Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Für den Dosierfaktor werden zusätzlich nur saubere Zugabe-/Nachmess-Paare innerhalb eines sinnvollen Zeitfensters verwendet. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase; der Dosierfaktor greift erst ab mindestens zwei verwertbaren Paaren aktiv in die Berechnung ein.
+Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Für den Dosierfaktor werden zusätzlich nur saubere Zugabe-/Nachmess-Paare innerhalb eines sinnvollen Zeitfensters verwendet. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase; der Dosierfaktor greift erst ab mindestens zwei verwertbaren Paaren aktiv in die Berechnung ein. Die Stabilitätsbewertung nutzt neben der rohen Verbrauchsreihe jetzt zusätzlich eine heuristisch kontextbereinigte Reihe, in der offene Abdeckung und Nutzung zeitanteilig normalisiert werden.
 
 ### pH-Lernanalyse
 
@@ -911,6 +911,8 @@ Diese Methode:
 5. sendet optional Benachrichtigungen
 6. startet bei Chemieaktionen einen Follow-up-Timer
 7. triggert einen Refresh
+
+Bei `set_covered` und `set_usage` wird zusätzlich ein Verlauf in `pool_context_history` geschrieben. Dieser Verlauf dient der Chlor-Lernanalyse, um Intervalle wie `5 Stunden offen / 19 Stunden geschlossen` oder gemischte Nutzung innerhalb von 24 Stunden korrekt zeitgewichtet zu bewerten.
 
 ### Follow-up
 
