@@ -189,7 +189,12 @@ def update_maintenance_history(
         action_text = f"{amount:g}{unit} {label}" if amount else label
 
     stored_amount = None if m_type in ("filter_clean", "filter_replace") else amount
-    history[m_type] = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+    history_entry = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+    history[m_type] = history_entry
+
+    # A filter replacement implicitly resets the cleaning interval as well.
+    if m_type == "filter_replace":
+        history["filter_clean"] = dict(history_entry)
 
     if m_type in ("set_covered", "set_usage"):
         return pool_covered, usage_mode, None
