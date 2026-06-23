@@ -1,8 +1,35 @@
 # Smart Pool Assistant
 
+<p align="center">
+  <img src="images/banner.png" alt="Smart Pool Assistant Banner" width="900">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/release-v2.2.1-blue" alt="Release">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/Home%20Assistant-Custom%20Integration-41BDF5" alt="Home Assistant Custom Integration">
+  <img src="https://img.shields.io/github/downloads/SniperWCW/Smart-Pool-Assistant/total?label=downloads&color=F2C94C" alt="Downloads">
+</p>
+
 Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
 **Aktueller Release-Stand: V2.2.1**
+
+## Demo
+
+<p>
+  <a href="demo/overview-status.jpg"><img src="demo/overview-status.jpg" alt="Status und Dosierempfehlung" width="220"></a>
+  <a href="demo/sections-collapsed.jpg"><img src="demo/sections-collapsed.jpg" alt="Uebersicht der eingeklappten Bereiche" width="220"></a>
+  <a href="demo/weather-expanded.jpg"><img src="demo/weather-expanded.jpg" alt="Erweiterte Wetteransicht" width="220"></a>
+  <a href="demo/stability-expanded.jpg"><img src="demo/stability-expanded.jpg" alt="Erweiterte Stabilitaetsansicht" width="220"></a>
+</p>
+
+<p>
+  <a href="demo/measurements-expanded.jpg"><img src="demo/measurements-expanded.jpg" alt="Erweiterte Messwertetabelle" width="220"></a>
+  <a href="demo/layzspa-expanded.jpg"><img src="demo/layzspa-expanded.jpg" alt="LayZSpa Bereich" width="220"></a>
+  <a href="demo/activities-expanded.jpg"><img src="demo/activities-expanded.jpg" alt="Letzte Aktivitaeten" width="220"></a>
+  <a href="demo/maintenance-status.jpg"><img src="demo/maintenance-status.jpg" alt="Filterwartung und Status" width="220"></a>
+</p>
 
 ## Hauptfunktionen
 
