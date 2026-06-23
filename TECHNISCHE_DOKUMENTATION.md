@@ -1232,7 +1232,7 @@ Die Karte berechnet aus den vorhandenen Empfehlungssensor-Attributen eine einfac
 🔴 Nicht empfohlen
 ```
 
-Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser, Regen-/Windhinweisen oder hoher UV-Belastung. Grün wird nur angezeigt, wenn keine roten oder gelben Gründe vorliegen.
+Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur ab 41 °C oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser über 36 °C, Regen-/Windhinweisen oder hoher UV-Belastung. Grün wird nur angezeigt, wenn keine roten oder gelben Gründe vorliegen.
 
 ### Nachmess-Zustand in der Karte
 

@@ -839,8 +839,8 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     if (Number.isFinite(temp)) {
-      if (temp >= 40) issues.push("Temperatur sehr hoch");
-      else if (temp > 32) warnings.push("warmes Wasser");
+      if (temp >= 41) issues.push("Temperatur sehr hoch");
+      else if (temp > 36) warnings.push("warmes Wasser");
     }
 
     if (["lightning", "lightning-rainy", "lightning_rainy", "exceptional"].includes(condition)) {

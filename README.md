@@ -163,7 +163,7 @@ layzspa:
 
 `heat_eta` ist optional. Die Karte lädt dafür im Frontend die Home-Assistant-Historie von Ist-Temperatur und Heizung, berechnet daraus die reale Heizrate während Heizphasen und zeigt die geschätzte Restdauer bis zur Zieltemperatur. Wenn noch nicht genug Verlauf vorhanden ist, wird `fallback_rate_c_per_hour` verwendet und als Fallback gekennzeichnet.
 
-Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich oder deutlicher Chlor-/pH-Abweichung. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
+Die Karte zeigt oben neben der Empfehlung eine Badeampel. Rot bedeutet, dass Baden aktuell nicht empfohlen wird, z. B. wegen fehlender aktueller Kernmessung, Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich, deutlicher Chlor-/pH-Abweichung oder sehr hoher Wassertemperatur ab 41 °C. Gelb bedeutet, dass Baden möglich ist, aber Werte oder Wetter nicht ideal sind, z. B. bei warmem Wasser über 36 °C. Grün bedeutet, dass keine Warn- oder Sperrgründe vorliegen.
 
 Die Karte zeigt zusätzlich eine einklappbare Sektion **Stabilität**. Die Kopfzeile fasst Chlor- und pH-Status inklusive Lernfortschritt oder Vorhersagequalität zusammen; aufgeklappt erscheinen 24h-/7d-/14d-Werte, Min/Max, persönlicher Chlorfaktor, persönlicher Dosierfaktor, effektiver Wirkstoffanteil, Chlor-Prognose, Konfidenz und pH-Trend.
 
