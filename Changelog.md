@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [2.2.3] - 2026-06-24
+
+- **Dosierfaktor-Lernlogik abgesichert**: Der persönliche Chlor-Dosierfaktor nutzt jetzt nur noch zeitnahe Messpaare. Vorher-Messung und Nachmessung muessen jeweils innerhalb von `12 h` um die Zugabe liegen, damit späte Nachmessungen den Faktor nicht unplausibel nach unten ziehen.
+- **Breakdown-Diagnose erweitert**: Die Chlor-Berechnungsdetails zeigen jetzt zusätzlich den gelernten Dosierfaktor, den effektiven Wirkstoff und das verwendete Volumen direkt im Empfehlungsblock.
+- **FAQ ergänzt**: Neue `FAQ.md` mit typischen Diagnosefällen, insbesondere zu zu hoher Chlorempfehlung bei kleinem Becken, Lernphase und spätem Nachmessen.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `FAQ.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.2.3.md` auf den aktuellen Stand gebracht.
+
 ## [2.2.2] - 2026-06-24
 
 - **Volumen-Diagnose in der Chlor-Breakdown-Ansicht**: Die Lovelace-Karte zeigt jetzt direkt das fuer die Dosierberechnung verwendete Poolvolumen in `m³` und Litern an.

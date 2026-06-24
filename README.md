@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v2.2.2-blue" alt="Release">
+  <img src="https://img.shields.io/badge/release-v2.2.3-blue" alt="Release">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/Home%20Assistant-Custom%20Integration-41BDF5" alt="Home Assistant Custom Integration">
   <img src="https://img.shields.io/github/downloads/SniperWCW/Smart-Pool-Assistant/total?label=downloads&color=F2C94C" alt="Downloads">
@@ -13,7 +13,7 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration für Pool- und Whirlpool-Pflege. Die Integration kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V2.2.2**
+**Aktueller Release-Stand: V2.2.3**
 
 ## Demo
 
@@ -147,6 +147,8 @@ Berechnet werden:
 
 Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
 
+Für den persönlichen Dosierfaktor werden nur zeitnahe Messpaare verwendet. Die Vorher-Messung und die Nachmessung muessen jeweils innerhalb von `12 h` um die Zugabe liegen. Späte Nachmessungen würden sonst vor allem den natürlichen Chlorverlust messen und den Dosierfaktor unplausibel nach unten ziehen.
+
 Für die Stabilität bleibt der angezeigte 24h/7d/14d-Verbrauch roh beobachtet. Die Stabilitätsbewertung selbst nutzt zusätzlich eine heuristisch kontextbereinigte Reihe, damit Intervalle mit viel offener Abdeckung oder intensiver Nutzung die Stabilitätsampel nicht mehr unnötig verschlechtern.
 
 ### pH-Stabilitätsanalyse
@@ -198,6 +200,8 @@ Die Karte zeigt zusätzlich eine einklappbare Sektion **Stabilität**. Die Kopfz
 
 Direkt im Chlor-Empfehlungsblock blendet die Karte außerdem die aktuelle Chlor-Prognose mit Konfidenz ein, sobald genügend Lernhistorie vorhanden ist.
 
+In den Berechnungsdetails zeigt die Karte zusätzlich das tatsächlich verwendete Volumen sowie den aktuell wirksamen Dosierfaktor und effektiven Wirkstoff. Damit lassen sich Fälle wie `20 g trotz 0,916 m³` direkt auf eine verzerrte Lernhistorie oder eine abweichende Laufzeitkonfiguration zurückführen.
+
 Im visuellen Karten-Editor bleiben nur die LayZSpa-Optionen editierbar. Wetter-Entität und UV-Sensor werden in der Integration konfiguriert; Empfehlungssensor und PoolLab-Abruf-Button werden von der Karte fest bzw. automatisch verwendet.
 
 ## Entitäten
@@ -240,3 +244,4 @@ Die Integration stellt unter anderem bereit:
 
 - Technische Doku: [TECHNISCHE_DOKUMENTATION.md](TECHNISCHE_DOKUMENTATION.md)
 - Changelog: [Changelog.md](Changelog.md)
+- FAQ / typische Diagnosefälle: [FAQ.md](FAQ.md)
