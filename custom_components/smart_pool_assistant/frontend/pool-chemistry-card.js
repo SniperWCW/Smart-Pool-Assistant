@@ -1923,6 +1923,9 @@ class PoolChemistryCard extends HTMLElement {
       const finalDose = Number(attr.chlor_dose || 0); // attr.chlor_dose ist die finale Menge
       const volumeM3 = Number(attr.volume_m3);
       const volumeLiters = Number(attr.volume_liters);
+      const learnedDoseFactor = Number(attr.personal_chlor_dose_factor);
+      const effectiveChlorContent = Number(attr.effective_chlor_content);
+      const doseFactorSamples = Number(attr.chlor_dose_factor_attributes?.samples);
 
       let breakdownHtml = `
         <div class="breakdown-item">Basis (Ziel-Ist): <span>${base.toFixed(2)}g</span></div>
@@ -1962,6 +1965,15 @@ class PoolChemistryCard extends HTMLElement {
           ? ` (${volumeLiters.toLocaleString("de-DE", { maximumFractionDigits: 0 })} l)`
           : "";
         breakdownHtml += `<div class="breakdown-item">Berechnetes Volumen: <span>${volumeText}${litersText}</span></div>`;
+      }
+      if (Number.isFinite(learnedDoseFactor) && learnedDoseFactor > 0) {
+        const factorText = learnedDoseFactor.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const sampleText = Number.isFinite(doseFactorSamples) && doseFactorSamples > 0 ? ` (${doseFactorSamples} Samples)` : "";
+        breakdownHtml += `<div class="breakdown-item">Gelernter Dosierfaktor: <span>${factorText}${sampleText}</span></div>`;
+      }
+      if (Number.isFinite(effectiveChlorContent) && effectiveChlorContent > 0) {
+        const contentText = effectiveChlorContent.toLocaleString("de-DE", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+        breakdownHtml += `<div class="breakdown-item">Effektiver Wirkstoff: <span>${contentText}</span></div>`;
       }
       chlorBreakdownInfo.innerHTML = breakdownHtml;
       chlorBreakdownDetails.style.display = 'block';
@@ -2577,7 +2589,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.2.2 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.2.3 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
