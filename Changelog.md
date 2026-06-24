@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [2.2.2] - 2026-06-24
+
+- **Volumen-Diagnose in der Chlor-Breakdown-Ansicht**: Die Lovelace-Karte zeigt jetzt direkt das fuer die Dosierberechnung verwendete Poolvolumen in `m³` und Litern an.
+- **Abweichungen schneller sichtbar**: Wenn eine Chlorempfehlung nicht zur erwarteten Beckengroesse passt, ist jetzt sofort erkennbar, mit welchem Volumen der laufende Coordinator wirklich gerechnet hat.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V2.2.2.md` auf den aktuellen Stand gebracht.
+
 ## [2.2.1] - 2026-06-23
 
 - **Zeitgewichteter Kontextverlauf**: `set_covered` und `set_usage` werden jetzt als eigener Verlauf gespeichert, damit Lernintervalle anteilig `offen/abgedeckt` und `none/normal/party` auswerten koennen.

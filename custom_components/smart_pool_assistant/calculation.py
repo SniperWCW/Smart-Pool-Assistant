@@ -195,6 +195,7 @@ def calculate_pool_chemistry(
         "chlor_breakdown_min_dose_applied": round(min_dose, 2) if (s_g > 0 and raw_chlor < min_dose) else 0.0,
         "weather_note": weather_note,
         "volume_m3": volume_m3,
+        "volume_liters": round(volume_m3 * 1000.0, 0),
         "effective_chlor_content": round(wirkstoff, 3),
     }
 

@@ -1921,6 +1921,8 @@ class PoolChemistryCard extends HTMLElement {
       const sumRaw = Number(attr.chlor_breakdown_sum_raw || 0);
       const minDoseApplied = Number(attr.chlor_breakdown_min_dose_applied || 0);
       const finalDose = Number(attr.chlor_dose || 0); // attr.chlor_dose ist die finale Menge
+      const volumeM3 = Number(attr.volume_m3);
+      const volumeLiters = Number(attr.volume_liters);
 
       let breakdownHtml = `
         <div class="breakdown-item">Basis (Ziel-Ist): <span>${base.toFixed(2)}g</span></div>
@@ -1954,6 +1956,13 @@ class PoolChemistryCard extends HTMLElement {
       breakdownHtml += `
         <div class="breakdown-item breakdown-final">Empfohlene Menge: <span>${finalDose.toFixed(2)}g</span></div>
       `;
+      if (Number.isFinite(volumeM3) && volumeM3 > 0) {
+        const volumeText = `${volumeM3.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 3 })} m³`;
+        const litersText = Number.isFinite(volumeLiters) && volumeLiters > 0
+          ? ` (${volumeLiters.toLocaleString("de-DE", { maximumFractionDigits: 0 })} l)`
+          : "";
+        breakdownHtml += `<div class="breakdown-item">Berechnetes Volumen: <span>${volumeText}${litersText}</span></div>`;
+      }
       chlorBreakdownInfo.innerHTML = breakdownHtml;
       chlorBreakdownDetails.style.display = 'block';
     } else {
@@ -2568,7 +2577,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 2.2.1 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 2.2.2 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

@@ -1023,6 +1023,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         chlor_breakdown_bather_adj = chemistry["chlor_breakdown_bather_adj"]
         chlor_breakdown_sum_raw = chemistry["chlor_breakdown_sum_raw"]
         chlor_breakdown_min_dose_applied = chemistry["chlor_breakdown_min_dose_applied"]
+        volume_m3 = chemistry["volume_m3"]
+        volume_liters = chemistry["volume_liters"]
         effective_chlor_content = chemistry["effective_chlor_content"]
 
         retest_status = calculate_retest_status(
@@ -1121,6 +1123,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
             "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
             "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
+            "volume_m3": volume_m3,
+            "volume_liters": volume_liters,
             "effective_chlor_content": effective_chlor_content,
             "poollab_fetch_result": poollab_fetch_result,
             "poollab_fetch_error": poollab_fetch_error,
