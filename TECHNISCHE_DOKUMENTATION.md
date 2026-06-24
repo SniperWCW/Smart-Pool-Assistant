@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-24  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-24 auf Basis von `manifest.json` Version `2.2.2`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel und sichtbarer Volumen-Diagnose im Chlor-Breakdown
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-24 auf Basis von `manifest.json` Version `2.2.3`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown und abgesicherter Dosierfaktor-Lernlogik gegen späte Nachmessungen
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -800,7 +800,7 @@ Ausgegeben werden:
 - `chlor_stability`
 - `chlor_stability_attributes`
 
-Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Für den Dosierfaktor werden zusätzlich nur saubere Zugabe-/Nachmess-Paare innerhalb eines sinnvollen Zeitfensters verwendet. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase; der Dosierfaktor greift erst ab mindestens zwei verwertbaren Paaren aktiv in die Berechnung ein. Die Stabilitätsbewertung nutzt neben der rohen Verbrauchsreihe jetzt zusätzlich eine heuristisch kontextbereinigte Reihe, in der offene Abdeckung und Nutzung zeitanteilig normalisiert werden.
+Intervalle unter 3 Stunden, über 7 Tagen, negative Verbrauchswerte und extreme Ausreißer über `5 mg/l/d` werden verworfen. Für den Dosierfaktor werden zusätzlich nur saubere Zugabe-/Nachmess-Paare innerhalb eines engen Zeitfensters verwendet: Die Vorher-Messung darf höchstens `12 h` vor der Zugabe liegen, die Nachmessung höchstens `12 h` nach der Zugabe. Späte Nachmessungen würden sonst überwiegend den natürlichen Chlorverlust statt der eigentlichen Zugabewirkung abbilden und den Faktor künstlich nach unten ziehen. Bis drei verwertbare Intervalle vorhanden sind, meldet `chlor_stability` die Lernphase; der Dosierfaktor greift erst ab mindestens zwei verwertbaren Paaren aktiv in die Berechnung ein. Die Stabilitätsbewertung nutzt neben der rohen Verbrauchsreihe jetzt zusätzlich eine heuristisch kontextbereinigte Reihe, in der offene Abdeckung und Nutzung zeitanteilig normalisiert werden.
 
 ### pH-Lernanalyse
 

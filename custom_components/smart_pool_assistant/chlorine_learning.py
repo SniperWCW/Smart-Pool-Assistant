@@ -15,7 +15,10 @@ MAX_STORED_ITEMS = 120
 MIN_INTERVAL_HOURS = 3.0
 MAX_INTERVAL_DAYS = 7.0
 MIN_DOSE_EFFECT_HOURS = 0.5
-MAX_DOSE_EFFECT_HOURS = 48.0
+# Dose-factor learning needs tight measurement windows. Late follow-up
+# measurements mostly reflect natural loss again and distort the factor.
+MAX_DOSE_EFFECT_HOURS = 12.0
+MAX_DOSE_BASELINE_GAP_HOURS = 12.0
 DEFAULT_DAILY_LOSS = 0.8
 DEFAULT_DOSE_FACTOR = 1.0
 CRITICAL_LOW_CHLOR = 0.6
@@ -500,22 +503,28 @@ def _build_dose_effects(
         if next_dose and next_dose["dt"] <= following["dt"]:
             continue
 
-        hours = (following["dt"] - previous["dt"]).total_seconds() / 3600.0
-        if hours < MIN_DOSE_EFFECT_HOURS or hours > MAX_DOSE_EFFECT_HOURS:
+        baseline_gap_hours = (dose["dt"] - previous["dt"]).total_seconds() / 3600.0
+        effect_hours = (following["dt"] - dose["dt"]).total_seconds() / 3600.0
+        total_hours = (following["dt"] - previous["dt"]).total_seconds() / 3600.0
+        if baseline_gap_hours < 0 or baseline_gap_hours > MAX_DOSE_BASELINE_GAP_HOURS:
+            continue
+        if effect_hours < MIN_DOSE_EFFECT_HOURS or effect_hours > MAX_DOSE_EFFECT_HOURS:
             continue
 
         theoretical_increase = dose["amount"] * chlor_content / volume
         if theoretical_increase <= 0:
             continue
 
-        corrected_increase = following["chlor"] - previous["chlor"] + baseline_daily_loss * (hours / 24.0)
+        corrected_increase = following["chlor"] - previous["chlor"] + baseline_daily_loss * (effect_hours / 24.0)
         dose_factor = corrected_increase / theoretical_increase
         if dose_factor <= 0.2 or dose_factor > 1.8:
             continue
 
         effects.append({
             "end": following["dt"],
-            "hours": round(hours, 2),
+            "hours": round(total_hours, 2),
+            "baseline_gap_hours": round(baseline_gap_hours, 2),
+            "effect_hours": round(effect_hours, 2),
             "dose_amount": round(dose["amount"], 2),
             "theoretical_increase": round(theoretical_increase, 3),
             "corrected_increase": round(corrected_increase, 3),
