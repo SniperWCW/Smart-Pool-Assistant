@@ -3,8 +3,8 @@
 **Projekt:** Smart Pool Assistant  
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
-**Dokumentationsstand:** 2026-06-24  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-24 auf Basis von `manifest.json` Version `2.2.3`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown und abgesicherter Dosierfaktor-Lernlogik gegen späte Nachmessungen
+**Dokumentationsstand:** 2026-06-25  
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-25 auf Basis von `manifest.json` Version `3.0.0`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen einklappbaren Frontend-Panels, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen späte Nachmessungen und FAQ für typische Diagnose- und Supportfälle
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "2.2.3",
+  "version": "3.0.0",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],

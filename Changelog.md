@@ -1,5 +1,13 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.0] - 2026-06-25
+
+- **GitHub- und lokaler Stand zusammengeführt**: Der Release basiert jetzt auf dem tatsächlich veröffentlichten GitHub-Stand und bündelt die manuell hochgeladenen `2.2.3`-Änderungen mit den lokalen Fixes in einem sauberen gemeinsamen Ausgangspunkt.
+- **Dosierfaktor-Lernlogik fachlich gehärtet**: Der persönliche Chlor-Dosierfaktor nutzt nur noch zeitnahe Messpaare. Vorher-Messung und Nachmessung müssen jeweils innerhalb von `12 h` um die Zugabe liegen, damit späte Nachmessungen den Faktor nicht künstlich nach unten ziehen.
+- **Diagnose deutlich schneller**: Die Chlor-Berechnungsdetails zeigen Volumen, gelernten Dosierfaktor und effektiven Wirkstoff direkt im Breakdown, damit Fälle wie `20 g trotz 0,916 m³` ohne Rätselraten nachvollziehbar werden.
+- **FAQ für typische Supportfälle**: Neue `FAQ.md` mit den häufigsten Diagnosefällen rund um Volumen, Lernphase, Dosierfaktor und späte Nachmessungen.
+- **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `FAQ.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V3.0.0.md` auf den aktuellen Stand gebracht.
+
 ## [2.2.3] - 2026-06-24
 
 - **Dosierfaktor-Lernlogik abgesichert**: Der persönliche Chlor-Dosierfaktor nutzt jetzt nur noch zeitnahe Messpaare. Vorher-Messung und Nachmessung muessen jeweils innerhalb von `12 h` um die Zugabe liegen, damit späte Nachmessungen den Faktor nicht unplausibel nach unten ziehen.
