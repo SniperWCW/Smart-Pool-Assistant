@@ -1,5 +1,14 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.1] - 2026-06-25
+
+- **README deutlich besser lesbar aufgeteilt**: Die Hauptseite ist jetzt eine kompakte Landingpage mit Banner, Vorschau und klaren Links statt einer langen Vollreferenz.
+- **Dokumentation in Themen-Seiten getrennt**: Neue Unterseiten fuer Setup, Chemielogik, Karte/Demos und Entitaeten machen die Projektdoku deutlich schneller erfassbar.
+- **Konsistente Navigation zwischen den Doku-Seiten**: README, FAQ und alle neuen `docs/`-Seiten verlinken sich jetzt direkt gegenseitig.
+- **Persoenlicher Dosierfaktor defensiver aktiviert**: Der gelernte Chlor-Dosierfaktor fliesst jetzt erst ab mindestens `5` verwertbaren Samples aktiv in die Chlorempfehlung ein.
+- **Prognosetext fuer bereits zu niedrige Chlorwerte verbessert**: Statt `in 0 Stunden` meldet die Karte jetzt direkt, wenn Chlor bereits unter `0,6 mg/l` liegt.
+- **Versionierung aktualisiert**: `README.md`, `FAQ.md`, `TECHNISCHE_DOKUMENTATION.md`, `Changelog.md`, `manifest.json`, Frontend-Version und neue `release_notes/RELEASE_NOTES_V3.0.1.md` wurden auf `3.0.1` angehoben.
+
 ## [3.0.0] - 2026-06-25
 
 - **GitHub- und lokaler Stand zusammengeführt**: Der Release basiert jetzt auf dem tatsächlich veröffentlichten GitHub-Stand und bündelt die manuell hochgeladenen `2.2.3`-Änderungen mit den lokalen Fixes in einem sauberen gemeinsamen Ausgangspunkt.

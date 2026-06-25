@@ -27,6 +27,7 @@ from .calculation import (
     calculate_retest_status,
 )
 from .chlorine_learning import (
+    MIN_DOSE_FACTOR_SAMPLES,
     calculate_chlorine_learning,
     record_chlor_dose,
     record_chlor_measurement,
@@ -920,7 +921,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         )
         learned_dose_factor = None
         dose_factor_attrs = chlorine_learning.get("chlor_dose_factor_attributes")
-        if isinstance(dose_factor_attrs, dict) and int(dose_factor_attrs.get("samples") or 0) >= 2:
+        if (
+            isinstance(dose_factor_attrs, dict)
+            and int(dose_factor_attrs.get("samples") or 0) >= MIN_DOSE_FACTOR_SAMPLES
+        ):
             learned_dose_factor = chlorine_learning.get("personal_chlor_dose_factor")
         ph_learning = calculate_ph_learning(
             self.maintenance_history,

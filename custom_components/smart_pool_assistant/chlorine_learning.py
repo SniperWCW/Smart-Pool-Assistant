@@ -22,6 +22,7 @@ MAX_DOSE_BASELINE_GAP_HOURS = 12.0
 DEFAULT_DAILY_LOSS = 0.8
 DEFAULT_DOSE_FACTOR = 1.0
 CRITICAL_LOW_CHLOR = 0.6
+MIN_DOSE_FACTOR_SAMPLES = 5
 CONTEXT_OPEN_FACTOR = 0.35
 CONTEXT_USAGE_NORMAL_FACTOR = 0.25
 CONTEXT_USAGE_PARTY_FACTOR = 0.7
@@ -578,6 +579,7 @@ def _dose_factor_stats(effects: list[dict], chlor_content: float) -> dict:
                 "max_factor": None,
                 "quality_stars": "-----",
                 "learning_phase": True,
+                "minimum_samples": MIN_DOSE_FACTOR_SAMPLES,
             },
         }
 
@@ -596,7 +598,8 @@ def _dose_factor_stats(effects: list[dict], chlor_content: float) -> dict:
             "min_factor": min_factor,
             "max_factor": max_factor,
             "quality_stars": _quality_stars(quality),
-            "learning_phase": len(values) < 2,
+            "learning_phase": len(values) < MIN_DOSE_FACTOR_SAMPLES,
+            "minimum_samples": MIN_DOSE_FACTOR_SAMPLES,
             "last_confirmed_effect": effects[-1]["corrected_increase"],
             "last_confirmed_dose": effects[-1]["dose_amount"],
         },
@@ -873,14 +876,16 @@ def _build_forecast_message(
     hours_to_critical: float | None,
     confidence: str,
 ) -> str | None:
+    if current_chlorine <= CRITICAL_LOW_CHLOR:
+        return f"Chlor liegt bereits unter {CRITICAL_LOW_CHLOR:.1f} mg/l."
+    if current_chlorine <= chlor_min:
+        return "Chlor liegt bereits am oder unter dem Minimum."
     if hours_to_critical is not None and 0 <= hours_to_critical <= 48:
         return f"In ca. {hours_to_critical:g} Stunden faellt Chlor unter {CRITICAL_LOW_CHLOR:.1f} mg/l."
     if hours_to_min is not None and 0 <= hours_to_min <= 48:
         return f"In ca. {hours_to_min:g} Stunden faellt Chlor unter {chlor_min:.1f} mg/l."
     if confidence == "low":
         return "Chlor-Prognose noch unsicher."
-    if current_chlorine <= chlor_min:
-        return "Chlor liegt bereits am oder unter dem Minimum."
     return None
 
 

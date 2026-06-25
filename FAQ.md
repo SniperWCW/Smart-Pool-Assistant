@@ -1,5 +1,15 @@
 # FAQ - Smart Pool Assistant
 
+Zur Uebersicht zurueck: [README.md](README.md)
+
+Weitere Doku:
+
+- [Einrichtung und Konfiguration](docs/SETUP.md)
+- [Chemielogik und Lernsystem](docs/CHEMISTRY.md)
+- [Lovelace-Karte und Demos](docs/CARD_AND_DEMOS.md)
+- [Entitaeten](docs/ENTITIES.md)
+- [Technische Dokumentation](TECHNISCHE_DOKUMENTATION.md)
+
 ## Warum empfiehlt die Integration ploetzlich sehr viel Chlor?
 
 Die haeufigsten Ursachen sind:
@@ -16,9 +26,11 @@ Pruefe zuerst in den Berechnungsdetails:
 
 ## Beispiel: 20 g bei nur 0,916 m3
 
-Wenn das Becken nur `0,916 m³` hat, waeren `20 g` bei `56 %` Wirkstoff normalerweise deutlich zu viel. Wenn die Karte gleichzeitig etwa `Dosierfaktor 0,40` und `Effektiver Wirkstoff 0,224` zeigt, ist die hohe Empfehlung meist durch die Lernlogik erklaert.
+Wenn das Becken nur `0,916 m3` hat, waeren `20 g` bei `56 %` Wirkstoff normalerweise deutlich zu viel. Wenn die Karte gleichzeitig etwa `Dosierfaktor 0,40` und `Effektiver Wirkstoff 0,224` zeigt, ist die hohe Empfehlung meist durch die Lernlogik erklaert.
 
 Ohne Lernfaktor waere die Empfehlung in so einem Fall eher im Bereich um `8 g`. Mit einem effektiven Wirkstoff von nur `0,224` steigt die rechnerische Produktmenge dagegen fast auf `20 g`.
+
+Seit der aktuellen Anpassung wird der persoenliche Dosierfaktor aber erst ab `5` verwertbaren Samples aktiv in die Empfehlung eingerechnet. Davor ist der Wert zwar schon als Diagnose sichtbar, die eigentliche Chlorempfehlung rechnet aber noch nur mit dem konfigurierten Produkt-Wirkstoff.
 
 ## Was bedeutet "Dosierfaktor"?
 
@@ -26,7 +38,7 @@ Der Dosierfaktor beschreibt, wie stark bestaetigte Chlorzugaben in der Praxis wi
 
 ## Warum kann der Dosierfaktor zu niedrig werden?
 
-Der haeufigste Grund sind späte Nachmessungen:
+Der haeufigste Grund sind spaete Nachmessungen:
 
 - Du gibst Chlor zu.
 - Die Nachmessung erfolgt erst viele Stunden spaeter oder sogar erst am naechsten Tag.
@@ -37,6 +49,20 @@ Seit `v2.2.3` werden fuer den Dosierfaktor deshalb nur noch zeitnahe Messpaare v
 
 - Vorher-Messung maximal `12 h` vor der Zugabe
 - Nachmessung maximal `12 h` nach der Zugabe
+
+Zusaetzlich greift der Faktor jetzt erst ab `5` verwertbaren Samples aktiv in die Chlorempfehlung ein. Das ist fuer kleine Becken und noch duenne Historie deutlich robuster.
+
+## Was ist ein "Sample" beim Dosierfaktor?
+
+Ein Sample ist genau ein verwertbares Zugabe-/Nachmess-Paar fuer die Lernlogik:
+
+- eine frische Vorher-Messung vor der Chlorzugabe
+- eine bestaetigte Chlorzugabe
+- eine Nachmessung nach der Zugabe
+- kein weiterer Chlor-Dosiervorgang dazwischen
+- Vorher- und Nachmessung jeweils innerhalb von `12 h`
+
+Nur wenn dieses Paar sauber auswertbar ist, zaehlt es als `1 Sample` fuer den persoenlichen Dosierfaktor.
 
 ## Hat die Erfassung von offen/abgedeckt und Nutzung damit direkt zu tun?
 
@@ -54,7 +80,7 @@ Am besten:
 - nach ausreichender Umwaelzung und Einwirkzeit
 - aber nicht erst sehr spaet oder am naechsten Tag
 
-Praktisch ist ein Zeitfenster von wenigen Stunden deutlich besser als eine sehr späte Kontrolle.
+Praktisch ist ein Zeitfenster von wenigen Stunden deutlich besser als eine sehr spaete Kontrolle.
 
 ## Wie erkenne ich, dass die Lernphase noch unsicher ist?
 
@@ -63,5 +89,7 @@ Typische Hinweise in der Karte:
 - `Lernphase`
 - wenige Intervalle oder wenige Samples
 - noch keine oder nur schwache Prognose
+
+Beim Dosierfaktor gilt die Lernphase jetzt bis mindestens `5` verwertbare Samples erreicht sind.
 
 In dieser Phase sollten hohe Abweichungen immer mit gesundem Menschenverstand gegen Beckenvolumen, Produkt und frische Messung gegengeprueft werden.
