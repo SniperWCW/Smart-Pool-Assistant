@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.2] - 2026-06-26
+
+- **Neueste Messquelle gewinnt pro Wert**: Chlor, pH und Temperatur werden jetzt quellenübergreifend nach Zeitstempel ausgewählt. Dadurch verdrängt ein älterer Bluetooth-Wert keinen neueren Messwert mehr.
+- **PoolLab-BLE-Lesen des letzten Messblocks robuster**: Wenn der letzte `GET_MEASURES`-Block leer zurückkommt, versucht die Integration den Abruf mit alternativer `cell_id`-Byte-Reihenfolge erneut.
+- **Leere PoolLab-Phantomdatensätze ignoriert**: BLE-Einträge mit `type=0`, `timestamp=0` und `value=0.0` werden nicht mehr als echte Messung übernommen.
+
 ## [3.0.1] - 2026-06-25
 
 - **README deutlich besser lesbar aufgeteilt**: Die Hauptseite ist jetzt eine kompakte Landingpage mit Banner, Vorschau und klaren Links statt einer langen Vollreferenz.

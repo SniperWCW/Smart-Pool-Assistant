@@ -112,6 +112,13 @@ class PoolLabBLEClient:
         return bytes((PREAMBLE, cmd_type & 0xFF, (cmd_type >> 8) & 0xFF)) + payload
 
     @staticmethod
+    def _build_measurement_payload(cell_id: int, cell_half: int, *, little_endian_cell: bool) -> bytes:
+        """Build a GET_MEASURES payload for the requested storage cell."""
+        if little_endian_cell:
+            return bytes([cell_id & 0xFF, (cell_id >> 8) & 0xFF, cell_half, 0x00])
+        return bytes([(cell_id >> 8) & 0xFF, cell_id & 0xFF, cell_half, 0x00])
+
+    @staticmethod
     def _parse_measurements(data: bytes) -> list[PoolLabMeasurement]:
         """Parse up to 8 measurement records from one GET_MEASURES response."""
         if not data or len(data) < 17 or data[0] != PREAMBLE:
@@ -126,6 +133,8 @@ class PoolLabBLEClient:
 
             m_id, m_type, status, ts = struct.unpack_from("<HBBI", chunk, 0)
             (val,) = struct.unpack_from("<f", chunk, 8)
+            if m_type == 0 and ts == 0 and val == 0.0:
+                continue
             measurements.append(PoolLabMeasurement(m_id, m_type, status, ts, val))
 
         return measurements
@@ -198,7 +207,7 @@ class PoolLabBLEClient:
             for chunk_idx in range(command_count):
                 cell_id = chunk_idx // 2
                 cell_half = chunk_idx % 2  # 0 = lower half, 1 = upper half
-                payload = bytes([(cell_id >> 8) & 0xFF, cell_id & 0xFF, cell_half, 0x00])
+                payload = self._build_measurement_payload(cell_id, cell_half, little_endian_cell=False)
                 _LOGGER.debug(
                     "Requesting measurement chunk=%s cell_id=%s half=%s payload=%s",
                     chunk_idx,
@@ -238,6 +247,47 @@ class PoolLabBLEClient:
                         resp[:40].hex(" "),
                     )
                     parsed = self._parse_measurements(resp)
+                    remaining_expected = max(result_count - (chunk_idx * 8), 0)
+                    expected_for_chunk = min(8, remaining_expected)
+                    if not parsed and cell_id > 0 and expected_for_chunk > 0:
+                        fallback_payload = self._build_measurement_payload(
+                            cell_id,
+                            cell_half,
+                            little_endian_cell=True,
+                        )
+                        _LOGGER.debug(
+                            "Retrying measurement chunk with little-endian cell id: chunk=%s cell=%s half=%s payload=%s",
+                            chunk_idx,
+                            cell_id,
+                            cell_half,
+                            fallback_payload.hex(" "),
+                        )
+                        try:
+                            fallback_resp = await self._send_command(
+                                client,
+                                self._build_command(0x05, fallback_payload),
+                                timeout=7.5,
+                            )
+                            fallback_parsed = self._parse_measurements(fallback_resp)
+                            _LOGGER.debug(
+                                "PoolLab GET_MEASURES fallback chunk=%s cell=%s half=%s len=%s raw=%s parsed=%s",
+                                chunk_idx,
+                                cell_id,
+                                cell_half,
+                                len(fallback_resp),
+                                fallback_resp[:40].hex(" "),
+                                len(fallback_parsed),
+                            )
+                            if fallback_parsed:
+                                parsed = fallback_parsed
+                        except BleakError as err:
+                            _LOGGER.debug(
+                                "PoolLab fallback chunk read failed: chunk=%s cell=%s half=%s error=%s",
+                                chunk_idx,
+                                cell_id,
+                                cell_half,
+                                err,
+                            )
                     all_measurements.extend(parsed)
                     for measurement in parsed:
                         _LOGGER.debug(

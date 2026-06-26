@@ -553,6 +553,29 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             except ValueError:
                 return None, None
 
+        def add_value_candidate(
+            bucket: list[tuple[datetime | None, object, str]],
+            value: object,
+            source: str,
+            ts_raw: str | None,
+        ) -> None:
+            """Track candidate values so the newest source wins per metric."""
+            if value is None:
+                return
+            bucket.append((self._parse_ts_aware(ts_raw), value, source))
+
+        def select_latest_candidate(
+            bucket: list[tuple[datetime | None, object, str]],
+        ) -> tuple[object | None, str | None]:
+            """Return the newest candidate value and its source."""
+            if not bucket:
+                return None, None
+            dt_value, value, source = max(
+                bucket,
+                key=lambda item: item[0] or dt_util.parse_datetime("1970-01-01T00:00:00+00:00"),
+            )
+            return value, source
+
         # 1. Bestehende Daten laden
         # Immer einen aktuellen Zeitstempel für den "letzten Lauf" parat haben
         now_iso = dt_util.now().isoformat()
@@ -576,6 +599,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         c_ist = ph_ist = temp_ist = None
         chlor_source = ph_source = temp_source = None
+        c_candidates: list[tuple[datetime | None, object, str]] = []
+        ph_candidates: list[tuple[datetime | None, object, str]] = []
+        temp_candidates: list[tuple[datetime | None, object, str]] = []
         # Lade letzte bekannte API-Messwerte aus dem Speicher
         last_api_measurements = self.maintenance_history.get("last_api_measurements", [])
 
@@ -625,20 +651,26 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         )
 
                         if ble_selection.chlor is not None:
-                            c_ist = ble_selection.chlor
-                            chlor_source = "Bluetooth"
                             self.maintenance_history["last_ble_c"] = ble_selection.chlor
                         if ble_selection.ph is not None:
-                            ph_ist = ble_selection.ph
-                            ph_source = "Bluetooth"
                             self.maintenance_history["last_ble_ph"] = ble_selection.ph
                         if ble_selection.temperature is not None:
-                            temp_ist = ble_selection.temperature
-                            temp_source = "Bluetooth"
                             self.maintenance_history["last_ble_temp"] = ble_selection.temperature
                         if ble_selection.cyanuric_acid is not None:
                             self.maintenance_history["cyanuric_acid"] = ble_selection.cyanuric_acid
 
+                        add_value_candidate(
+                            c_candidates, ble_selection.chlor, "Bluetooth", ble_selection.measurement_raw
+                        )
+                        add_value_candidate(
+                            ph_candidates, ble_selection.ph, "Bluetooth", ble_selection.measurement_raw
+                        )
+                        add_value_candidate(
+                            temp_candidates, ble_selection.temperature, "Bluetooth", ble_selection.measurement_raw
+                        )
+                        c_ist, chlor_source = select_latest_candidate(c_candidates)
+                        ph_ist, ph_source = select_latest_candidate(ph_candidates)
+                        temp_ist, temp_source = select_latest_candidate(temp_candidates)
                         _LOGGER.debug(
                             "BLE source assignment: chlor=%s ph=%s temp=%s",
                             chlor_source,
@@ -689,15 +721,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                     last_api_measurements = cloud_result.last_measurements
                     self.maintenance_history["last_api_measurements"] = last_api_measurements
 
-                if c_ist is None and cloud_result.chlor is not None:
-                    c_ist = cloud_result.chlor
-                    chlor_source = "Cloud"
-                if ph_ist is None and cloud_result.ph is not None:
-                    ph_ist = cloud_result.ph
-                    ph_source = "Cloud"
-                if temp_ist is None and cloud_result.temperature is not None:
-                    temp_ist = cloud_result.temperature
-                    temp_source = "Cloud"
+                add_value_candidate(
+                    c_candidates, cloud_result.chlor, "Cloud", cloud_result.measurement_raw
+                )
+                add_value_candidate(
+                    ph_candidates, cloud_result.ph, "Cloud", cloud_result.measurement_raw
+                )
+                add_value_candidate(
+                    temp_candidates, cloud_result.temperature, "Cloud", cloud_result.measurement_raw
+                )
+                c_ist, chlor_source = select_latest_candidate(c_candidates)
+                ph_ist, ph_source = select_latest_candidate(ph_candidates)
+                temp_ist, temp_source = select_latest_candidate(temp_candidates)
 
                 if cloud_result.found:
                     cloud_found = True
@@ -725,70 +760,54 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         ble_ts_str = self.maintenance_history.get("last_ble_measurement_raw")
         dt_api_for_values = self._parse_ts_aware(api_ts_str)
         dt_ble_for_values = self._parse_ts_aware(ble_ts_str)
-        use_cached_ble_values = (
-            not ble_found
-            and dt_ble_for_values is not None
-            and (dt_api_for_values is None or dt_ble_for_values > dt_api_for_values)
-        )
-
-        if use_cached_ble_values:
+        if not ble_found and dt_ble_for_values is not None:
             cached_ble_c = self.maintenance_history.get("last_ble_c")
             cached_ble_ph = self.maintenance_history.get("last_ble_ph")
             cached_ble_temp = self.maintenance_history.get("last_ble_temp")
 
-            if cached_ble_c is not None:
-                c_ist = cached_ble_c
-                chlor_source = "Bluetooth"
-            if cached_ble_ph is not None:
-                ph_ist = cached_ble_ph
-                ph_source = "Bluetooth"
-            if cached_ble_temp is not None and temp_source != "Manuell":
-                temp_ist = cached_ble_temp
-                temp_source = "Bluetooth"
+            add_value_candidate(c_candidates, cached_ble_c, "Bluetooth", ble_ts_str)
+            add_value_candidate(ph_candidates, cached_ble_ph, "Bluetooth", ble_ts_str)
+            add_value_candidate(temp_candidates, cached_ble_temp, "Bluetooth", ble_ts_str)
 
-            if cached_ble_c is not None or cached_ble_ph is not None:
+            if cached_ble_c is not None or cached_ble_ph is not None or cached_ble_temp is not None:
                 cached_ble_found = True
-                cloud_found = False
+                c_ist, chlor_source = select_latest_candidate(c_candidates)
+                ph_ist, ph_source = select_latest_candidate(ph_candidates)
+                temp_ist, temp_source = select_latest_candidate(temp_candidates)
                 _LOGGER.debug(
-                    "Using cached BLE values because BLE timestamp is newer than Cloud: ble=%s api=%s",
+                    "Considering cached BLE values in source selection: ble=%s api=%s selected=(%s,%s,%s)",
                     ble_ts_str,
                     api_ts_str,
+                    chlor_source,
+                    ph_source,
+                    temp_source,
                 )
 
         # 2. Versuch: Manuelle Sensoren prüfen (immer prüfen für Quellen-Erkennung)
         c_man, c_man_ts = get_state_info(conf.get(CONF_CHLOR_SENSOR))
         ph_man, ph_man_ts = get_state_info(conf.get(CONF_PH_SENSOR))
-        temp_man, _ = get_state_info(conf.get(CONF_TEMP_SENSOR))
+        temp_man, temp_man_ts = get_state_info(conf.get(CONF_TEMP_SENSOR))
 
         if c_man is not None or ph_man is not None:
             manual_found = True
 
-        # Werte zuweisen, falls Cloud nichts geliefert hat
-        if c_ist is None and c_man is not None:
-            c_ist = c_man
-            chlor_source = "Manuell"
-            if c_man_ts:
-                ts_iso = c_man_ts if isinstance(c_man_ts, str) else c_man_ts.isoformat()
-                old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
-                dt_new_man = self._parse_ts_aware(ts_iso)
-                dt_old_man = self._parse_ts_aware(old_man_str)
-                if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
-                    self.maintenance_history["last_manual_measurement_raw"] = ts_iso
+        add_value_candidate(c_candidates, c_man, "Manuell", c_man_ts)
+        add_value_candidate(ph_candidates, ph_man, "Manuell", ph_man_ts)
+        add_value_candidate(temp_candidates, temp_man, "Manuell", temp_man_ts)
 
-        if ph_ist is None and ph_man is not None:
-            ph_ist = ph_man
-            ph_source = "Manuell"
-            if ph_man_ts:
-                ts_iso = ph_man_ts if isinstance(ph_man_ts, str) else ph_man_ts.isoformat()
-                old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
-                dt_new_man = self._parse_ts_aware(ts_iso)
-                dt_old_man = self._parse_ts_aware(old_man_str)
-                if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
-                    self.maintenance_history["last_manual_measurement_raw"] = ts_iso
+        c_ist, chlor_source = select_latest_candidate(c_candidates)
+        ph_ist, ph_source = select_latest_candidate(ph_candidates)
+        temp_ist, temp_source = select_latest_candidate(temp_candidates)
 
-        if temp_ist is None and temp_man is not None:
-            temp_ist = temp_man
-            temp_source = "Manuell"
+        for ts_candidate in (c_man_ts, ph_man_ts, temp_man_ts):
+            if not ts_candidate:
+                continue
+            ts_iso = ts_candidate if isinstance(ts_candidate, str) else ts_candidate.isoformat()
+            old_man_str = self.maintenance_history.get("last_manual_measurement_raw")
+            dt_new_man = self._parse_ts_aware(ts_iso)
+            dt_old_man = self._parse_ts_aware(old_man_str)
+            if not dt_old_man or (dt_new_man and dt_new_man > dt_old_man):
+                self.maintenance_history["last_manual_measurement_raw"] = ts_iso
 
         # 4. Fallback auf Historie, falls aktuelle Quellen keine Daten liefern (Persistenz)
         if c_ist is None:
@@ -931,6 +950,21 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             conf,
             self._parse_ts_aware,
             dt_util.now(),
+        )
+        ph_learning_attr = ph_learning.get("ph_stability_attributes") or {}
+        _LOGGER.debug(
+            "pH learning summary: stability=%s trend=%s samples=%s avg_14d=%s drift_24h=%s drift_7d=%s "
+            "min=%s max=%s quality=%s stars=%s",
+            ph_learning.get("ph_stability"),
+            ph_learning.get("ph_trend"),
+            ph_learning_attr.get("samples"),
+            ph_learning_attr.get("average_daily_drift"),
+            ph_learning.get("ph_drift_24h"),
+            ph_learning.get("ph_drift_7d"),
+            ph_learning_attr.get("min_daily_drift"),
+            ph_learning_attr.get("max_daily_drift"),
+            ph_learning_attr.get("prediction_quality"),
+            ph_learning_attr.get("prediction_quality_stars"),
         )
 
         # Wenn wichtige Sensoren fehlen, keine Berechnung durchführen
