@@ -875,7 +875,7 @@ class PoolChemistryCard extends HTMLElement {
     return {
       className: "ok",
       icon: "🟢",
-      title: "Baden empfohlen",
+      title: "Viel Spaß beim Baden",
       detail: "Werte im grünen Bereich",
     };
   }
