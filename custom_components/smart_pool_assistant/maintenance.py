@@ -7,7 +7,7 @@ from datetime import datetime
 from homeassistant.util import dt as dt_util
 
 
-VISIBLE_ACTIVITY_TYPES = ("chlor", "ph_plus", "ph_minus", "filter_clean", "filter_replace")
+VISIBLE_ACTIVITY_TYPES = ("chlor", "ph_plus", "ph_minus", "water_exchange", "filter_clean", "filter_replace")
 CONTEXT_HISTORY_KEY = "pool_context_history"
 MAX_CONTEXT_HISTORY_ITEMS = 240
 
@@ -17,6 +17,7 @@ def activity_text(
     amount: float | int | None,
     pool_covered: bool = True,
     usage_mode: str = "none",
+    details: dict | None = None,
 ) -> str:
     """Return a human readable activity label."""
     if m_type == "chlor":
@@ -25,6 +26,16 @@ def activity_text(
         return f"{amount:g}g PH-Plus hinzugef\u00fcgt" if amount is not None else "PH-Plus hinzugef\u00fcgt"
     if m_type == "ph_minus":
         return f"{amount:g}ml PH-Minus hinzugef\u00fcgt" if amount is not None else "PH-Minus hinzugef\u00fcgt"
+    if m_type == "water_exchange":
+        liters = details.get("liters") if isinstance(details, dict) else amount
+        percent = details.get("percent") if isinstance(details, dict) else None
+        if liters is not None and percent is not None:
+            return f"{liters:g}l Wasser gewechselt ({percent:g}%)"
+        if liters is not None:
+            return f"{liters:g}l Wasser gewechselt"
+        if percent is not None:
+            return f"{percent:g}% Wasser gewechselt"
+        return "Wasser gewechselt"
     if m_type == "filter_clean":
         return "Filter gereinigt"
     if m_type == "filter_replace":
@@ -73,6 +84,7 @@ def normalize_loaded_history(
                     item.get("amount"),
                     pool_covered,
                     usage_mode,
+                    item,
                 ) or "--"
                 changed = True
 
@@ -132,7 +144,7 @@ def format_activity(
     usage_mode: str = "none",
 ) -> str:
     """Format a stored activity entry."""
-    return activity_text(entry.get("type"), entry.get("amount"), pool_covered, usage_mode) or "--"
+    return activity_text(entry.get("type"), entry.get("amount"), pool_covered, usage_mode, entry) or "--"
 
 
 def collect_last_activities(
@@ -157,10 +169,12 @@ def collect_last_activities(
             normalized.append({
                 "type": entry.get("type"),
                 "text": entry.get("text")
-                or activity_text(entry.get("type"), entry.get("amount"), pool_covered, usage_mode)
+                or activity_text(entry.get("type"), entry.get("amount"), pool_covered, usage_mode, entry)
                 or "--",
                 "time": entry.get("time"),
                 "raw_ts": raw_ts,
+                "percent": entry.get("percent"),
+                "liters": entry.get("liters"),
                 "_dt": dt,
             })
         normalized.sort(key=lambda item: item["_dt"], reverse=True)
@@ -201,6 +215,7 @@ def update_maintenance_history(
     now: datetime,
     pool_covered: bool,
     usage_mode: str,
+    details: dict | None = None,
 ) -> tuple[bool, str, str | None]:
     """Update maintenance history and return pool state plus notification text."""
     ts_formatted = now.strftime("%d.%m. %H:%M")
@@ -218,13 +233,18 @@ def update_maintenance_history(
         usage_mode = modes[int(amount)] if int(amount) < len(modes) else "none"
         history["usage_mode"] = usage_mode
 
-    action_text = activity_text(m_type, amount, pool_covered, usage_mode) if m_type else ""
+    action_text = activity_text(m_type, amount, pool_covered, usage_mode, details) if m_type else ""
     if not action_text:
         label, unit = _maintenance_label_and_unit(m_type)
         action_text = f"{amount:g}{unit} {label}" if amount else label
 
     stored_amount = None if m_type in ("filter_clean", "filter_replace") else amount
     history_entry = {"amount": stored_amount, "time": ts_formatted, "raw_ts": now.isoformat()}
+    if isinstance(details, dict):
+        if details.get("liters") is not None:
+            history_entry["liters"] = details["liters"]
+        if details.get("percent") is not None:
+            history_entry["percent"] = details["percent"]
     history[m_type] = history_entry
 
     # A filter replacement implicitly resets the cleaning interval as well.
@@ -245,6 +265,8 @@ def update_maintenance_history(
             "amount": stored_amount,
             "time": ts_formatted,
             "raw_ts": now.isoformat(),
+            "liters": history_entry.get("liters"),
+            "percent": history_entry.get("percent"),
         })
         history["last_activities"] = activities[:5]
 
@@ -313,6 +335,8 @@ def _maintenance_label_and_unit(m_type: str | None) -> tuple[str, str]:
         return "PH-Plus", "g"
     if m_type == "ph_minus":
         return "PH-Minus", "ml"
+    if m_type == "water_exchange":
+        return "Wasser gewechselt", "l"
     if m_type == "filter_clean":
         return "Filter gereinigt", ""
     if m_type == "filter_replace":

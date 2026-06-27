@@ -62,7 +62,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if coord:
                 await coord.async_log_maintenance(
                     call.data.get("type"),
-                    call.data.get("amount")
+                    call.data.get("amount"),
+                    call.data.get("water_exchange_percent"),
                 )
 
     if not hass.services.has_service(DOMAIN, "log_maintenance"):

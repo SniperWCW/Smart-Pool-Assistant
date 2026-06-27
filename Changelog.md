@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.7] - 2026-06-27
+
+- **CYA-Verlauf als Prognosemodell**: Die Integration speichert jetzt CYA-Messpunkte dauerhaft und berechnet daraus zusammen mit Chlorprodukt, Chlorzugaben und Wasserwechseln einen modellierten CYA-Verlauf.
+- **Wasserwechsel direkt protokollierbar**: In der Lovelace-Karte und im Service `log_maintenance` koennen Wasserwechsel jetzt in Litern oder Prozent dokumentiert werden.
+- **CYA-Prognose sichtbar gemacht**: Die Karte zeigt jetzt einen modellierten aktuellen CYA-Wert, die geschaetzte Nettoveraenderung pro Tag und eine Prognose bis unter `80 ppm` bzw. ueber `100 ppm`.
+- **Recorder-Problem entschärft**: `sensor.pool_empfehlung` haengt nicht mehr die komplette interne Historie als Attribut an, wodurch die Recorder-Warnung wegen zu grosser Attribute vermieden werden sollte.
+
 ## [3.0.6] - 2026-06-27
 
 - **Chlorprodukt-Typ ergänzt**: Die Konfiguration unterscheidet jetzt zwischen `organisch / stabilisiert` und `anorganisch / unstabilisiert`.

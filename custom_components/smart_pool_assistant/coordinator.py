@@ -33,6 +33,12 @@ from .chlorine_learning import (
     record_chlor_dose,
     record_chlor_measurement,
 )
+from .cya_learning import (
+    calculate_cya_learning,
+    normalize_water_exchange,
+    record_cya_measurement,
+    record_water_exchange,
+)
 from .ph_learning import (
     calculate_ph_learning,
     record_ph_correction,
@@ -433,7 +439,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             await self._store.async_save(self.maintenance_history)
             await self.async_request_refresh()
 
-    async def async_log_maintenance(self, m_type: str, amount: float):
+    async def async_log_maintenance(self, m_type: str, amount: float, percent: float | None = None):
         """Log maintenance action and send notifications."""
         now = dt_util.now()
         _LOGGER.debug(
@@ -442,6 +448,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             amount,
             now.isoformat(),
         )
+        details = None
+        if m_type == "water_exchange":
+            pool_volume_liters = max(float(self.config.get(CONF_POOL_VOLUME, 0.0)) * 1000.0, 0.0)
+            details = normalize_water_exchange(amount, percent, pool_volume_liters)
+            if details is None:
+                raise HomeAssistantError("Wasserwechsel braucht Liter oder Prozent groesser 0.")
+            amount = details["liters"]
+
         self.pool_covered, self.usage_mode, msg = update_maintenance_history(
             self.maintenance_history,
             m_type,
@@ -449,6 +463,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             now,
             self.pool_covered,
             self.usage_mode,
+            details,
         )
         if m_type == "chlor":
             temp_value = self.data.get("temp_ist") if isinstance(self.data, dict) else None
@@ -461,6 +476,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             )
         elif m_type in ("ph_plus", "ph_minus"):
             record_ph_correction(self.maintenance_history, now.isoformat(), m_type, amount)
+        elif m_type == "water_exchange":
+            record_water_exchange(
+                self.maintenance_history,
+                now.isoformat(),
+                details["liters"] if details else amount,
+                details["percent"] if details else percent,
+                max(float(self.config.get(CONF_POOL_VOLUME, 0.0)) * 1000.0, 0.0),
+            )
 
         await self._store.async_save(self.maintenance_history)
 
@@ -958,6 +981,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             )
         if ph_ist is not None and last_meas_raw:
             record_ph_measurement(self.maintenance_history, last_meas_raw, ph_ist)
+        if cya_ist is not None and last_meas_raw:
+            record_cya_measurement(self.maintenance_history, last_meas_raw, cya_ist)
         chlorine_learning = calculate_chlorine_learning(
             self.maintenance_history,
             conf,
@@ -982,6 +1007,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             conf,
             self._parse_ts_aware,
             dt_util.now(),
+        )
+        cya_learning = calculate_cya_learning(
+            self.maintenance_history,
+            conf,
+            self._parse_ts_aware,
+            dt_util.now(),
+            current_cya=cya_ist,
         )
         ph_learning_attr = ph_learning.get("ph_stability_attributes") or {}
         _LOGGER.debug(
@@ -1023,6 +1055,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "last_measurement_source": last_meas_source,
                 "last_api_measurements": last_api_measurements,
                 "last_activities": last_activities,
+                "last_chlor_action": self.maintenance_history.get("chlor"),
+                "last_ph_plus_action": self.maintenance_history.get("ph_plus"),
+                "last_ph_minus_action": self.maintenance_history.get("ph_minus"),
+                "last_water_exchange_action": self.maintenance_history.get("water_exchange"),
                 "pool_covered": self.pool_covered,
                 "ble_battery": self.maintenance_history.get("ble_battery"),
                 "bluetooth_connected": ble_connected,
@@ -1059,9 +1095,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "weather_forecast_days": weather_forecast_days,
                 "weather_note": None,
                 "chlor_breakdown_uv_adj": 0.0,
-                "history": self.maintenance_history,
                 **chlorine_learning,
                 **ph_learning,
+                **cya_learning,
                 "recommendation": "⚠️ Keine Messwerte vorhanden"
             }
 
@@ -1185,7 +1221,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ble_battery": self.maintenance_history.get("ble_battery"),
             "bluetooth_connected": ble_connected,
             "last_activities": last_activities,
-            "history": self.maintenance_history,
+            "last_chlor_action": self.maintenance_history.get("chlor"),
+            "last_ph_plus_action": self.maintenance_history.get("ph_plus"),
+            "last_ph_minus_action": self.maintenance_history.get("ph_minus"),
+            "last_water_exchange_action": self.maintenance_history.get("water_exchange"),
             "recommendation": recommendation,
             "cyanuric_acid": cya_ist,
             "cyanuric_acid_source": cya_source,
@@ -1233,4 +1272,5 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "filter_replace_interval": filter_replace_interval,
             **chlorine_learning,
             **ph_learning,
+            **cya_learning,
         }

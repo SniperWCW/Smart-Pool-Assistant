@@ -997,7 +997,6 @@ class PoolChemistryCard extends HTMLElement {
     }
     this._renderSignature = renderSignature;
 
-    const hist = attr.history || {};
     // Erstelle das Skelett der Karte nur einmal
     if (!this.content) {
       this.innerHTML = `
@@ -1034,6 +1033,19 @@ class PoolChemistryCard extends HTMLElement {
                     <input type="number" id="input-ph_plus" step="0.1" placeholder="Plus g">
                     <input type="number" id="input-ph_minus" step="0.1" placeholder="Minus ml">
                     <button id="btn-ph">OK</button>
+                  </div>
+                </div>
+              </div>
+              <div class="rec-row">
+                <ha-icon icon="mdi:water-sync"></ha-icon>
+                <div class="rec-content">
+                  <div id="cya-forecast-rec"></div>
+                  <div id="cya-hist" class="hist-text"></div>
+                  <div id="cya-model" class="forecast-text"></div>
+                  <div class="log-input">
+                    <input type="number" id="input-water_exchange_liters" step="1" placeholder="Wasserwechsel l">
+                    <input type="number" id="input-water_exchange_percent" step="0.1" placeholder="Wasserwechsel %">
+                    <button id="btn-water-exchange">OK</button>
                   </div>
                 </div>
               </div>
@@ -1701,6 +1713,16 @@ class PoolChemistryCard extends HTMLElement {
         if (this.querySelector('#input-ph_plus').value) this._handleAdd('ph_plus');
         else if (this.querySelector('#input-ph_minus').value) this._handleAdd('ph_minus'); // Use else if to prevent both from firing
       };
+      this.querySelector('#btn-water-exchange').onclick = () => {
+        const liters = parseFloat(this.querySelector('#input-water_exchange_liters').value);
+        const percent = parseFloat(this.querySelector('#input-water_exchange_percent').value);
+        if (!Number.isFinite(liters) && !Number.isFinite(percent)) {
+          return;
+        }
+        this._handleAdd('water_exchange', Number.isFinite(liters) ? liters : 0, {
+          water_exchange_percent: Number.isFinite(percent) ? percent : null,
+        });
+      };
       this.querySelector('#btn-toggle-cover').onclick = () => {
         const isCovered = this._lastAttr.pool_covered;
         this._handleAdd('set_covered', isCovered ? 0 : 1);
@@ -1797,7 +1819,13 @@ class PoolChemistryCard extends HTMLElement {
             : (chlorLowDiff > 0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist im Zielbereich.`));
     }
 
-    this.querySelector('#chlor-hist').textContent = hist.chlor ? `Zuletzt: ${Number(hist.chlor.amount).toFixed(2)}g (${hist.chlor.time})` : '';
+    const lastChlorAction = attr.last_chlor_action || {};
+    const lastPhPlusAction = attr.last_ph_plus_action || {};
+    const lastPhMinusAction = attr.last_ph_minus_action || {};
+    const lastWaterExchangeAction = attr.last_water_exchange_action || {};
+    this.querySelector('#chlor-hist').textContent = lastChlorAction.time
+      ? `Zuletzt: ${Number(lastChlorAction.amount).toFixed(2)}g (${lastChlorAction.time})`
+      : '';
     const chlorForecastNode = this.querySelector('#chlor-forecast');
     if (chlorForecastNode) {
       const forecastMessage = attr.chlor_forecast_message;
@@ -1864,8 +1892,43 @@ class PoolChemistryCard extends HTMLElement {
       phButton.disabled = phAwaitingRetest || awaitingRetest;
     }
 
-    const phPlusHist = hist.ph_plus ? `Zuletzt PH+: ${Number(hist.ph_plus.amount).toFixed(2)}g (${hist.ph_plus.time})` : '';
-    const phMinusHist = hist.ph_minus ? `Zuletzt PH-: ${Number(hist.ph_minus.amount).toFixed(2)}ml (${hist.ph_minus.time})` : '';
+    const waterLitersInput = this.querySelector('#input-water_exchange_liters');
+    const waterPercentInput = this.querySelector('#input-water_exchange_percent');
+    const waterButton = this.querySelector('#btn-water-exchange');
+    if (waterLitersInput) waterLitersInput.placeholder = 'Wasserwechsel l';
+    if (waterPercentInput) waterPercentInput.placeholder = 'Wasserwechsel %';
+    if (waterButton) waterButton.disabled = false;
+
+    const cyaForecastNode = this.querySelector('#cya-forecast-rec');
+    const cyaModelNode = this.querySelector('#cya-model');
+    const cyaHistNode = this.querySelector('#cya-hist');
+    const modeledCya = Number(attr.cya_estimated_current);
+    const dailyCyaChange = Number(attr.cya_estimated_daily_change);
+    if (cyaForecastNode) {
+      cyaForecastNode.innerHTML = attr.cya_forecast_message || 'Keine CYA-Prognose verfuegbar.';
+    }
+    if (cyaModelNode) {
+      const modelParts = [];
+      if (Number.isFinite(modeledCya)) {
+        modelParts.push(`Modell aktuell: ${modeledCya.toFixed(1)} ppm`);
+      }
+      if (Number.isFinite(dailyCyaChange)) {
+        const sign = dailyCyaChange > 0 ? '+' : '';
+        modelParts.push(`Netto: ${sign}${dailyCyaChange.toFixed(2)} ppm/Tag`);
+      }
+      cyaModelNode.style.display = modelParts.length ? 'block' : 'none';
+      cyaModelNode.textContent = modelParts.join(' | ');
+    }
+    if (cyaHistNode) {
+      const liters = Number(lastWaterExchangeAction.liters);
+      const percent = Number(lastWaterExchangeAction.percent);
+      cyaHistNode.textContent = lastWaterExchangeAction.time
+        ? `Zuletzt Wasserwechsel: ${Number.isFinite(liters) ? liters.toFixed(0) : '--'}l / ${Number.isFinite(percent) ? percent.toFixed(1) : '--'}% (${lastWaterExchangeAction.time})`
+        : '';
+    }
+
+    const phPlusHist = lastPhPlusAction.time ? `Zuletzt PH+: ${Number(lastPhPlusAction.amount).toFixed(2)}g (${lastPhPlusAction.time})` : '';
+    const phMinusHist = lastPhMinusAction.time ? `Zuletzt PH-: ${Number(lastPhMinusAction.amount).toFixed(2)}ml (${lastPhMinusAction.time})` : '';
     this.querySelector('#ph-hist').innerHTML = `${phPlusHist}${phPlusHist && phMinusHist ? ' | ' : ''}${phMinusHist}`;
 
     const formatActivityText = (entry) => {
@@ -1875,6 +1938,7 @@ class PoolChemistryCard extends HTMLElement {
       if (type === 'chlor') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}g Chlor hinzugefügt` : 'Chlor hinzugefügt';
       if (type === 'ph_plus') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}g PH-Plus hinzugefügt` : 'PH-Plus hinzugefügt';
       if (type === 'ph_minus') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}ml PH-Minus hinzugefügt` : 'PH-Minus hinzugefügt';
+      if (type === 'water_exchange') return `${Number(entry?.liters || amount || 0).toFixed(0)}l Wasser gewechselt (${Number(entry?.percent || 0).toFixed(1)}%)`;
       if (type === 'filter_clean') return 'Filter gereinigt';
       if (type === 'filter_replace') return 'Filter getauscht';
       if (type === 'set_covered') return `Abdeckung: ${entry?.amount > 0 ? 'Abgedeckt' : 'Offen'}`;
@@ -1888,7 +1952,7 @@ class PoolChemistryCard extends HTMLElement {
     const maintenanceSection = this.querySelector('#maintenance-section');
     const lastActivities = Array.isArray(attr.last_activities) && attr.last_activities.length
       ? attr.last_activities
-      : (Array.isArray(hist.last_activities) ? hist.last_activities : []);
+      : [];
     const hasMaintenance = lastActivities.length > 0;
     if (hasMaintenance) {
       maintenanceSection.style.display = 'block';
@@ -2533,7 +2597,7 @@ class PoolChemistryCard extends HTMLElement {
     return { label: `${v} dBm`, cssClass: "lz-rssi-bad" };
   }
 
-  _handleAdd(type, overrideVal = null) {
+  _handleAdd(type, overrideVal = null, extraData = null) {
     const input = this.querySelector(`#input-${type}`);
     let val = overrideVal !== null ? parseFloat(overrideVal) : (input ? parseFloat(input.value) : 0);
 
@@ -2549,12 +2613,26 @@ class PoolChemistryCard extends HTMLElement {
         this.querySelector('#icon-covered').icon = val > 0 ? 'mdi:pool' : 'mdi:sun-side';
       }
 
-      this._hass.callService("smart_pool_assistant", "log_maintenance", {
+      const serviceData = {
         entity_id: this.config.recommendation_entity,
         type: type,
         amount: val
-      });
+      };
+      if (extraData && typeof extraData === 'object') {
+        Object.entries(extraData).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== "") {
+            serviceData[key] = value;
+          }
+        });
+      }
+      this._hass.callService("smart_pool_assistant", "log_maintenance", serviceData);
       if (input) input.value = "";
+      if (type === 'water_exchange') {
+        const litersInput = this.querySelector('#input-water_exchange_liters');
+        const percentInput = this.querySelector('#input-water_exchange_percent');
+        if (litersInput) litersInput.value = "";
+        if (percentInput) percentInput.value = "";
+      }
     } else if (type === 'filter_clean' || type === 'filter_replace') {
        this._hass.callService("smart_pool_assistant", "log_maintenance", {
         entity_id: this.config.recommendation_entity,

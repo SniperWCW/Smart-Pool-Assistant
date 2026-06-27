@@ -54,6 +54,8 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
         PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
         PoolAssistantSensor(coordinator, "Cyanursäure", "cyanuric_acid", "ppm", "mdi:shield-check"),
+        PoolAssistantSensor(coordinator, "CYA Nettoveraenderung", "cya_estimated_daily_change", "ppm/d", "mdi:chart-timeline-variant"),
+        PoolAssistantSensor(coordinator, "CYA Prognose", "cya_forecast_message", None, "mdi:timeline-clock-outline"),
         PoolAssistantBatterySensor(coordinator),
         PoolAssistantStatusSensor(coordinator),
     ]
@@ -92,7 +94,7 @@ class PoolAssistantBatterySensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data.get("history", {}).get("ble_battery")
+        return self.coordinator.data.get("ble_battery")
 
 
 class PoolAssistantChlorStabilitySensor(CoordinatorEntity, SensorEntity):
@@ -172,8 +174,11 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "filter_replace_interval": data.get("filter_replace_interval"),
             "ph_senker_total": data.get("ph_senker_total"),
             "ph_erhoeher_total": data.get("ph_erhoeher_total"),
-            "history": data.get("history"),
-            "last_activities": data.get("last_activities") or data.get("history", {}).get("last_activities"),
+            "last_activities": data.get("last_activities"),
+            "last_chlor_action": data.get("last_chlor_action"),
+            "last_ph_plus_action": data.get("last_ph_plus_action"),
+            "last_ph_minus_action": data.get("last_ph_minus_action"),
+            "last_water_exchange_action": data.get("last_water_exchange_action"),
             "is_shock": data.get("is_shock"),
             "pool_covered": data.get("pool_covered"),
             "usage_mode": data.get("usage_mode"),
@@ -205,6 +210,14 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "ph_stability": data.get("ph_stability"),
             "ph_trend": data.get("ph_trend"),
             "ph_stability_attributes": data.get("ph_stability_attributes"),
+            "cya_estimated_current": data.get("cya_estimated_current"),
+            "cya_estimated_daily_change": data.get("cya_estimated_daily_change"),
+            "cya_days_to_80": data.get("cya_days_to_80"),
+            "cya_days_to_100": data.get("cya_days_to_100"),
+            "cya_forecast_confidence": data.get("cya_forecast_confidence"),
+            "cya_trend": data.get("cya_trend"),
+            "cya_forecast_message": data.get("cya_forecast_message"),
+            "cya_forecast_attributes": data.get("cya_forecast_attributes"),
             "chlor_breakdown_base": data.get("chlor_breakdown_base"),
             "chlor_breakdown_shock_adj": data.get("chlor_breakdown_shock_adj"),
             "chlor_breakdown_temp_adj": data.get("chlor_breakdown_temp_adj"),

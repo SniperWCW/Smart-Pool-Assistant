@@ -117,6 +117,7 @@
             "chlor": "Chlor-Zugabe",
             "ph_plus": "pH-Plus Zugabe",
             "ph_minus": "pH-Minus Zugabe",
+            "water_exchange": "Wasserwechsel",
             "filter_clean": "Filter gereinigt",
             "filter_replace": "Filter gewechselt",
             "set_covered": "Abdeckung Status (0=Offen, 1=Abgedeckt)",
@@ -125,7 +126,11 @@
         },
         "amount": {
           "name": "Wert / Menge",
-          "description": "Menge (g/ml) oder Status-Wert (0/1/2)."
+          "description": "Menge (g/ml/l) oder Status-Wert (0/1/2)."
+        },
+        "water_exchange_percent": {
+          "name": "Wasserwechsel Prozent",
+          "description": "Optionaler Prozentwert fuer den Wasserwechsel."
         }
       }
     }
