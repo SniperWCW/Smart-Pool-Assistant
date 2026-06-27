@@ -155,6 +155,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "temp_source": data.get("temp_source"),
             "cyanuric_acid": data.get("cyanuric_acid"),
             "cyanuric_acid_source": data.get("cyanuric_acid_source"),
+            "chlor_product_type": data.get("chlor_product_type"),
             "chlor_target": data.get("chlor_target"),
             "chlor_min": data.get("chlor_min"),
             "chlor_max": data.get("chlor_max"),

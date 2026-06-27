@@ -257,6 +257,8 @@ def build_recommendation(
     awaiting_retest: bool,
     ph_ist: float | None,
     c_ist: float | None,
+    cya_ist: float | None,
+    chlor_product_type: str | None,
     ph_min: float,
     ph_max: float,
     c_min: float,
@@ -288,6 +290,13 @@ def build_recommendation(
             warnings.append("Chlor zu hoch")
         elif current_c < (target_c_min - 0.2) and chlor_dose > 0:
             warnings.append("Chlor nachdosieren")
+
+    current_cya = float(cya_ist) if cya_ist is not None else None
+    normalized_product_type = chlor_product_type if chlor_product_type in {"organic", "inorganic"} else "organic"
+    if current_cya is not None and current_cya > 100:
+        warnings.append("CYA kritisch hoch")
+    elif current_cya is not None and normalized_product_type == "organic" and current_cya > 80:
+        warnings.append("CYA hoch")
 
     if awaiting_retest:
         return "\u23f3 Warten auf erneute Messung"

@@ -18,7 +18,7 @@ from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_PUMP_ENTITY,
     CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_PH_TARGET, CONF_PH_MIN, CONF_PH_MAX,
-    CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
+    CONF_CHLOR_PRODUCT_TYPE, CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
     CONF_POOL_CONNECTION_SENSOR, CONF_POOL_CONNECTION_OFFLINE_DELAY,
     CONF_FILTER_CLEAN_INTERVAL, CONF_FILTER_REPLACE_INTERVAL,
@@ -63,6 +63,17 @@ def validate_target_ranges(user_input: dict[str, Any]) -> bool:
         )
     except (TypeError, ValueError):
         return False
+
+
+def _chlor_product_type(defaults: dict[str, Any]) -> str:
+    value = defaults.get(CONF_CHLOR_PRODUCT_TYPE, "organic")
+    return value if value in {"organic", "inorganic"} else "organic"
+
+
+def _chlor_content_default(defaults: dict[str, Any]) -> float:
+    if CONF_CHLOR_CONTENT in defaults:
+        return defaults.get(CONF_CHLOR_CONTENT, 0.56)
+    return 1.0 if _chlor_product_type(defaults) == "inorganic" else 0.56
 
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Pool Assistant."""
@@ -146,6 +157,7 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
             discovered_devices[info.address] = f"{info.name or 'PoolLab'} ({info.address})"
 
     range_defaults = _range_defaults(defaults)
+    chlor_product_type = _chlor_product_type(defaults)
 
     return vol.Schema({
         vol.Optional(CONF_BLE_ADDRESS, default=defaults.get(CONF_BLE_ADDRESS, "")): selector.SelectSelector(
@@ -181,7 +193,16 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Required(CONF_PH_MAX, default=range_defaults[CONF_PH_MAX]): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1)
         ),
-        vol.Required(CONF_CHLOR_CONTENT, default=defaults.get(CONF_CHLOR_CONTENT, 0.56)): selector.NumberSelector(
+        vol.Required(CONF_CHLOR_PRODUCT_TYPE, default=chlor_product_type): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    {"label": "Organisch / stabilisiert", "value": "organic"},
+                    {"label": "Anorganisch / unstabilisiert", "value": "inorganic"},
+                ],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Required(CONF_CHLOR_CONTENT, default=_chlor_content_default(defaults)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.01)
         ),
         vol.Required(CONF_PH_DOWN_DOSAGE, default=defaults.get(CONF_PH_DOWN_DOSAGE, 200.0)): selector.NumberSelector(

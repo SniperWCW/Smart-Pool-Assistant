@@ -367,13 +367,16 @@ class PoolChemistryCard extends HTMLElement {
     return diff <= criticalTolerance ? "status-warning" : "status-critical";
   }
 
-  _getCyaAssessment(value) {
+  _getCyaAssessment(value, chlorProductType) {
     const num = Number(value);
+    const isInorganic = chlorProductType === "inorganic";
     if (!Number.isFinite(num)) {
       return {
         label: "--",
         target: "30-50 ppm",
-        action: "Noch kein CYA-Messwert vorhanden.",
+        action: isInorganic
+          ? "Noch kein CYA-Messwert vorhanden. Bei anorganischem Chlor nur separat relevant."
+          : "Noch kein CYA-Messwert vorhanden.",
         className: "",
       };
     }
@@ -382,7 +385,9 @@ class PoolChemistryCard extends HTMLElement {
       return {
         label: "Zu niedrig",
         target: "30-50 ppm",
-        action: "Chlor wird zu schnell abgebaut, Cyanurs\u00e4ure erh\u00f6hen.",
+        action: isInorganic
+          ? "Bei Bedarf separat Stabilisator dosieren, sonst bleibt Chlor unstabilisiert."
+          : "Chlor wird zu schnell abgebaut, Cyanurs\u00e4ure erh\u00f6hen.",
         className: "status-warning",
       };
     }
@@ -400,7 +405,9 @@ class PoolChemistryCard extends HTMLElement {
       return {
         label: "Optimal",
         target: "30-50 ppm",
-        action: "Perfekter Bereich, regelm\u00e4\u00dfig kontrollieren.",
+        action: isInorganic
+          ? "Guter Stabilisatorbereich. Mit anorganischem Chlor nicht unn\u00f6tig weiter erh\u00f6hen."
+          : "Perfekter Bereich, regelm\u00e4\u00dfig kontrollieren.",
         className: "status-ok",
       };
     }
@@ -409,7 +416,9 @@ class PoolChemistryCard extends HTMLElement {
       return {
         label: "Erh\u00f6ht",
         target: "30-50 ppm",
-        action: "Noch akzeptabel, Wasserwechsel einplanen.",
+        action: isInorganic
+          ? "Erh\u00f6ht. Kein zus\u00e4tzlicher Stabilisator n\u00f6tig, Wasserwechsel einplanen."
+          : "Noch akzeptabel, organisches Chlor sparsam nutzen und Wasserwechsel einplanen.",
         className: "status-warning",
       };
     }
@@ -418,7 +427,9 @@ class PoolChemistryCard extends HTMLElement {
       return {
         label: "Zu hoch",
         target: "30-50 ppm",
-        action: "Teilwasserwechsel durchf\u00fchren.",
+        action: isInorganic
+          ? "Teilwasserwechsel durchf\u00fchren."
+          : "Teilwasserwechsel durchf\u00fchren und organisches Chlor vermeiden.",
         className: "status-critical",
       };
     }
@@ -426,7 +437,9 @@ class PoolChemistryCard extends HTMLElement {
     return {
       label: "Kritisch",
       target: "30-50 ppm",
-      action: "Kompletter Wasserwechsel erforderlich.",
+      action: isInorganic
+        ? "Sehr hoher Wert. Gro\u00dfer Wasserwechsel erforderlich."
+        : "Sehr hoher Wert. Wasserwechsel erforderlich und organisches Chlor sofort stoppen.",
       className: "status-critical",
     };
   }
@@ -1908,7 +1921,7 @@ class PoolChemistryCard extends HTMLElement {
     const ph_ist = formatNum(attr.ph_ist);
     const t_ist = formatNum(attr.temp_ist);
     const cya_ist = formatNum(attr.cyanuric_acid);
-    const cyaAssessment = this._getCyaAssessment(attr.cyanuric_acid);
+    const cyaAssessment = this._getCyaAssessment(attr.cyanuric_acid, attr.chlor_product_type);
     const tableChlorRange = this._getTargetRange(attr, "chlor_min", "chlor_max", "chlor_target");
     const tablePhRange = this._getTargetRange(attr, "ph_min", "ph_max", "ph_target");
     const c_target = this._formatTargetRange(tableChlorRange, " mg/l");
@@ -2732,7 +2745,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.1 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.6 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

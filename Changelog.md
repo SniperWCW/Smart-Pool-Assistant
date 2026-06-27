@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.6] - 2026-06-27
+
+- **Chlorprodukt-Typ ergänzt**: Die Konfiguration unterscheidet jetzt zwischen `organisch / stabilisiert` und `anorganisch / unstabilisiert`.
+- **Wirkstoff-Hinweis präzisiert**: Der Wirkstoffanteil erklärt jetzt direkt typische Startwerte wie `0.56` für organisches Chlor und `1.00` für Calciumhypochlorit.
+- **CYA-Hinweise fachlich angepasst**: Die Lovelace-Karte bewertet Cyanursäure jetzt abhängig vom gewählten Chlorprodukt-Typ, damit anorganisches Chlor keine irreführenden CYA-Empfehlungen mehr auslöst.
+- **CYA-Warnung in der Empfehlung**: Hohe Cyanursäure wird jetzt auch im Empfehlungstext als `CYA hoch` bzw. `CYA kritisch hoch` sichtbar.
+
 ## [3.0.5] - 2026-06-27
 
 - **CYA-Zeile im Frontend verbessert**: `Cyanursäure` wird jetzt korrekt dargestellt, der Zielbereich `30-50 ppm` wird angezeigt und der Ist-Wert farblich eingeordnet.
