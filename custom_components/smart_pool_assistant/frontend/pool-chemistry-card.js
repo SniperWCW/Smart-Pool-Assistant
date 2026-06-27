@@ -1042,9 +1042,15 @@ class PoolChemistryCard extends HTMLElement {
                   <div id="cya-forecast-rec"></div>
                   <div id="cya-hist" class="hist-text"></div>
                   <div id="cya-model" class="forecast-text"></div>
-                  <div class="log-input">
-                    <input type="number" id="input-water_exchange_liters" step="1" placeholder="Wasserwechsel l">
-                    <input type="number" id="input-water_exchange_percent" step="0.1" placeholder="Wasserwechsel %">
+                  <div class="log-input water-exchange-inputs">
+                    <div class="field-with-label">
+                      <div class="field-label">Wasserwechsel L</div>
+                      <input type="number" id="input-water_exchange_liters" step="1" placeholder="L">
+                    </div>
+                    <div class="field-with-label">
+                      <div class="field-label">Wasserwechsel %</div>
+                      <input type="number" id="input-water_exchange_percent" step="0.1" placeholder="%">
+                    </div>
                     <button id="btn-water-exchange">OK</button>
                   </div>
                 </div>
@@ -1249,6 +1255,9 @@ class PoolChemistryCard extends HTMLElement {
               line-height: 1.35;
             }
             .log-input { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+            .water-exchange-inputs { align-items: flex-end; }
+            .field-with-label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 120px; min-width: 110px; }
+            .field-label { font-size: 0.72em; font-weight: 700; opacity: 0.75; line-height: 1.2; }
             .log-input input {
               flex: 1 1 80px;
               min-width: 0;
