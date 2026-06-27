@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.4] - 2026-06-27
+
+- **CYA jetzt wirklich bis zur Karte durchgereicht**: `sensor.pool_empfehlung` enthält nun auch `cyanuric_acid` und `cyanuric_acid_source` als Attribute, damit die Lovelace-Karte den bereits korrekt eingelesenen Wert auch anzeigen kann.
+- **Frontend-/Backend-Pfad geschlossen**: Der PoolLab-BLE-Abruf war bereits erfolgreich, der fehlende Messwert lag nur noch in der Attribut-Weitergabe des Empfehlungssensors.
+
 ## [3.0.3] - 2026-06-27
 
 - **CYA als echter PoolLab-Messwert**: Cyanursaeure aus PoolLab BLE wird jetzt bis in den Coordinator und ins Frontend als eigener aktueller Messwert inklusive Quelle durchgereicht.

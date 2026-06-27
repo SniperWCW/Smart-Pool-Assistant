@@ -82,6 +82,11 @@ Am besten:
 
 Praktisch ist ein Zeitfenster von wenigen Stunden deutlich besser als eine sehr spaete Kontrolle.
 
+Wichtig ist die Trennung:
+
+- Verbrauch lernen: `Messung -> Messung` mindestens `3 h`
+- Dosierwirkung lernen: `Messung -> Zugabe -> Nachmessung` mit eigener Logik, dort gilt aktuell `0.5 h` bis `12 h` nach der Zugabe
+
 ## Wie erkenne ich, dass die Lernphase noch unsicher ist?
 
 Typische Hinweise in der Karte:
