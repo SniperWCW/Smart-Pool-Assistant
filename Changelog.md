@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.5] - 2026-06-27
+
+- **CYA-Zeile im Frontend verbessert**: `Cyanursäure` wird jetzt korrekt dargestellt, der Zielbereich `30-50 ppm` wird angezeigt und der Ist-Wert farblich eingeordnet.
+- **CYA-Maßnahme direkt in der Tabelle**: Die letzte Spalte zeigt jetzt neben der Quelle auch eine passende Handlungsempfehlung abhängig vom gemessenen Cyanursäure-Wert.
+
 ## [3.0.4] - 2026-06-27
 
 - **CYA jetzt wirklich bis zur Karte durchgereicht**: `sensor.pool_empfehlung` enthält nun auch `cyanuric_acid` und `cyanuric_acid_source` als Attribute, damit die Lovelace-Karte den bereits korrekt eingelesenen Wert auch anzeigen kann.

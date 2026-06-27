@@ -367,6 +367,70 @@ class PoolChemistryCard extends HTMLElement {
     return diff <= criticalTolerance ? "status-warning" : "status-critical";
   }
 
+  _getCyaAssessment(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      return {
+        label: "--",
+        target: "30-50 ppm",
+        action: "Noch kein CYA-Messwert vorhanden.",
+        className: "",
+      };
+    }
+
+    if (num < 20) {
+      return {
+        label: "Zu niedrig",
+        target: "30-50 ppm",
+        action: "Chlor wird zu schnell abgebaut, Cyanurs\u00e4ure erh\u00f6hen.",
+        className: "status-warning",
+      };
+    }
+
+    if (num < 30) {
+      return {
+        label: "Leicht niedrig",
+        target: "30-50 ppm",
+        action: "Noch leicht erh\u00f6hen, damit der Zielbereich stabil erreicht wird.",
+        className: "status-warning",
+      };
+    }
+
+    if (num <= 50) {
+      return {
+        label: "Optimal",
+        target: "30-50 ppm",
+        action: "Perfekter Bereich, regelm\u00e4\u00dfig kontrollieren.",
+        className: "status-ok",
+      };
+    }
+
+    if (num <= 80) {
+      return {
+        label: "Erh\u00f6ht",
+        target: "30-50 ppm",
+        action: "Noch akzeptabel, Wasserwechsel einplanen.",
+        className: "status-warning",
+      };
+    }
+
+    if (num <= 100) {
+      return {
+        label: "Zu hoch",
+        target: "30-50 ppm",
+        action: "Teilwasserwechsel durchf\u00fchren.",
+        className: "status-critical",
+      };
+    }
+
+    return {
+      label: "Kritisch",
+      target: "30-50 ppm",
+      action: "Kompletter Wasserwechsel erforderlich.",
+      className: "status-critical",
+    };
+  }
+
   _isKnownValue(value) {
     return value !== undefined && value !== null && value !== "" && value !== "unknown" && value !== "unavailable";
   }
@@ -1844,6 +1908,7 @@ class PoolChemistryCard extends HTMLElement {
     const ph_ist = formatNum(attr.ph_ist);
     const t_ist = formatNum(attr.temp_ist);
     const cya_ist = formatNum(attr.cyanuric_acid);
+    const cyaAssessment = this._getCyaAssessment(attr.cyanuric_acid);
     const tableChlorRange = this._getTargetRange(attr, "chlor_min", "chlor_max", "chlor_target");
     const tablePhRange = this._getTargetRange(attr, "ph_min", "ph_max", "ph_target");
     const c_target = this._formatTargetRange(tableChlorRange, " mg/l");
@@ -1908,10 +1973,16 @@ class PoolChemistryCard extends HTMLElement {
         <div class="table-meta" data-label="Quelle">${sourceWithTime(tempSource)}</div>
       </div>
       <div class="table-row">
-        <div class="table-label">CyanursÃ¤ure</div>
-        <div class="table-value" data-label="Ist">${cya_ist} ppm</div>
-        <div class="table-target" data-label="Ziel">--</div>
-        <div class="table-meta" data-label="Quelle">${sourceWithTime(cyaSource)}</div>
+        <div class="table-label">Cyanurs\u00e4ure</div>
+        <div class="table-value" data-label="Ist"><span class="${cyaAssessment.className}">${cya_ist} ppm</span></div>
+        <div class="table-target" data-label="Ziel">
+          ${cyaAssessment.target}
+          <span class="table-sub ${cyaAssessment.className}">${cyaAssessment.label}</span>
+        </div>
+        <div class="table-meta" data-label="Quelle">
+          ${sourceWithTime(cyaSource)}
+          <span class="table-sub">${cyaAssessment.action}</span>
+        </div>
       </div>
       <div class="table-row">
         <div class="table-label">BT Verbindung</div>
