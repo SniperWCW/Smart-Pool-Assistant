@@ -29,7 +29,12 @@ class PoolLabBLESelection:
     @property
     def found(self) -> bool:
         """Return whether the BLE response contained usable chemistry values."""
-        return self.chlor is not None or self.ph is not None
+        return (
+            self.chlor is not None
+            or self.ph is not None
+            or self.temperature is not None
+            or self.cyanuric_acid is not None
+        )
 
 
 def select_poollab_ble_measurements(

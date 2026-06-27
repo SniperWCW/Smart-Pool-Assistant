@@ -19,13 +19,19 @@ class PoolLabCloudResult:
     chlor: float | None = None
     ph: float | None = None
     temperature: float | None = None
+    cyanuric_acid: float | None = None
     measurement_raw: str | None = None
     last_measurements: list[dict] = field(default_factory=list)
 
     @property
     def found(self) -> bool:
         """Return whether the cloud response contained usable chemistry values."""
-        return self.chlor is not None or self.ph is not None
+        return (
+            self.chlor is not None
+            or self.ph is not None
+            or self.temperature is not None
+            or self.cyanuric_acid is not None
+        )
 
 
 async def async_fetch_poollab_cloud_measurements(session, api_key: str) -> PoolLabCloudResult:
@@ -76,14 +82,22 @@ async def async_fetch_poollab_cloud_measurements(session, api_key: str) -> PoolL
             cloud_result.ph = p_val
         if p_name == "PL Temperature" and cloud_result.temperature is None:
             cloud_result.temperature = p_val
-        if cloud_result.chlor is not None and cloud_result.ph is not None:
+        if p_name in ("PL Cyanuric Acid", "PL Cyanuric acid", "PL CYA") and cloud_result.cyanuric_acid is None:
+            cloud_result.cyanuric_acid = p_val
+        if (
+            cloud_result.chlor is not None
+            and cloud_result.ph is not None
+            and cloud_result.temperature is not None
+            and cloud_result.cyanuric_acid is not None
+        ):
             break
 
     _LOGGER.debug(
-        "PoolLab Cloud values selected: chlor=%s ph=%s temp=%s measurement_raw=%s last_measurements=%s",
+        "PoolLab Cloud values selected: chlor=%s ph=%s temp=%s cya=%s measurement_raw=%s last_measurements=%s",
         cloud_result.chlor,
         cloud_result.ph,
         cloud_result.temperature,
+        cloud_result.cyanuric_acid,
         cloud_result.measurement_raw,
         cloud_result.last_measurements,
     )

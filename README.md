@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v3.0.1-blue" alt="Release">
+  <img src="https://img.shields.io/badge/release-v3.0.3-blue" alt="Release">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/Home%20Assistant-Custom%20Integration-41BDF5" alt="Home Assistant Custom Integration">
   <img src="https://img.shields.io/github/downloads/SniperWCW/Smart-Pool-Assistant/total?label=downloads&color=F2C94C" alt="Downloads">
@@ -13,7 +13,7 @@
 
 Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und Whirlpool-Pflege. Sie kombiniert PoolLab BLE, PoolLab Cloud, manuelle Sensoren, lernende Dosierlogik, Wartungshistorie und eine eigene Lovelace-Karte in einer zentralen Empfehlung.
 
-**Aktueller Release-Stand: V3.0.1**
+**Aktueller Release-Stand: V3.0.3**
 
 ## Schnellueberblick
 
@@ -21,6 +21,8 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und 
 - transparente Berechnungsdetails direkt in der Karte
 - lernende Chlor- und pH-Analyse mit Prognosen
 - manueller PoolLab-BLE-Abruf plus zyklischer Cloud-Sync
+- CYA/Cyanursaeure aus PoolLab BLE und Cloud direkt in den aktuellen Messwerten
+- PoolLab-Abruf oben in einer eigenen Box neben `Status` und `Baden`
 - Nachmess-Workflow, Badeampel, Wetter- und LayZSpa-Integration
 
 ## Vorschau

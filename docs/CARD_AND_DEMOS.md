@@ -70,7 +70,8 @@ layzspa:
 
 ## Hinweise zur Bedienung
 
-- Der Abrufbutton fuer PoolLab sitzt direkt in **Aktuelle Messwerte**.
+- Der PoolLab-Abruf sitzt oben in einer eigenen Box neben **Status** und **Baden**.
+- In **Aktuelle Messwerte** erscheint Cyanursaeure/CYA jetzt als eigener Messwert inklusive Quelle.
 - Nach Chemiezugaben sperrt die Karte die Eingabe bis zur naechsten Messung.
 - In den Berechnungsdetails siehst du, warum hohe Empfehlungen zustande kommen.
 - Der visuelle Karten-Editor beschraenkt sich auf die LayZSpa-Optionen. Wetter und UV werden in der Integration konfiguriert.

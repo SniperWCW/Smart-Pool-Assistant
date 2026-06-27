@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.3] - 2026-06-27
+
+- **CYA als echter PoolLab-Messwert**: Cyanursaeure aus PoolLab BLE wird jetzt bis in den Coordinator und ins Frontend als eigener aktueller Messwert inklusive Quelle durchgereicht.
+- **Cloud-Pfad fuer CYA vorbereitet**: Falls die PoolLab-Cloud Cyanursaeure liefert, wird der Wert jetzt ebenfalls erkannt und in die Quellenlogik aufgenommen.
+- **PoolLab-Abruf nach oben verlegt**: Die Lovelace-Karte zeigt den manuellen PoolLab-Abruf jetzt in einer dritten oberen Box neben `Status` und `Baden`, damit der Zugriff ohne Scrollen moeglich ist.
+- **Messwerttabelle wieder fokussiert**: `Aktuelle Messwerte` enthaelt jetzt die neue CYA-Zeile und keinen separaten Abruf-Button mehr.
+
 ## [3.0.2] - 2026-06-26
 
 - **Neueste Messquelle gewinnt pro Wert**: Chlor, pH und Temperatur werden jetzt quellenübergreifend nach Zeitstempel ausgewählt. Dadurch verdrängt ein älterer Bluetooth-Wert keinen neueren Messwert mehr.

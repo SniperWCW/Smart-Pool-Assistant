@@ -49,7 +49,7 @@ Wichtige Konfigurationspunkte:
 
 - Die Integration verbindet sich nicht zyklisch per BLE mit dem PoolLab.
 - Fuer einen BLE-Abruf: PoolLab einschalten, Messung oder Zero durchfuehren, kurz warten und dann `button.poollab_messwerte_abrufen` druecken.
-- Der gleiche Abruf ist direkt in der Lovelace-Karte unter **Aktuelle Messwerte** integriert.
+- Der gleiche Abruf ist direkt in der Lovelace-Karte oben in einer eigenen **PoolLab**-Box integriert.
 - Nach Erfolg gilt ein Cooldown von `20` Sekunden, nach Fehlern `30` Sekunden.
 - Cloud-Daten laufen weiterhin zyklisch ueber das konfigurierte Intervall weiter.
 - **BT Verbindung** zeigt nur den aktuell laufenden BLE-Connect an. Nach dem Lesen trennt die Integration bewusst wieder.

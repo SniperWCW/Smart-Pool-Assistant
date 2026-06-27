@@ -597,11 +597,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         poollab_fetch_completed_at = self.maintenance_history.get("last_poollab_fetch_completed_at")
         self.maintenance_history.pop("bluetooth_connected", None)
 
-        c_ist = ph_ist = temp_ist = None
-        chlor_source = ph_source = temp_source = None
+        c_ist = ph_ist = temp_ist = cya_ist = None
+        chlor_source = ph_source = temp_source = cya_source = None
         c_candidates: list[tuple[datetime | None, object, str]] = []
         ph_candidates: list[tuple[datetime | None, object, str]] = []
         temp_candidates: list[tuple[datetime | None, object, str]] = []
+        cya_candidates: list[tuple[datetime | None, object, str]] = []
         # Lade letzte bekannte API-Messwerte aus dem Speicher
         last_api_measurements = self.maintenance_history.get("last_api_measurements", [])
 
@@ -658,6 +659,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                             self.maintenance_history["last_ble_temp"] = ble_selection.temperature
                         if ble_selection.cyanuric_acid is not None:
                             self.maintenance_history["cyanuric_acid"] = ble_selection.cyanuric_acid
+                            self.maintenance_history["last_ble_cya"] = ble_selection.cyanuric_acid
 
                         add_value_candidate(
                             c_candidates, ble_selection.chlor, "Bluetooth", ble_selection.measurement_raw
@@ -668,14 +670,19 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         add_value_candidate(
                             temp_candidates, ble_selection.temperature, "Bluetooth", ble_selection.measurement_raw
                         )
+                        add_value_candidate(
+                            cya_candidates, ble_selection.cyanuric_acid, "Bluetooth", ble_selection.measurement_raw
+                        )
                         c_ist, chlor_source = select_latest_candidate(c_candidates)
                         ph_ist, ph_source = select_latest_candidate(ph_candidates)
                         temp_ist, temp_source = select_latest_candidate(temp_candidates)
+                        cya_ist, cya_source = select_latest_candidate(cya_candidates)
                         _LOGGER.debug(
-                            "BLE source assignment: chlor=%s ph=%s temp=%s",
+                            "BLE source assignment: chlor=%s ph=%s temp=%s cya=%s",
                             chlor_source,
                             ph_source,
                             temp_source,
+                            cya_source,
                         )
                         if ble_selection.measurement_raw:
                             self.maintenance_history["last_ble_measurement_raw"] = ble_selection.measurement_raw
@@ -706,7 +713,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         # 2. Versuch: Cloud-Daten zyklisch abrufen. Ein manueller Abruf soll BLE priorisieren
         # und nur dann die Cloud verwenden, wenn kein BLE-Geraet konfiguriert ist.
-        should_fetch_cloud = bool(api_key) and (c_ist is None or ph_ist is None) and (
+        should_fetch_cloud = bool(api_key) and (c_ist is None or ph_ist is None or cya_ist is None) and (
             not perform_remote_fetch or not ble_address
         )
         if should_fetch_cloud:
@@ -730,9 +737,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 add_value_candidate(
                     temp_candidates, cloud_result.temperature, "Cloud", cloud_result.measurement_raw
                 )
+                add_value_candidate(
+                    cya_candidates, cloud_result.cyanuric_acid, "Cloud", cloud_result.measurement_raw
+                )
                 c_ist, chlor_source = select_latest_candidate(c_candidates)
                 ph_ist, ph_source = select_latest_candidate(ph_candidates)
                 temp_ist, temp_source = select_latest_candidate(temp_candidates)
+                cya_ist, cya_source = select_latest_candidate(cya_candidates)
 
                 if cloud_result.found:
                     cloud_found = True
@@ -764,23 +775,32 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             cached_ble_c = self.maintenance_history.get("last_ble_c")
             cached_ble_ph = self.maintenance_history.get("last_ble_ph")
             cached_ble_temp = self.maintenance_history.get("last_ble_temp")
+            cached_ble_cya = self.maintenance_history.get("last_ble_cya")
 
             add_value_candidate(c_candidates, cached_ble_c, "Bluetooth", ble_ts_str)
             add_value_candidate(ph_candidates, cached_ble_ph, "Bluetooth", ble_ts_str)
             add_value_candidate(temp_candidates, cached_ble_temp, "Bluetooth", ble_ts_str)
+            add_value_candidate(cya_candidates, cached_ble_cya, "Bluetooth", ble_ts_str)
 
-            if cached_ble_c is not None or cached_ble_ph is not None or cached_ble_temp is not None:
+            if (
+                cached_ble_c is not None
+                or cached_ble_ph is not None
+                or cached_ble_temp is not None
+                or cached_ble_cya is not None
+            ):
                 cached_ble_found = True
                 c_ist, chlor_source = select_latest_candidate(c_candidates)
                 ph_ist, ph_source = select_latest_candidate(ph_candidates)
                 temp_ist, temp_source = select_latest_candidate(temp_candidates)
+                cya_ist, cya_source = select_latest_candidate(cya_candidates)
                 _LOGGER.debug(
-                    "Considering cached BLE values in source selection: ble=%s api=%s selected=(%s,%s,%s)",
+                    "Considering cached BLE values in source selection: ble=%s api=%s selected=(%s,%s,%s,%s)",
                     ble_ts_str,
                     api_ts_str,
                     chlor_source,
                     ph_source,
                     temp_source,
+                    cya_source,
                 )
 
         # 2. Versuch: Manuelle Sensoren prüfen (immer prüfen für Quellen-Erkennung)
@@ -798,6 +818,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         c_ist, chlor_source = select_latest_candidate(c_candidates)
         ph_ist, ph_source = select_latest_candidate(ph_candidates)
         temp_ist, temp_source = select_latest_candidate(temp_candidates)
+        cya_ist, cya_source = select_latest_candidate(cya_candidates)
 
         for ts_candidate in (c_man_ts, ph_man_ts, temp_man_ts):
             if not ts_candidate:
@@ -831,6 +852,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         else:
             self.maintenance_history["last_temp"] = temp_ist
 
+        if cya_ist is None:
+            cya_ist = self.maintenance_history.get("cyanuric_acid")
+            if cya_ist is not None:
+                cya_source = self.maintenance_history.get("cyanuric_acid_source") or "Speicher"
+        else:
+            self.maintenance_history["cyanuric_acid"] = cya_ist
+            self.maintenance_history["cyanuric_acid_source"] = cya_source
+
         last_activities = self._collect_last_activities()
         if last_activities:
             self.maintenance_history["last_activities"] = last_activities
@@ -847,7 +876,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Synchronisiere den kombinierten Zeitstempel für die Anzeige
         _LOGGER.debug(
             "PoolLab source collection summary: remote_fetch=%s ble_found=%s cloud_found=%s manual_found=%s "
-            "cached_ble_found=%s result=%s error=%s data_source=%s c=%s ph=%s temp=%s sources=(%s,%s,%s)",
+            "cached_ble_found=%s result=%s error=%s data_source=%s c=%s ph=%s temp=%s cya=%s sources=(%s,%s,%s,%s)",
             perform_remote_fetch,
             ble_found,
             cloud_found,
@@ -859,9 +888,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             c_ist,
             ph_ist,
             temp_ist,
+            cya_ist,
             chlor_source,
             ph_source,
             temp_source,
+            cya_source,
         )
 
         api_ts_str = self.maintenance_history.get("last_api_measurement_raw")
@@ -994,7 +1025,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "pool_covered": self.pool_covered,
                 "ble_battery": self.maintenance_history.get("ble_battery"),
                 "bluetooth_connected": ble_connected,
-                "cyanuric_acid": self.maintenance_history.get("cyanuric_acid"),
+                "cyanuric_acid": cya_ist,
+                "cyanuric_acid_source": cya_source,
                 "usage_mode": self.usage_mode,
                 "chlor_breakdown_base": 0.0,
                 "chlor_breakdown_shock_adj": 0.0,
@@ -1151,7 +1183,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "last_activities": last_activities,
             "history": self.maintenance_history,
             "recommendation": recommendation,
-            "cyanuric_acid": self.maintenance_history.get("cyanuric_acid"),
+            "cyanuric_acid": cya_ist,
+            "cyanuric_acid_source": cya_source,
             "chlor_breakdown_base": chlor_breakdown_base,
             "last_api_measurements": last_api_measurements,
             "chlor_breakdown_shock_adj": chlor_breakdown_shock_adj,

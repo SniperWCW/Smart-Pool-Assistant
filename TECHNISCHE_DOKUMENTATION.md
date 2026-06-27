@@ -3,8 +3,8 @@
 **Projekt:** Smart Pool Assistant  
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
-**Dokumentationsstand:** 2026-06-25  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-25 auf Basis von `manifest.json` Version `3.0.1`, inklusive manueller PoolLab-Abruf-UI, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer zweispaltiger Status- und Badeampel-Box, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen späte Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples und FAQ fuer typische Diagnose- und Supportfaelle
+**Dokumentationsstand:** 2026-06-27  
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-27 auf Basis von `manifest.json` Version `3.0.3`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursäure/CYA als aktuellem Messwert mit Quellenanzeige, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen späte Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples und FAQ fuer typische Diagnose- und Supportfaelle
 
 ---
 
@@ -136,7 +136,7 @@ Aktueller Stand:
 {
   "domain": "smart_pool_assistant",
   "name": "Smart Pool Assistant",
-  "version": "3.0.1",
+  "version": "3.0.3",
   "documentation": "https://github.com/SniperWCW/Smart-Pool-Assistant",
   "issue_tracker": "https://github.com/SniperWCW/Smart-Pool-Assistant/issues",
   "dependencies": ["bluetooth"],
@@ -1161,7 +1161,7 @@ Die Karte:
 - zeigt Messwerte und Zielbereiche
 - zeigt Messquellen
 - zeigt BLE-Verbindungsstatus
-- integriert den PoolLab-Abrufbutton
+- integriert den PoolLab-Abruf in einer eigenen Kopfbox
 - zeigt einen Wartezustand nach bestätigten Chemiezugaben
 - zeigt die aktuelle Chlor-Prognose direkt im Empfehlungsblock
 - protokolliert Chemie- und Wartungsaktionen
@@ -1180,14 +1180,13 @@ Die Messwertetabelle nutzt die Spalten:
 Messwert | Ist | Ziel | Quelle
 ```
 
-Chemiewerte zeigen Istwerte und Zielbereiche getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Zusätzlich enthält die Tabelle zwei relevante Status-/Aktionszeilen:
+Chemiewerte zeigen Istwerte und Zielbereiche getrennt. Die Quellen-Spalte kann passende Messzeitpunkte anzeigen. Cyanursäure/CYA wird dabei wie Chlor, pH und Temperatur als eigener aktueller Messwert dargestellt. In der Tabelle bleibt als zusätzliche Statuszeile nur:
 
 - `BT Verbindung`
-- `PoolLab Abruf`
 
 Auf schmalen Displays blendet die Karte den Tabellenkopf aus und zeigt die Werte je Messwert mit kompakten Labels (`Ist`, `Ziel`, `Quelle`). Dadurch bleiben Zielbereiche und Quellen auch auf dem Handy eindeutig zuordenbar.
 
-Die Karte ermittelt den Button standardmäßig automatisch:
+Der PoolLab-Abruf sitzt oberhalb der Empfehlungen in einer dritten Box neben `Status` und `Baden`. Die Karte ermittelt den zugehörigen Button standardmäßig automatisch:
 
 1. `button.poollab_messwerte_abrufen`
 2. erste passende Fallback-Entität mit diesem Prefix
@@ -1457,7 +1456,7 @@ Die folgenden Punkte waren in älteren Dokumentationen teils anders beschrieben 
 - `PLATFORMS` ist **nicht mehr nur `SENSOR`**, sondern `SENSOR` und `BUTTON`.
 - BLE wird **nicht mehr zyklisch** gelesen.
 - Das **Cloud-Intervall ist wieder konfigurierbar** und läuft weiterhin zyklisch.
-- Die Lovelace-Karte enthält jetzt einen **integrierten PoolLab-Abruf-Button**.
+- Die Lovelace-Karte enthält jetzt einen **integrierten PoolLab-Abruf-Button in einer eigenen oberen PoolLab-Box**.
 - Der Karten-Editor bietet keine eigene `fetch_button_entity` mehr an; die Karte nutzt den automatisch erkannten PoolLab-Abruf-Button.
 - `bluetooth_connected` ist jetzt ein Live-Status nur für den aktiven BLE-Abruf und keine persistente "letzter Erfolg"-Anzeige mehr.
 - Die Karte kennt jetzt einen expliziten Nachmess-Zustand nach Chemiezugaben.

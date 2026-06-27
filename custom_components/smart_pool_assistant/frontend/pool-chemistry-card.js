@@ -194,6 +194,12 @@ class PoolChemistryCard extends HTMLElement {
     };
   }
 
+  _getPoolLabFetchBadgeClass(meta) {
+    if (meta === "fehler") return "critical";
+    if (meta === "warte" || meta === "lÃ¤uft") return "waiting";
+    return "ok";
+  }
+
   async _pressPoolLabFetchButton() {
     if (!this._hass) return;
 
@@ -923,6 +929,7 @@ class PoolChemistryCard extends HTMLElement {
             <div id="top-status-card" class="top-status-card">
               <div id="status-box" class="status-segment"></div>
               <div id="bathing-box" class="status-segment"></div>
+              <div id="poollab-box" class="status-segment poollab-box"></div>
             </div>
             <div class="recommendation-section">
               <div class="rec-row">
@@ -1030,7 +1037,7 @@ class PoolChemistryCard extends HTMLElement {
           <style>
             .top-status-card {
               display: grid;
-              grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+              grid-template-columns: minmax(0, 1fr) minmax(220px, 0.85fr) minmax(220px, 0.95fr);
               margin-bottom: 16px;
               border-radius: 8px;
               overflow: hidden;
@@ -1067,6 +1074,59 @@ class PoolChemistryCard extends HTMLElement {
               font-size: 1.05em;
               font-weight: 700;
               line-height: 1.2;
+            }
+            .poollab-box {
+              align-items: stretch;
+              text-align: left;
+            }
+            .poollab-title {
+              font-size: 1em;
+              font-weight: 700;
+              line-height: 1.2;
+            }
+            .poollab-detail {
+              font-size: 0.78em;
+              font-weight: 500;
+              opacity: 0.78;
+              line-height: 1.25;
+            }
+            .poollab-actions {
+              margin-top: 8px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 8px;
+              flex-wrap: wrap;
+            }
+            .poollab-meta-badge {
+              display: inline-flex;
+              align-items: center;
+              border-radius: 999px;
+              padding: 3px 8px;
+              font-size: 0.72em;
+              font-weight: 700;
+              letter-spacing: 0.04em;
+              text-transform: uppercase;
+              background: rgba(0, 0, 0, 0.06);
+            }
+            .poollab-meta-badge.ok { color: #4caf50; }
+            .poollab-meta-badge.waiting { color: #03a9f4; }
+            .poollab-meta-badge.critical { color: #f44336; }
+            .poollab-inline-btn {
+              height: 34px;
+              cursor: pointer;
+              background: var(--primary-color);
+              color: white;
+              border: none;
+              border-radius: 6px;
+              padding: 0 12px;
+              font-size: 0.9em;
+              font-weight: bold;
+              flex-shrink: 0;
+            }
+            .poollab-inline-btn:disabled {
+              opacity: 0.65;
+              cursor: default;
             }
             .bathing-detail {
               font-size: 0.78em;
@@ -1602,7 +1662,10 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     const bathingBox = this.querySelector('#bathing-box');
+    const poollabBox = this.querySelector('#poollab-box');
     const bathingAdvice = this._getBathingAdvice(attr);
+    const fetchUi = this._getPoolLabFetchUi(attr);
+    const fetchBadgeClass = this._getPoolLabFetchBadgeClass(fetchUi.meta);
     const combinedStatusClass = this._getCombinedStatusClass(statusClass, bathingAdvice.className);
 
     topStatusCard.className = `top-status-card ${combinedStatusClass}`;
@@ -1618,6 +1681,16 @@ class PoolChemistryCard extends HTMLElement {
       <div class="status-label">Baden</div>
       <div class="bathing-title">${bathingAdvice.icon} ${bathingAdvice.title}</div>
       <div class="bathing-detail">${bathingAdvice.detail}</div>
+    `;
+    poollabBox.className = "status-segment poollab-box";
+    poollabBox.innerHTML = `
+      <div class="status-label">PoolLab</div>
+      <div class="poollab-title">${fetchUi.status}</div>
+      <div class="poollab-detail">${fetchUi.entityId ? "Manueller Abruf direkt aus der Karte." : "Kein Abruf-Button vorhanden."}</div>
+      <div class="poollab-actions">
+        <span class="poollab-meta-badge ${fetchBadgeClass}">${fetchUi.meta}</span>
+        <button id="btn-poollab-fetch-top" class="poollab-inline-btn" ${fetchUi.disabled ? "disabled" : ""}>${fetchUi.label}</button>
+      </div>
     `;
 
     // LayzSpa Panel Rendering
@@ -1770,6 +1843,7 @@ class PoolChemistryCard extends HTMLElement {
     const c_ist = formatNum(attr.chlor_ist);
     const ph_ist = formatNum(attr.ph_ist);
     const t_ist = formatNum(attr.temp_ist);
+    const cya_ist = formatNum(attr.cyanuric_acid);
     const tableChlorRange = this._getTargetRange(attr, "chlor_min", "chlor_max", "chlor_target");
     const tablePhRange = this._getTargetRange(attr, "ph_min", "ph_max", "ph_target");
     const c_target = this._formatTargetRange(tableChlorRange, " mg/l");
@@ -1780,6 +1854,7 @@ class PoolChemistryCard extends HTMLElement {
     const chlorSource = attr.chlor_source || '--';
     const phSource = attr.ph_source || '--';
     const tempSource = attr.temp_source || '--';
+    const cyaSource = attr.cyanuric_acid_source || '--';
     const lastMeasurement = attr.last_measurement && attr.last_measurement !== "Noch keine Messung"
       ? attr.last_measurement
       : "";
@@ -1793,10 +1868,9 @@ class PoolChemistryCard extends HTMLElement {
     const bluetoothBadge = bluetoothConnected
       ? '<span class="bt-badge connected"><span class="bt-dot"></span>Bluetooth: Ja</span>'
       : '<span class="bt-badge disconnected"><span class="bt-dot"></span>Bluetooth: Nein</span>';
-    const fetchUi = this._getPoolLabFetchUi(attr);
     const measurementsSummary = this.querySelector('#measurements-summary');
     if (measurementsSummary) {
-      measurementsSummary.textContent = `Chlor ${c_ist} mg/l, pH ${ph_ist}, ${t_ist}°C`;
+      measurementsSummary.textContent = `Chlor ${c_ist} mg/l, pH ${ph_ist}, ${t_ist} °C, CYA ${cya_ist} ppm`;
     }
 
     // Helper to get colored text for filter status
@@ -1834,25 +1908,23 @@ class PoolChemistryCard extends HTMLElement {
         <div class="table-meta" data-label="Quelle">${sourceWithTime(tempSource)}</div>
       </div>
       <div class="table-row">
+        <div class="table-label">CyanursÃ¤ure</div>
+        <div class="table-value" data-label="Ist">${cya_ist} ppm</div>
+        <div class="table-target" data-label="Ziel">--</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(cyaSource)}</div>
+      </div>
+      <div class="table-row">
         <div class="table-label">BT Verbindung</div>
         <div class="table-value" data-label="Status">${bluetoothBadge}</div>
         <div class="table-target" data-label="Messung">${lastMeasurement && attr.last_measurement_source === "Bluetooth" ? lastMeasurement : "--"}</div>
         <div class="table-meta" data-label="Quelle">${bluetoothConnected ? 'aktiv' : 'inaktiv'}</div>
       </div>
-      <div class="table-row">
-        <div class="table-label">PoolLab Abruf</div>
-        <div class="table-value table-action" data-label="Aktion">
-          <button id="btn-poollab-fetch" class="fetch-btn" ${fetchUi.disabled ? "disabled" : ""}>${fetchUi.label}</button>
-        </div>
-        <div id="poollab-fetch-status" class="table-target fetch-status" data-label="Status">${fetchUi.status}</div>
-        <div class="table-meta" data-label="Quelle">${fetchUi.meta}</div>
-      </div>
     `;
     this._renderWeatherSection();
     this._renderStabilitySection();
-    const fetchButton = this.querySelector('#btn-poollab-fetch');
-    if (fetchButton) {
-      fetchButton.onclick = () => this._pressPoolLabFetchButton();
+    const fetchButtonTop = this.querySelector('#btn-poollab-fetch-top');
+    if (fetchButtonTop) {
+      fetchButtonTop.onclick = () => this._pressPoolLabFetchButton();
     }
     // Filter Maintenance Display
     const hoursSinceClean = attr.hours_since_filter_clean;
