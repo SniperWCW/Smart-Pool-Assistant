@@ -146,6 +146,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
         """Return entity specific state attributes."""
         data = self.coordinator.data
         return {
+            "config_entry_id": self.coordinator.entry.entry_id,
             "last_calculation": data.get("last_calculation"),
             "last_measurement": data.get("last_measurement"),
             "last_measurement_source": data.get("last_measurement_source"),

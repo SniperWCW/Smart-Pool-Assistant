@@ -661,7 +661,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             )
 
         for item in diagnosis.get("rejected", [])[-10:]:
-            _LOGGER.warning(
+            _LOGGER.info(
                 "Dose sample rejected: reason=%s dose_at=%s amount=%sg previous_at=%s following_at=%s baseline_gap_h=%s effect_h=%s factor=%s",
                 item.get("reason"),
                 item.get("dose_at"),
@@ -928,6 +928,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         ble_data = await asyncio.wait_for(client.async_read_data(), timeout=40.0)
 
                         ble_found = True
+                        ble_connected = True
                         poollab_fetch_result = "success"
                         poollab_fetch_error = None
                         poollab_fetch_completed_at = dt_util.now().isoformat()

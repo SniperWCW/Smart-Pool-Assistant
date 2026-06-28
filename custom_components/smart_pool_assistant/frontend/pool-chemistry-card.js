@@ -42,24 +42,38 @@ class PoolChemistryCard extends HTMLElement {
 
   _resolvePoolLabFetchButtonEntity() {
     if (!this._hass) return null;
+    const recommendationEntryId = this._lastAttr?.config_entry_id || null;
 
     if (this.config?.fetch_button_entity && this._hass.states[this.config.fetch_button_entity]) {
       return this.config.fetch_button_entity;
     }
 
-    if (this._hass.states["button.poollab_messwerte_abrufen"]) {
-      return "button.poollab_messwerte_abrufen";
-    }
-
     if (this._poolLabFetchButtonEntityCache && this._hass.states[this._poolLabFetchButtonEntityCache]) {
-      return this._poolLabFetchButtonEntityCache;
+      const cachedState = this._hass.states[this._poolLabFetchButtonEntityCache];
+      const cachedEntryId = cachedState?.attributes?.config_entry_id || null;
+      if (!recommendationEntryId || cachedEntryId === recommendationEntryId) {
+        return this._poolLabFetchButtonEntityCache;
+      }
     }
 
     const candidates = Object.keys(this._hass.states)
       .filter((entityId) => entityId.startsWith("button.poollab_messwerte_abrufen"))
       .sort((a, b) => a.localeCompare(b));
 
-    this._poolLabFetchButtonEntityCache = candidates[0] || null;
+    const matchingCandidate = recommendationEntryId
+      ? candidates.find((entityId) => this._hass.states[entityId]?.attributes?.config_entry_id === recommendationEntryId)
+      : null;
+
+    if (this._hass.states["button.poollab_messwerte_abrufen"]) {
+      const defaultButtonState = this._hass.states["button.poollab_messwerte_abrufen"];
+      const defaultButtonEntryId = defaultButtonState?.attributes?.config_entry_id || null;
+      if (!recommendationEntryId || defaultButtonEntryId === recommendationEntryId) {
+        this._poolLabFetchButtonEntityCache = "button.poollab_messwerte_abrufen";
+        return this._poolLabFetchButtonEntityCache;
+      }
+    }
+
+    this._poolLabFetchButtonEntityCache = matchingCandidate || candidates[0] || null;
     return this._poolLabFetchButtonEntityCache;
   }
 

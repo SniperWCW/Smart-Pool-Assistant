@@ -88,6 +88,10 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
+            ble_address = user_input.get(CONF_BLE_ADDRESS)
+            if isinstance(ble_address, str) and ble_address.strip():
+                await self.async_set_unique_id(ble_address.strip())
+                self._abort_if_unique_id_configured()
             # Prüfen, ob dies eine vollständige Übermittlung ist (erforderliches Feld vorhanden)
             if CONF_POOL_VOLUME in user_input:
                 if not validate_data_source(user_input):

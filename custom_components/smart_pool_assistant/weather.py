@@ -45,11 +45,16 @@ async def async_get_weather_data(hass: HomeAssistant, conf: dict, limit: int = 2
             "wind_speed_unit": base["wind_speed_unit"],
         }
 
+    has_forecast = len(normalized_days) > 0
+    today = _apply_uv_sensor(hass, conf, today)
+    if isinstance(today, dict):
+        today = {**today, "has_forecast": has_forecast}
+
     return {
         **base,
-        "has_forecast": len(normalized_days) > 0,
+        "has_forecast": has_forecast,
         "forecast_days": normalized_days,
-        "today": _apply_uv_sensor(hass, conf, today),
+        "today": today,
     }
 
 

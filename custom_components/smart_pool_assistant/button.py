@@ -41,7 +41,7 @@ class PoolLabFetchButton(CoordinatorEntity, ButtonEntity):
     def extra_state_attributes(self) -> dict[str, str]:
         """Expose the last manual fetch state on the button itself."""
         data = self.coordinator.data or {}
-        attrs = {}
+        attrs = {"config_entry_id": self.coordinator.entry.entry_id}
 
         if requested_at := data.get("last_poollab_fetch_requested_at"):
             attrs["last_fetch_requested_at"] = requested_at

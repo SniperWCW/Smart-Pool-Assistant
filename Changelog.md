@@ -1,5 +1,9 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.12] - 2026-06-28
+
+- **Diagnose nicht mehr als Fehlerbox**: Verwarfene Chlor-Dosier-Samples aus der Reparatur-/Diagnoselogik werden nicht mehr als `WARNING`, sondern als unkritische Info protokolliert. Dadurch erscheint in Home Assistant keine irrefuehrende Fehlerbox mehr fuer fachliche Sample-Verwerfungen.
+
 ## [3.0.11] - 2026-06-28
 
 - **Sample-Diagnose in Push erweitert**: Benachrichtigungen zu gewerteten oder verworfenen Chlor-Dosier-Samples enthalten jetzt direkt Vorherwert, Nachherwert, geloggte Gramm, theoretischen Anstieg und beobachteten Anstieg.
