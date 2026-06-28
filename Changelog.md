@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.13] - 2026-06-28
+
+- **Wetter-Forecast wieder wirksam in der Chemielogik**: Forecast-Status wird jetzt bis in den Tageskontext durchgereicht, sodass UV-Zuschlag und Regen-Hinweis wieder tatsaechlich in der Berechnung greifen.
+- **BLE-Status sauber bis ins Frontend gespiegelt**: Nach erfolgreichem PoolLab-BLE-Abruf wird die Verbindung jetzt korrekt als aktiv markiert, ohne den eigentlichen Abrufpfad zu veraendern.
+- **Config-Flow gegen doppelte BLE-Eintraege gehaertet**: Manuell eingetragene PoolLab-BLE-Adressen werden nun ebenfalls ueber die `unique_id` dedupliziert.
+- **PoolLab-Button bei mehreren Eintraegen robuster zugeordnet**: Die Lovelace-Karte ordnet den manuellen Abruf-Button jetzt ueber die `config_entry_id` dem passenden Empfehlungssensor zu.
+
 ## [3.0.12] - 2026-06-28
 
 - **Diagnose nicht mehr als Fehlerbox**: Verwarfene Chlor-Dosier-Samples aus der Reparatur-/Diagnoselogik werden nicht mehr als `WARNING`, sondern als unkritische Info protokolliert. Dadurch erscheint in Home Assistant keine irrefuehrende Fehlerbox mehr fuer fachliche Sample-Verwerfungen.
