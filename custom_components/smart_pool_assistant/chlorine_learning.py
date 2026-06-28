@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from statistics import mean
 from typing import Callable
 
-from .const import CONF_CHLOR_CONTENT, CONF_CHLOR_MIN, CONF_CHLOR_TARGET, CONF_POOL_VOLUME
+from .chlorine_products import resolve_chlor_content
+from .const import CONF_CHLOR_CONTENT, CONF_CHLOR_MIN, CONF_CHLOR_PRODUCT_TYPE, CONF_CHLOR_TARGET, CONF_POOL_VOLUME
 from .maintenance import CONTEXT_HISTORY_KEY
 
 
@@ -139,7 +140,7 @@ def calculate_chlorine_learning(
 ) -> dict:
     """Calculate learned chlorine consumption, dose factor and forecast."""
     volume = _positive_float(conf.get(CONF_POOL_VOLUME), 0.0)
-    chlor_content = _positive_float(conf.get(CONF_CHLOR_CONTENT), 0.56) or 0.56
+    chlor_content = resolve_chlor_content(conf.get(CONF_CHLOR_PRODUCT_TYPE), conf.get(CONF_CHLOR_CONTENT))
     chlor_min = _chlor_min_from_conf(conf)
 
     measurements = _load_measurements(history, parse_ts, now)
@@ -230,7 +231,7 @@ def diagnose_chlorine_dose_samples(
 ) -> dict:
     """Return accepted and rejected dose-sample candidates with reasons."""
     volume = _positive_float(conf.get(CONF_POOL_VOLUME), 0.0)
-    chlor_content = _positive_float(conf.get(CONF_CHLOR_CONTENT), 0.56) or 0.56
+    chlor_content = resolve_chlor_content(conf.get(CONF_CHLOR_PRODUCT_TYPE), conf.get(CONF_CHLOR_CONTENT))
 
     measurements = _load_measurements(history, parse_ts, now)
     doses = _load_doses(history, parse_ts, now)

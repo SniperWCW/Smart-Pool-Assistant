@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Callable
 
+from .chlorine_products import normalize_chlor_product_type, resolve_chlor_content
 from .chlorine_learning import DOSES_KEY
 from .const import CONF_CHLOR_CONTENT, CONF_CHLOR_PRODUCT_TYPE, CONF_POOL_VOLUME
 
@@ -109,8 +110,8 @@ def calculate_cya_learning(
     current_cya: float | None = None,
 ) -> dict:
     """Calculate modeled current CYA and a simple forward forecast."""
-    product_type = conf.get(CONF_CHLOR_PRODUCT_TYPE, "organic")
-    chlor_content = _positive_float(conf.get(CONF_CHLOR_CONTENT), 0.56) or 0.56
+    product_type = normalize_chlor_product_type(conf.get(CONF_CHLOR_PRODUCT_TYPE, "organic"))
+    chlor_content = resolve_chlor_content(product_type, conf.get(CONF_CHLOR_CONTENT))
     volume_m3 = _positive_float(conf.get(CONF_POOL_VOLUME), 0.0)
     cya_ratio = _cya_ratio_for_product(product_type, chlor_content)
 

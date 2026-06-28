@@ -14,6 +14,10 @@ from homeassistant.components.bluetooth import (
     async_discovered_service_info,
 )
 
+from .chlorine_products import (
+    default_chlor_content_for_product_type,
+    normalize_chlor_product_type,
+)
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_PUMP_ENTITY,
@@ -66,14 +70,13 @@ def validate_target_ranges(user_input: dict[str, Any]) -> bool:
 
 
 def _chlor_product_type(defaults: dict[str, Any]) -> str:
-    value = defaults.get(CONF_CHLOR_PRODUCT_TYPE, "organic")
-    return value if value in {"organic", "inorganic"} else "organic"
+    return normalize_chlor_product_type(defaults.get(CONF_CHLOR_PRODUCT_TYPE, "organic"))
 
 
 def _chlor_content_default(defaults: dict[str, Any]) -> float:
     if CONF_CHLOR_CONTENT in defaults:
-        return defaults.get(CONF_CHLOR_CONTENT, 0.56)
-    return 1.0 if _chlor_product_type(defaults) == "inorganic" else 0.56
+        return defaults.get(CONF_CHLOR_CONTENT, default_chlor_content_for_product_type(_chlor_product_type(defaults)))
+    return default_chlor_content_for_product_type(_chlor_product_type(defaults))
 
 class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Pool Assistant."""

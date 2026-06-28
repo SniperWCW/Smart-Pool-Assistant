@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from .chlorine_products import normalize_chlor_product_type, resolve_chlor_content
 from .const import (
     CONF_CHLOR_CONTENT,
     CONF_CHLOR_MAX,
     CONF_CHLOR_MIN,
+    CONF_CHLOR_PRODUCT_TYPE,
     CONF_CHLOR_TARGET,
     CONF_PH_DOWN_DOSAGE,
     CONF_PH_MAX,
@@ -66,10 +68,8 @@ def calculate_pool_chemistry(
     volumen = conf.get(CONF_POOL_VOLUME, 1.0)
     c_min, c_max = _target_range(conf, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_CHLOR_TARGET, 1.5)
     ph_min, ph_max = _target_range(conf, CONF_PH_MIN, CONF_PH_MAX, CONF_PH_TARGET, 7.2)
-    wirkstoff = conf.get(CONF_CHLOR_CONTENT, 0.56)
-
-    if wirkstoff <= 0:
-        wirkstoff = 0.56
+    chlor_product_type = normalize_chlor_product_type(conf.get(CONF_CHLOR_PRODUCT_TYPE))
+    wirkstoff = resolve_chlor_content(chlor_product_type, conf.get(CONF_CHLOR_CONTENT))
     if chlor_dose_factor and chlor_dose_factor > 0:
         wirkstoff *= chlor_dose_factor
 
@@ -292,10 +292,9 @@ def build_recommendation(
             warnings.append("Chlor nachdosieren")
 
     current_cya = float(cya_ist) if cya_ist is not None else None
-    normalized_product_type = chlor_product_type if chlor_product_type in {"organic", "inorganic"} else "organic"
     if current_cya is not None and current_cya > 100:
         warnings.append("CYA kritisch hoch")
-    elif current_cya is not None and normalized_product_type == "organic" and current_cya > 80:
+    elif current_cya is not None and current_cya > 80:
         warnings.append("CYA hoch")
 
     if awaiting_retest:

@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.14] - 2026-06-28
+
+- **Wirkstoff-Default fuer anorganisch korrigiert**: Der chlorproduktabhaengige Fallback nutzt jetzt `0.65` statt eines fachlich zu hohen `1.00`-Werts und greift konsistent in Berechnung, Lernlogik und CYA-Modell.
+- **Wirkstofflogik zentralisiert**: Organisch/anorganisch und der daraus abgeleitete Wirkstoff-Fallback werden jetzt ueber einen gemeinsamen Helper vereinheitlicht, damit stille Abweichungen zwischen Config-Flow, Dosierung und Lernsystem vermieden werden.
+- **CYA-Warnung auch bei anorganischem Chlor konsistent**: Werte ueber `80 ppm` erscheinen jetzt auch im Empfehlungstext wieder als `CYA hoch`, weil vorhandenes CYA die Wirksamkeit weiterhin beeinflusst, selbst wenn kuenftig unstabilisiert gechlort wird.
+- **Dokumentation und Release-Artefakte aktualisiert**: README, Setup, Chemie-Doku, FAQ, technische Doku, Manifest, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.14` angehoben.
+
 ## [3.0.13] - 2026-06-28
 
 - **Wetter-Forecast wieder wirksam in der Chemielogik**: Forecast-Status wird jetzt bis in den Tageskontext durchgereicht, sodass UV-Zuschlag und Regen-Hinweis wieder tatsaechlich in der Berechnung greifen.
@@ -40,7 +47,7 @@
 ## [3.0.6] - 2026-06-27
 
 - **Chlorprodukt-Typ ergänzt**: Die Konfiguration unterscheidet jetzt zwischen `organisch / stabilisiert` und `anorganisch / unstabilisiert`.
-- **Wirkstoff-Hinweis präzisiert**: Der Wirkstoffanteil erklärt jetzt direkt typische Startwerte wie `0.56` für organisches Chlor und `1.00` für Calciumhypochlorit.
+- **Wirkstoff-Hinweis präzisiert**: Der Wirkstoffanteil erklaert jetzt direkt typische Startwerte fuer organisches und anorganisches Chlor.
 - **CYA-Hinweise fachlich angepasst**: Die Lovelace-Karte bewertet Cyanursäure jetzt abhängig vom gewählten Chlorprodukt-Typ, damit anorganisches Chlor keine irreführenden CYA-Empfehlungen mehr auslöst.
 - **CYA-Warnung in der Empfehlung**: Hohe Cyanursäure wird jetzt auch im Empfehlungstext als `CYA hoch` bzw. `CYA kritisch hoch` sichtbar.
 

@@ -23,6 +23,8 @@ Die Chlorempfehlung beruecksichtigt:
 6. Umrechnung ueber Poolvolumen und Wirkstoffanteil in Gramm Produkt.
 7. Zielbereich-Check, damit innerhalb des Bereichs oder bei Ueberdosierung `0 g` empfohlen wird.
 
+Der Wirkstoffanteil wird nicht pauschal aus dem Produkttyp abgeleitet, sondern sollte dem realen Produkt entsprechen. `Anorganisch` bedeutet hier nur `ohne eingebauten Stabilisator`, nicht automatisch `100 % Wirkstoff`.
+
 ### Stossziel
 
 Das Stossziel ist stufenweise definiert:
@@ -53,6 +55,8 @@ Berechnet werden:
 - effektiver Wirkstoffanteil auf Basis der real beobachteten Dosierwirkung
 - Chlor-Prognose fuer den erwarteten Abfall unter die Zieluntergrenze beziehungsweise unter `0,6 mg/l`
 - Chlor-Stabilitaet mit Durchschnitt, Minimum, Maximum, Stichprobenzahl und Qualitaetsbewertung
+
+Falls kein gueltiger Wirkstoffanteil hinterlegt ist, nutzt die Integration produktabhaengige Defaultwerte. Aktuell sind das `0.56` fuer organisch und `0.65` fuer anorganisch als konservativer Standard fuer Calciumhypochlorit.
 
 Bis mindestens drei verwertbare Intervalle vorhanden sind, bleibt die Auswertung in der Lernphase.
 

@@ -36,6 +36,18 @@ Seit der aktuellen Anpassung wird der persoenliche Dosierfaktor aber erst ab `5`
 
 Der Dosierfaktor beschreibt, wie stark bestaetigte Chlorzugaben in der Praxis wirklich im Wasser angekommen sind. `1,00` bedeutet: Die reale Wirkung entspricht ungefaehr dem Hersteller-Wirkstoff. Ein Wert unter `1,00` bedeutet: In der Historie kam rechnerisch weniger an als erwartet.
 
+## Ist bei anorganischem Chlor `1,00` als Wirkstoffanteil richtig?
+
+Nein, in der Regel nicht. `Anorganisch` beschreibt hier zuerst den Chlor-Typ ohne eingebauten Stabilisator, nicht automatisch `100 %` aktives Chlor.
+
+Typische Groessenordnungen:
+
+- organisches Chlor: oft etwa `0.56`
+- Calciumhypochlorit: oft etwa `0.65-0.70`
+- Natriumhypochlorit: oft etwa `0.12-0.15`
+
+Massgeblich bleibt immer die Produktangabe auf dem Etikett.
+
 ## Warum kann der Dosierfaktor zu niedrig werden?
 
 Der haeufigste Grund sind spaete Nachmessungen:

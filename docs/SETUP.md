@@ -40,7 +40,8 @@ Wichtige Konfigurationspunkte:
 - **Pool-Verbindung**: Optionaler Binary Sensor, der nach konfigurierbarer Offline-Wartezeit eine Benachrichtigung ausloest.
 - **Poolvolumen**: Wassermenge in `m3`.
 - **Zielbereiche**: Chlor Minimum/Maximum und pH Minimum/Maximum.
-- **Wirkstoffanteil**: Wirkstoffanteil des Chlorprodukts.
+- **Chlorprodukt-Typ**: `Organisch / stabilisiert` oder `Anorganisch / unstabilisiert`.
+- **Wirkstoffanteil**: Aktiver Chloranteil laut Produktangabe. Typische Startwerte sind etwa `0.56` fuer organisches Chlor, `0.65-0.70` fuer Calciumhypochlorit und `0.12-0.15` fuer Natriumhypochlorit.
 - **pH-Dosierungen**: pH-Minus in `ml` und pH-Plus in `g`.
 - **Benachrichtigungsdienst(e)** und **Follow-up-Zeit**.
 - **Filter-Intervalle** und Warnschwellen.

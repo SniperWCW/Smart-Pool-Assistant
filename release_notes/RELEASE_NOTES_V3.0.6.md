@@ -3,7 +3,7 @@
 ## Chlorprodukt-Typ
 
 - Die Konfiguration kennt jetzt `Organisch / stabilisiert` und `Anorganisch / unstabilisiert`.
-- Der Wirkstoffanteil ist klarer beschrieben, inklusive typischem Startwert `1.00` fuer Calciumhypochlorit.
+- Der Wirkstoffanteil ist klarer beschrieben und bleibt produktabhaengig statt pauschal auf `1.00` zu setzen.
 
 ## CYA-Logik
 
