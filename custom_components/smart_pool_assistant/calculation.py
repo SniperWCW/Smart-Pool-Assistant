@@ -9,6 +9,7 @@ from .const import (
     CONF_CHLOR_MAX,
     CONF_CHLOR_MIN,
     CONF_CHLOR_PRODUCT_TYPE,
+    CONF_CHLOR_SHOCK_MAX,
     CONF_CHLOR_TARGET,
     CONF_PH_DOWN_DOSAGE,
     CONF_PH_MAX,
@@ -70,6 +71,7 @@ def calculate_pool_chemistry(
     ph_min, ph_max = _target_range(conf, CONF_PH_MIN, CONF_PH_MAX, CONF_PH_TARGET, 7.2)
     chlor_product_type = normalize_chlor_product_type(conf.get(CONF_CHLOR_PRODUCT_TYPE))
     wirkstoff = resolve_chlor_content(chlor_product_type, conf.get(CONF_CHLOR_CONTENT))
+    configured_shock_max = max(float(conf.get(CONF_CHLOR_SHOCK_MAX, 5.0) or 5.0), c_min)
     if chlor_dose_factor and chlor_dose_factor > 0:
         wirkstoff *= chlor_dose_factor
 
@@ -104,18 +106,25 @@ def calculate_pool_chemistry(
     shock_target = 0.0
     if c_ist is not None:
         if float(c_ist) < 0.1:
-            shock_target = 5.0
+            shock_target = configured_shock_max
         elif float(c_ist) < 0.3:
-            shock_target = 4.0
+            shock_target = max(configured_shock_max - 1.0, c_min)
         elif float(c_ist) < 0.6:
-            shock_target = 3.0
+            shock_target = max(configured_shock_max - 2.0, c_min)
         elif float(c_ist) < 1.0:
-            shock_target = 2.0
+            shock_target = max(configured_shock_max - 3.0, c_min)
 
     base_target_with_conditions = float(c_min) + temp_target_extra + env_target_extra + uv_target_extra
-    effective_target = base_target_with_conditions + bather_target_extra
+    shock_target_extra = max(shock_target - base_target_with_conditions, 0.0)
+    applied_shock_target_extra = shock_target_extra
+    applied_bather_target_extra = bather_target_extra
     if shock_target > 0:
-        effective_target = max(base_target_with_conditions, shock_target) + bather_target_extra
+        available_extra_until_shock_max = max(configured_shock_max - base_target_with_conditions, 0.0)
+        applied_shock_target_extra = min(shock_target_extra, available_extra_until_shock_max)
+        remaining_extra = max(available_extra_until_shock_max - applied_shock_target_extra, 0.0)
+        applied_bather_target_extra = min(bather_target_extra, remaining_extra)
+
+    effective_target = base_target_with_conditions + applied_shock_target_extra + applied_bather_target_extra
 
     min_dose = 2.0 * volume_m3
     if c_ist is not None:
@@ -124,15 +133,15 @@ def calculate_pool_chemistry(
         elif float(c_ist) < 0.8:
             min_dose = 3.0 * volume_m3
 
-    max_target = 10.0
+    max_target = max(configured_shock_max, 10.0)
     max_dose = max(max_target - float(c_ist or 0.0), 0.0) * volume_m3 / wirkstoff
 
     chlor_base_amount_raw = c_diff * volume_m3 / wirkstoff
     chlor_breakdown_temp_adj_raw = temp_target_extra * volume_m3 / wirkstoff
     chlor_breakdown_env_adj_raw = env_target_extra * volume_m3 / wirkstoff
     chlor_breakdown_uv_adj_raw = uv_target_extra * volume_m3 / wirkstoff
-    chlor_breakdown_bather_adj_raw = bather_target_extra * volume_m3 / wirkstoff
-    chlor_breakdown_shock_adj_raw = max(shock_target - base_target_with_conditions, 0.0) * volume_m3 / wirkstoff
+    chlor_breakdown_bather_adj_raw = applied_bather_target_extra * volume_m3 / wirkstoff
+    chlor_breakdown_shock_adj_raw = applied_shock_target_extra * volume_m3 / wirkstoff
     target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
     raw_chlor = target_diff * volume_m3 / wirkstoff
 
@@ -178,10 +187,14 @@ def calculate_pool_chemistry(
         "ph_senker_total": ph_senker_ml,
         "ph_erhoeher_total": ph_erhoeher_g,
         "ph_diff": ph_diff,
-        "is_shock": (c_ist is not None and 3.0 <= float(c_ist) <= 5.0),
+        "is_shock": (
+            c_ist is not None
+            and min(3.0, configured_shock_max) <= float(c_ist) <= configured_shock_max
+        ),
         "chlor_target": c_min,
         "chlor_min": c_min,
         "chlor_max": c_max,
+        "chlor_shock_max": round(configured_shock_max, 2),
         "ph_target": ph_min,
         "ph_min": ph_min,
         "ph_max": ph_max,
@@ -259,6 +272,7 @@ def build_recommendation(
     c_ist: float | None,
     cya_ist: float | None,
     chlor_product_type: str | None,
+    chlor_shock_max: float,
     ph_min: float,
     ph_max: float,
     c_min: float,
@@ -282,10 +296,10 @@ def build_recommendation(
             warnings.append("pH zu niedrig")
 
     if current_c is not None:
-        if 3.0 <= current_c <= 5.0:
-            warnings.append("Chlor im Sto\u00dfchlorbereich")
+        if min(3.0, chlor_shock_max) <= current_c <= chlor_shock_max:
+            warnings.append("Chlor im Schockchlorungsbereich")
         elif current_c < 0.5:
-            warnings.append("Sto\u00dfchlorung empfohlen")
+            warnings.append("Schockchlorung empfohlen")
         elif current_c > (target_c_max + 0.2):
             warnings.append("Chlor zu hoch")
         elif current_c < (target_c_min - 0.2) and chlor_dose > 0:

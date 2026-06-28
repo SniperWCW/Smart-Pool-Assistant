@@ -21,7 +21,7 @@ from .chlorine_products import (
 from .const import (
     DOMAIN, CONF_API_KEY, CONF_BLE_ADDRESS, CONF_UPDATE_INTERVAL, CONF_CHLOR_SENSOR, CONF_PH_SENSOR, CONF_TEMP_SENSOR,
     CONF_PUMP_ENTITY,
-    CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_PH_TARGET, CONF_PH_MIN, CONF_PH_MAX,
+    CONF_POOL_VOLUME, CONF_CHLOR_TARGET, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_CHLOR_SHOCK_MAX, CONF_PH_TARGET, CONF_PH_MIN, CONF_PH_MAX,
     CONF_CHLOR_PRODUCT_TYPE, CONF_CHLOR_CONTENT, CONF_PH_DOWN_DOSAGE, CONF_PH_UP_DOSAGE,
     CONF_NOTIFY_SERVICE, CONF_NOTIFY_SERVICE_2, CONF_FOLLOW_UP_TIME, CONF_PERSISTENT_NOTIFICATION,
     CONF_POOL_CONNECTION_SENSOR, CONF_POOL_CONNECTION_OFFLINE_DELAY,
@@ -193,6 +193,9 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         ),
         vol.Required(CONF_CHLOR_MAX, default=range_defaults[CONF_CHLOR_MAX]): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="mg/l", step=0.1)
+        ),
+        vol.Required(CONF_CHLOR_SHOCK_MAX, default=defaults.get(CONF_CHLOR_SHOCK_MAX, 5.0)): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="mg/l", step=0.1, min=1.0, max=10.0)
         ),
         vol.Required(CONF_PH_MIN, default=range_defaults[CONF_PH_MIN]): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1)

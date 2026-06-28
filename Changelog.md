@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.15] - 2026-06-28
+
+- **Schockchlorung jetzt konfigurierbar gedeckelt**: Neues Feld `chlor_shock_max` fuer die maximale automatische Schockchlorung in `mg/l`, z.B. `3.0` fuer Whirlpools.
+- **Schockchlorungsgrenze wird jetzt wirklich eingehalten**: Die Berechnung kappt das Ziel sauber an der konfigurierten Obergrenze, auch wenn Temperatur, offene Abdeckung oder Nutzung weitere Zuschlaege liefern.
+- **Benennung vereinheitlicht**: Frontend, Empfehlung, Config-Texte und Doku verwenden jetzt durchgaengig `Schockchlorung` statt `Stoßchlor`.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.15` angehoben.
+
 ## [3.0.14] - 2026-06-28
 
 - **Wirkstoff-Default fuer anorganisch korrigiert**: Der chlorproduktabhaengige Fallback nutzt jetzt `0.65` statt eines fachlich zu hohen `1.00`-Werts und greift konsistent in Berechnung, Lernlogik und CYA-Modell.
@@ -159,8 +166,8 @@
 
 - **LayZSpa Heizzeit-Prognose**: Das Panel zeigt jetzt optional `Auf Wunschtemperatur` mit ETA auf Basis der Home-Assistant-Historie der letzten 24/48h bzw. konfigurierbarer Stunden.
 - **Fallback-Heizrate**: Wenn noch nicht genug Heizverlauf vorhanden ist, nutzt die Karte eine konfigurierbare Fallback-Rate statt fixer Template-Werte und kennzeichnet diese in der Detailzeile.
-- **Bugfix Stoßchlor-Semantik**: `is_shock` steht jetzt für einen gemessenen Chlorwert im Stoßchlorbereich von `3,0 bis 5,0 mg/l`, nicht mehr für zu niedrigen Chlorwert.
-- **Badeampel korrigiert**: Die Karte zeigt nicht mehr `Stoßchlor aktiv` nach einer Empfehlung oder Zugabe, sondern bei passendem Messwert `Chlor im Stoßchlorbereich`.
+- **Bugfix Schockchlorungs-Semantik**: `is_shock` steht jetzt für einen gemessenen Chlorwert im Schockchlorungsbereich von `3,0 bis 5,0 mg/l`, nicht mehr für zu niedrigen Chlorwert.
+- **Badeampel korrigiert**: Die Karte zeigt nicht mehr `Schockchlorung aktiv` nach einer Empfehlung oder Zugabe, sondern bei passendem Messwert `Chlor im Schockchlorungsbereich`.
 - **Dokumentation / Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V2.1.6.md` auf den aktuellen Stand gebracht.
 
 ## [2.1.5] - 2026-06-21
@@ -307,15 +314,15 @@
 
 ## [1.0.20] - 2026-06-18
 
-- **Nutzungsmodus korrigiert**: `none`, `normal` und `party` beeinflussen die finale Chlorempfehlung jetzt auch bei aktivem Stoßchlor-Ziel. Zuvor war die Endmenge in solchen Fällen fälschlich identisch, obwohl sich nur die Breakdown-Zeilen änderten.
+- **Nutzungsmodus korrigiert**: `none`, `normal` und `party` beeinflussen die finale Chlorempfehlung jetzt auch bei aktivem Schockchlorungsziel. Zuvor war die Endmenge in solchen Fällen fälschlich identisch, obwohl sich nur die Breakdown-Zeilen änderten.
 - **Whirlpool-Fälle geprüft**: Für den gezeigten 0,916 m³-Fall ergibt die korrigierte Logik jetzt ca. `8,1 g` bei keiner Nutzung, `8,9 g` bei normaler Nutzung und `9,7 g` bei Party.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.0.20.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.19] - 2026-06-18
 
 - **Chlorlogik neu aufgebaut**: Die Chlorberechnung arbeitet jetzt über volumenbezogene Zielkonzentrationen in `mg/l` und rechnet erst am Ende über das konfigurierte `pool_volume` in Gramm Produkt um.
-- **Plausiblere Whirlpool-Dosierung**: Feste Grammzuschläge für kleine Becken entfallen. Temperatur, offenes Becken, Nutzung und Stoßchlorung werden jetzt fachlich konsistenter berücksichtigt.
-- **Frontend-Breakdown angepasst**: Die Karte zeigt jetzt `Stoßchlor-Ziel`, `Temperatur-Zuschlag`, `Offenes Becken` und `Nutzung` statt der alten Faktor-Begriffe.
+- **Plausiblere Whirlpool-Dosierung**: Feste Grammzuschläge für kleine Becken entfallen. Temperatur, offenes Becken, Nutzung und Schockchlorung werden jetzt fachlich konsistenter berücksichtigt.
+- **Frontend-Breakdown angepasst**: Die Karte zeigt jetzt `Schockchlorungsziel`, `Temperatur-Zuschlag`, `Offenes Becken` und `Nutzung` statt der alten Faktor-Begriffe.
 - **Versionierung aktualisiert**: `README.md`, `TECHNISCHE_DOKUMENTATION.md`, `manifest.json` und neue `release_notes/RELEASE_NOTES_V1.0.19.md` auf den aktuellen Stand gebracht.
 
 ## [1.0.16] - 2026-06-18

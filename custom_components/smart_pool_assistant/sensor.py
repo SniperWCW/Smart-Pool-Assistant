@@ -162,6 +162,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "chlor_target": data.get("chlor_target"),
             "chlor_min": data.get("chlor_min"),
             "chlor_max": data.get("chlor_max"),
+            "chlor_shock_max": data.get("chlor_shock_max"),
             "ph_target": data.get("ph_target"),
             "ph_min": data.get("ph_min"),
             "ph_max": data.get("ph_max"),

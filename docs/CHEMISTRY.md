@@ -19,22 +19,24 @@ Die Chlorempfehlung beruecksichtigt:
 2. Temperatur-Zuschlag ab `28 C` beziehungsweise `32 C`.
 3. Zuschlag fuer offene Abdeckung.
 4. Nutzungsmodus `none`, `normal` oder `party`.
-5. Stosschlor-Ziele bei sehr niedrigen Chlorwerten.
+5. Schockchlorungsziele bei sehr niedrigen Chlorwerten.
 6. Umrechnung ueber Poolvolumen und Wirkstoffanteil in Gramm Produkt.
 7. Zielbereich-Check, damit innerhalb des Bereichs oder bei Ueberdosierung `0 g` empfohlen wird.
 
 Der Wirkstoffanteil wird nicht pauschal aus dem Produkttyp abgeleitet, sondern sollte dem realen Produkt entsprechen. `Anorganisch` bedeutet hier nur `ohne eingebauten Stabilisator`, nicht automatisch `100 % Wirkstoff`.
 
-### Stossziel
+### Schockchlorungsziel
 
-Das Stossziel ist stufenweise definiert:
+Das Schockchlorungsziel ist stufenweise definiert:
 
-- Chlor `< 0,1 mg/l` -> Ziel `5,0 mg/l`
-- Chlor `< 0,3 mg/l` -> Ziel `4,0 mg/l`
-- Chlor `< 0,6 mg/l` -> Ziel `3,0 mg/l`
-- Chlor `< 1,0 mg/l` -> Ziel `2,0 mg/l`
+- Chlor `< 0,1 mg/l` -> Ziel `Schockchlorung Maximum`
+- Chlor `< 0,3 mg/l` -> Ziel `Maximum - 1,0 mg/l`
+- Chlor `< 0,6 mg/l` -> Ziel `Maximum - 2,0 mg/l`
+- Chlor `< 1,0 mg/l` -> Ziel `Maximum - 3,0 mg/l`
 
-Die Logik setzt nicht blind auf dieses Ziel, sondern vergleicht zuerst Basisziel plus Temperatur, Abdeckung und UV mit dem Stossziel. Der Nutzungszuschlag kommt erst danach zusaetzlich auf die Endmenge.
+Die Obergrenze ist konfigurierbar. Standardmaessig liegt sie bei `5,0 mg/l`, fuer Whirlpools kann sie aber z.B. auf `3,0 mg/l` gesetzt werden.
+
+Die Logik setzt nicht blind auf dieses Ziel, sondern vergleicht zuerst Basisziel plus Temperatur, Abdeckung und UV mit dem Schockchlorungsziel. Der Nutzungszuschlag kommt erst danach zusaetzlich auf die Endmenge.
 
 ## pH-Berechnung
 

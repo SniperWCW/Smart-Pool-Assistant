@@ -3,8 +3,8 @@
 **Projekt:** Smart Pool Assistant  
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
-**Dokumentationsstand:** 2026-06-27  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-28 auf Basis von `manifest.json` Version `3.0.14`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurückgenommenem zusätzlichem BLE-Connect-Timeout, Zielbereichen für Chlor und pH, lernender Chloranalyse mit persönlichem Chlorfaktor, persönlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitätsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitätssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messlöffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursäure/CYA als aktuellem Messwert mit Quellenanzeige, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Stoßchlorbereich-Bewertung, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen späte Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples, CYA-Prognose, chlorproduktabhaengiger Wirkstoff-Defaults und FAQ fuer typische Diagnose- und Supportfaelle
+**Dokumentationsstand:** 2026-06-28  
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-28 auf Basis von `manifest.json` Version `3.0.15`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurueckgenommenem zusaetzlichem BLE-Connect-Timeout, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, persoenlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitaetsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitaetssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursaeure/CYA als aktuellem Messwert mit Quellenanzeige, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Schockchlorungsbereich-Bewertung, konfigurierbarer Schockchlorungs-Obergrenze, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen spaete Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples, CYA-Prognose, chlorproduktabhaengiger Wirkstoff-Defaults und FAQ fuer typische Diagnose- und Supportfaelle
 
 ---
 
@@ -341,8 +341,9 @@ Das aktuelle Formular deckt folgende Bereiche ab:
 | Key | Default |
 |---|---:|
 | `update_interval` | 5 min |
-| `pool_volume` | 0.916 m³ |
+| `pool_volume` | 0.916 m3 |
 | `chlor_target` | 1.5 mg/l |
+| `chlor_shock_max` | 5.0 mg/l |
 | `ph_target` | 7.2 |
 | `chlor_content` | 0.56 |
 | `ph_down_dosage` | 200 ml |
@@ -696,7 +697,7 @@ Eingänge:
 
 Die Basisdosis wird aus `untere Zielgrenze - Ist`, Volumen und Wirkstoffanteil berechnet.
 Alle Zusatzlogiken arbeiten als zusätzliche Zielkonzentration in `mg/l`
-(Temperatur, offenes Becken, Nutzung, Stoßchlorung). Erst ganz am Ende wird
+(Temperatur, offenes Becken, Nutzung, Schockchlorung). Erst ganz am Ende wird
 die benötigte Gesamtkonzentration über das konfigurierte Poolvolumen und den
 Wirkstoffanteil in Gramm Produkt umgerechnet.
 
@@ -710,14 +711,14 @@ Der konfigurierte Wirkstoffanteil repraesentiert den aktiven Chloranteil des rea
 sonst    -> +0.0 mg/l
 ```
 
-#### Stoßchlor-Ziel
+#### Schockchlorungsziel
 
 ```text
-chlor < 0.1 -> Ziel 5.0 mg/l
-chlor < 0.3 -> Ziel 4.0 mg/l
-chlor < 0.6 -> Ziel 3.0 mg/l
-chlor < 1.0 -> Ziel 2.0 mg/l
-sonst       -> kein Stoßziel
+chlor < 0.1 -> Ziel chlor_shock_max
+chlor < 0.3 -> Ziel max(chlor_shock_max - 1.0, chlor_min)
+chlor < 0.6 -> Ziel max(chlor_shock_max - 2.0, chlor_min)
+chlor < 1.0 -> Ziel max(chlor_shock_max - 3.0, chlor_min)
+sonst       -> kein Schockchlorungsziel
 ```
 
 #### Abdeckungs-Zuschlag
@@ -866,8 +867,8 @@ pH < ph_min - 0.1 -> "pH zu niedrig"
 ### Chlor
 
 ```text
-3.0 <= chlor <= 5.0 -> "Chlor im Stoßchlorbereich"
-chlor < 0.5 -> "Stoßchlorung empfohlen"
+min(3.0, chlor_shock_max) <= chlor <= chlor_shock_max -> "Chlor im Schockchlorungsbereich"
+chlor < 0.5 -> "Schockchlorung empfohlen"
 chlor > chlor_max + 0.2 -> "Chlor zu hoch"
 chlor < chlor_min - 0.2 und chlor_dose > 0 -> "Chlor nachdosieren"
 ```
@@ -1235,7 +1236,7 @@ Die Karte berechnet aus den vorhandenen Empfehlungssensor-Attributen eine einfac
 🔴 Nicht empfohlen
 ```
 
-Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, gemessenem Chlor im Stoßchlorbereich, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur ab 41 °C oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser über 36 °C, Regen-/Windhinweisen oder hoher UV-Belastung. Grün wird nur angezeigt, wenn keine roten oder gelben Gründe vorliegen.
+Rot wird angezeigt bei fehlender aktueller Chlor-/pH-Messung, Speicherwerten, aktivem Nachmess-Zustand, gemessenem Chlor im Schockchlorungsbereich, deutlichen Chlor-/pH-Abweichungen, sehr hoher Temperatur ab 41 C oder unsicherem Wetter. Gelb wird angezeigt bei moderaten Chlor-/pH-Abweichungen, warmem Wasser ueber 36 C, Regen-/Windhinweisen oder hoher UV-Belastung. Gruen wird nur angezeigt, wenn keine roten oder gelben Gruende vorliegen.
 
 ### Nachmess-Zustand in der Karte
 

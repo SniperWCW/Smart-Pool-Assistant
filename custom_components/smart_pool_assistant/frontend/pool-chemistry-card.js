@@ -923,7 +923,7 @@ class PoolChemistryCard extends HTMLElement {
       const chlorLowDiff = chlorRange.low - chlor;
       const chlorHighDiff = chlor - chlorRange.high;
       if (chlor <= 0.3) issues.push("Chlor sehr niedrig");
-      else if (attr.is_shock === true) issues.push("Chlor im Stoßchlorbereich");
+      else if (attr.is_shock === true) issues.push("Chlor im Schockchlorungsbereich");
       else if (chlor > 5 || chlorHighDiff > 0.9) issues.push("Chlor zu hoch");
       else if (chlorLowDiff > 0.3) warnings.push("Chlor niedrig");
       else if (chlorHighDiff > 0.3) warnings.push("Chlor erhöht");
@@ -1779,8 +1779,8 @@ class PoolChemistryCard extends HTMLElement {
     if (statusText.includes('⏳')) {
         statusClass = 'waiting';
     } else if (statusText.includes('⚠️') || statusText.includes('hoch') || statusText.includes('niedrig')) {
-        // Wenn "hoch" oder "Stoß" vorkommt, nutzen wir Rot (critical), sonst Gelb (warning)
-        statusClass = (statusText.includes('hoch') || statusText.includes('Stoß')) ? 'critical' : 'warning';
+        // Wenn "hoch" oder "Schock" vorkommt, nutzen wir Rot (critical), sonst Gelb (warning)
+        statusClass = (statusText.includes('hoch') || statusText.includes('Schock')) ? 'critical' : 'warning';
     }
 
     const bathingBox = this.querySelector('#bathing-box');
@@ -2174,7 +2174,7 @@ class PoolChemistryCard extends HTMLElement {
         <div class="breakdown-item">Basis (Ziel-Ist): <span>${base.toFixed(2)}g</span></div>
       `;
       if (shockAdj !== 0) {
-        breakdownHtml += `<div class="breakdown-item">Stoßchlor-Ziel: <span>${shockAdj > 0 ? '+' : ''}${shockAdj.toFixed(2)}g</span></div>`;
+        breakdownHtml += `<div class="breakdown-item">Schockchlorungsziel: <span>${shockAdj > 0 ? '+' : ''}${shockAdj.toFixed(2)}g</span></div>`;
       }
       if (tempAdj !== 0) {
         breakdownHtml += `<div class="breakdown-item">Temperatur-Zuschlag: <span>${tempAdj > 0 ? '+' : ''}${tempAdj.toFixed(2)}g</span></div>`;
@@ -2195,8 +2195,8 @@ class PoolChemistryCard extends HTMLElement {
 
       if (minDoseApplied > 0) {
         breakdownHtml += `<div class="breakdown-item">Mindestdosis angewendet: <span>+${(minDoseApplied - sumRaw).toFixed(2)}g</span></div>`;
-      } else if (finalDose !== sumRaw) { // Falls die obere Stoßgrenze angewendet wurde
-        breakdownHtml += `<div class="breakdown-item">Stoßgrenze angewendet: <span>${(finalDose - sumRaw).toFixed(2)}g</span></div>`;
+      } else if (finalDose !== sumRaw) { // Falls die obere Schockchlorungsgrenze angewendet wurde
+        breakdownHtml += `<div class="breakdown-item">Schockchlorungsgrenze angewendet: <span>${(finalDose - sumRaw).toFixed(2)}g</span></div>`;
       }
 
       breakdownHtml += `
@@ -2846,7 +2846,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.14 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.15 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
