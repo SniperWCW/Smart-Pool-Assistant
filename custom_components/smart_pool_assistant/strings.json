@@ -126,6 +126,20 @@
           "description": "Optionaler Prozentwert fuer den Wasserwechsel."
         }
       }
+    },
+    "repair_learning_history": {
+      "name": "Lernhistorie reparieren",
+      "description": "Fuehrt den Lernhistorie-Abgleich erneut aus und schreibt die Sample-Diagnose ins bestehende Diagnose-Log.",
+      "fields": {
+        "entity_id": {
+          "name": "Entitaet",
+          "description": "Die Pool-Empfehlung Entitaet."
+        },
+        "fetch_poollab": {
+          "name": "PoolLab vorher abrufen",
+          "description": "Optional zuerst einen frischen PoolLab-Abruf ausloesen und danach die Lernhistorie reparieren."
+        }
+      }
     }
   }
 }

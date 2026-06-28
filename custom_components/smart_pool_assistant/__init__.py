@@ -66,8 +66,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     call.data.get("water_exchange_percent"),
                 )
 
+    async def repair_learning_history_service(call):
+        entity_id = call.data.get("entity_id")
+        reg = er.async_get(hass)
+        entity_entry = reg.async_get(entity_id)
+        if entity_entry:
+            coord = hass.data[DOMAIN].get(entity_entry.config_entry_id)
+            if coord:
+                await coord.async_repair_learning_history(
+                    fetch_poollab=bool(call.data.get("fetch_poollab")),
+                )
+
     if not hass.services.has_service(DOMAIN, "log_maintenance"):
         hass.services.async_register(DOMAIN, "log_maintenance", log_maintenance_service)
+    if not hass.services.has_service(DOMAIN, "repair_learning_history"):
+        hass.services.async_register(DOMAIN, "repair_learning_history", repair_learning_history_service)
 
     # Initialen Datenabruf starten
     await coordinator.async_load_history()

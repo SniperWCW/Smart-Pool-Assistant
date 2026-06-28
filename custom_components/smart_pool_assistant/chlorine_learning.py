@@ -222,6 +222,97 @@ def calculate_chlorine_learning(
     }
 
 
+def diagnose_chlorine_dose_samples(
+    history: dict,
+    conf: dict,
+    parse_ts: Callable[[str | None], datetime | None],
+    now: datetime,
+) -> dict:
+    """Return accepted and rejected dose-sample candidates with reasons."""
+    volume = _positive_float(conf.get(CONF_POOL_VOLUME), 0.0)
+    chlor_content = _positive_float(conf.get(CONF_CHLOR_CONTENT), 0.56) or 0.56
+
+    measurements = _load_measurements(history, parse_ts, now)
+    doses = _load_doses(history, parse_ts, now)
+    context_events = _load_context_events(history, parse_ts, now)
+    intervals = _build_intervals(measurements, doses, volume, chlor_content, context_events)
+    avg_loss = _period_stats(intervals, now, timedelta(days=14))["average_daily_loss"]
+    baseline_daily_loss = avg_loss if avg_loss is not None else DEFAULT_DAILY_LOSS
+
+    accepted = []
+    rejected = []
+    for index, dose in enumerate(doses):
+        previous = _latest_measurement_before(measurements, dose["dt"])
+        following = _first_measurement_after(measurements, dose["dt"])
+        next_dose = doses[index + 1] if index + 1 < len(doses) else None
+
+        entry = {
+            "dose_at": dose["dt"].isoformat(),
+            "dose_amount": round(float(dose["amount"]), 2),
+            "previous_at": previous["dt"].isoformat() if previous else None,
+            "following_at": following["dt"].isoformat() if following else None,
+        }
+
+        if previous is None:
+            entry["reason"] = "missing_previous_measurement"
+            rejected.append(entry)
+            continue
+        if following is None:
+            entry["reason"] = "missing_following_measurement"
+            rejected.append(entry)
+            continue
+        if next_dose and next_dose["dt"] <= following["dt"]:
+            entry["reason"] = "next_dose_before_follow_up"
+            entry["next_dose_at"] = next_dose["dt"].isoformat()
+            rejected.append(entry)
+            continue
+
+        baseline_gap_hours = (dose["dt"] - previous["dt"]).total_seconds() / 3600.0
+        effect_hours = (following["dt"] - dose["dt"]).total_seconds() / 3600.0
+        theoretical_increase = dose["amount"] * chlor_content / volume if volume > 0 else 0.0
+        corrected_increase = following["chlor"] - previous["chlor"] + baseline_daily_loss * (effect_hours / 24.0)
+        dose_factor = corrected_increase / theoretical_increase if theoretical_increase > 0 else None
+
+        entry["baseline_gap_hours"] = round(baseline_gap_hours, 2)
+        entry["effect_hours"] = round(effect_hours, 2)
+        entry["previous_chlor"] = round(float(previous["chlor"]), 3)
+        entry["following_chlor"] = round(float(following["chlor"]), 3)
+
+        if baseline_gap_hours < 0 or baseline_gap_hours > MAX_DOSE_BASELINE_GAP_HOURS:
+            entry["reason"] = "baseline_gap_out_of_range"
+            rejected.append(entry)
+            continue
+        if effect_hours < MIN_DOSE_EFFECT_HOURS or effect_hours > MAX_DOSE_EFFECT_HOURS:
+            entry["reason"] = "effect_window_out_of_range"
+            rejected.append(entry)
+            continue
+        if theoretical_increase <= 0:
+            entry["reason"] = "invalid_theoretical_increase"
+            rejected.append(entry)
+            continue
+
+        entry["theoretical_increase"] = round(theoretical_increase, 3)
+        entry["corrected_increase"] = round(corrected_increase, 3)
+        entry["dose_factor"] = round(dose_factor, 3) if dose_factor is not None else None
+
+        if dose_factor is None or dose_factor <= 0.2 or dose_factor > 1.8:
+            entry["reason"] = "dose_factor_out_of_range"
+            rejected.append(entry)
+            continue
+
+        entry["reason"] = "accepted"
+        accepted.append(entry)
+
+    return {
+        "accepted": accepted,
+        "rejected": rejected,
+        "accepted_count": len(accepted),
+        "rejected_count": len(rejected),
+        "measurement_count": len(measurements),
+        "dose_count": len(doses),
+    }
+
+
 def calculate_chlorine_forecast(
     *,
     current_chlorine: float | None,

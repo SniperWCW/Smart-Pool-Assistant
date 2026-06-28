@@ -31,6 +31,7 @@ from .calculation import (
 from .chlorine_learning import (
     MIN_DOSE_FACTOR_SAMPLES,
     calculate_chlorine_learning,
+    diagnose_chlorine_dose_samples,
     record_chlor_dose,
     record_chlor_measurement,
 )
@@ -614,6 +615,61 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             if delay > 0:
                 async_call_later(self.hass, delay * 60, self._send_follow_up)
 
+    async def async_repair_learning_history(self, *, fetch_poollab: bool = False) -> None:
+        """Re-run learning backfill and log why dose samples are accepted or rejected."""
+        _LOGGER.info(
+            "Learning history repair requested: entry_id=%s fetch_poollab=%s",
+            self.entry.entry_id,
+            fetch_poollab,
+        )
+
+        if fetch_poollab:
+            await self.async_fetch_poollab_measurements()
+
+        last_api_measurements = self.maintenance_history.get("last_api_measurements")
+        self._backfill_cloud_learning_history(last_api_measurements if isinstance(last_api_measurements, list) else [])
+
+        diagnosis = diagnose_chlorine_dose_samples(
+            self.maintenance_history,
+            self.config,
+            self._parse_ts_aware,
+            dt_util.now(),
+        )
+        _LOGGER.info(
+            "Learning history repair summary: entry_id=%s measurements=%s doses=%s accepted=%s rejected=%s",
+            self.entry.entry_id,
+            diagnosis.get("measurement_count"),
+            diagnosis.get("dose_count"),
+            diagnosis.get("accepted_count"),
+            diagnosis.get("rejected_count"),
+        )
+
+        for item in diagnosis.get("accepted", [])[-5:]:
+            _LOGGER.info(
+                "Dose sample accepted: dose_at=%s amount=%sg previous_at=%s following_at=%s baseline_gap_h=%s effect_h=%s factor=%s",
+                item.get("dose_at"),
+                item.get("dose_amount"),
+                item.get("previous_at"),
+                item.get("following_at"),
+                item.get("baseline_gap_hours"),
+                item.get("effect_hours"),
+                item.get("dose_factor"),
+            )
+
+        for item in diagnosis.get("rejected", [])[-10:]:
+            _LOGGER.warning(
+                "Dose sample rejected: reason=%s dose_at=%s amount=%sg previous_at=%s following_at=%s baseline_gap_h=%s effect_h=%s factor=%s",
+                item.get("reason"),
+                item.get("dose_at"),
+                item.get("dose_amount"),
+                item.get("previous_at"),
+                item.get("following_at"),
+                item.get("baseline_gap_hours"),
+                item.get("effect_hours"),
+                item.get("dose_factor"),
+            )
+
+        await self._store.async_save(self.maintenance_history)
         await self.async_request_refresh()
 
     async def _send_follow_up(self, _):

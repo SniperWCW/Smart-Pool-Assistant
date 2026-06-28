@@ -35,3 +35,15 @@ log_maintenance:
           max: 100
           step: 0.1
           mode: box
+repair_learning_history:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: smart_pool_assistant
+          domain: sensor
+    fetch_poollab:
+      required: false
+      selector:
+        boolean:

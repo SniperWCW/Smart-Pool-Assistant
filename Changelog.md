@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.9] - 2026-06-28
+
+- **Manueller Reparatur-Service fuer Lernhistorie**: Neuer Service `smart_pool_assistant.repair_learning_history`, der den Lernhistorie-Abgleich erneut ausfuehrt und optional vorher einen frischen PoolLab-Abruf starten kann.
+- **Sample-Diagnose im bestehenden Log**: Akzeptierte und verworfene Chlor-Dosier-Samples werden mit Grund, Zeitfenstern und Faktorwerten ins bestehende Diagnose-Log geschrieben.
+
 ## [3.0.8] - 2026-06-28
 
 - **Quellsaubere Lernzeitstempel**: Chlor-, pH- und CYA-Lernen speichern Messpunkte jetzt mit dem Zeitstempel der tatsaechlichen Messquelle statt mit einem globalen Anzeige-Zeitstempel.
