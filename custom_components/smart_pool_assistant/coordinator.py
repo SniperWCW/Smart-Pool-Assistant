@@ -30,6 +30,8 @@ from .calculation import (
 )
 from .chlorine_learning import (
     MIN_DOSE_FACTOR_SAMPLES,
+    MIN_DOSE_EFFECT_HOURS,
+    MAX_DOSE_EFFECT_HOURS,
     calculate_chlorine_learning,
     diagnose_chlorine_dose_samples,
     record_chlor_dose,
@@ -608,6 +610,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         # Send Notification (Persistent & Service)
         if msg:
             await async_send_notification(self.hass, conf, msg, "maintenance")
+        if m_type == "chlor":
+            await self._async_notify_chlor_sample_window(now)
 
         # Follow-up Timer (only for chemicals)
         if m_type in ("chlor", "ph_plus", "ph_minus"):
@@ -669,8 +673,96 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 item.get("dose_factor"),
             )
 
+        await self._async_notify_latest_chlor_sample_status(diagnosis)
         await self._store.async_save(self.maintenance_history)
         await self.async_request_refresh()
+
+    def _format_local_time(self, dt_value: datetime | None) -> str:
+        """Format a timestamp in local wall-clock time."""
+        if dt_value is None:
+            return "--:--"
+        return dt_util.as_local(dt_value).strftime("%H:%M")
+
+    async def _async_notify_chlor_sample_window(self, dose_dt: datetime) -> None:
+        """Notify the user about the valid chlorine follow-up window."""
+        start_dt = dose_dt + timedelta(hours=MIN_DOSE_EFFECT_HOURS)
+        end_dt = dose_dt + timedelta(hours=MAX_DOSE_EFFECT_HOURS)
+        await async_send_notification(
+            self.hass,
+            self.config,
+            (
+                "Bitte fuer die Dosierqualitaet erneut messen. "
+                f"Gueltiges Zeitfenster: zwischen {self._format_local_time(start_dt)} Uhr "
+                f"und {self._format_local_time(end_dt)} Uhr."
+            ),
+            "chlor_sample_window",
+        )
+
+    async def _async_notify_latest_chlor_sample_status(self, diagnosis: dict) -> None:
+        """Send a status notification for the latest chlorine dose sample."""
+        doses = self.maintenance_history.get("chlor_learning_doses", [])
+        if not isinstance(doses, list) or not doses:
+            return
+
+        latest_dose_raw = None
+        for item in reversed(doses):
+            if isinstance(item, dict) and isinstance(item.get("raw_ts"), str):
+                latest_dose_raw = item.get("raw_ts")
+                break
+        if not latest_dose_raw:
+            return
+
+        latest_entry = None
+        for item in diagnosis.get("accepted", []):
+            if item.get("dose_at") == latest_dose_raw:
+                latest_entry = item
+                break
+        if latest_entry is None:
+            for item in diagnosis.get("rejected", []):
+                if item.get("dose_at") == latest_dose_raw:
+                    latest_entry = item
+                    break
+        if latest_entry is None:
+            return
+
+        state_token = "|".join(
+            str(latest_entry.get(key) or "")
+            for key in ("reason", "dose_at", "following_at", "first_following_at")
+        )
+        if self.maintenance_history.get("last_chlor_sample_status_token") == state_token:
+            return
+
+        reason = latest_entry.get("reason")
+        message = None
+        if reason == "accepted":
+            message = (
+                "Dosier-Sample erfolgreich erkannt. "
+                f"Nachmessung um {self._format_local_time(self._parse_ts_aware(latest_entry.get('following_at')))} Uhr "
+                f"wurde verwendet. Faktor: {latest_entry.get('dose_factor')}."
+            )
+        elif reason == "follow_up_too_early":
+            dose_dt = self._parse_ts_aware(latest_entry.get("dose_at"))
+            start_dt = dose_dt + timedelta(hours=MIN_DOSE_EFFECT_HOURS) if dose_dt else None
+            end_dt = dose_dt + timedelta(hours=MAX_DOSE_EFFECT_HOURS) if dose_dt else None
+            message = (
+                "Nachmessung war zu frueh und zaehlt noch nicht als Dosier-Sample. "
+                f"Bitte zwischen {self._format_local_time(start_dt)} Uhr und {self._format_local_time(end_dt)} Uhr erneut messen."
+            )
+        elif reason == "follow_up_too_late":
+            message = "Nachmessung war zu spaet und konnte nicht mehr als Dosier-Sample gewertet werden."
+        elif reason == "dose_factor_out_of_range":
+            message = (
+                "Dosier-Sample konnte nicht gewertet werden. "
+                f"Der berechnete Faktor ({latest_entry.get('dose_factor')}) liegt ausserhalb des erlaubten Bereichs."
+            )
+        elif reason == "next_dose_before_follow_up":
+            message = "Dosier-Sample konnte nicht gewertet werden, weil vor der gueltigen Nachmessung bereits eine weitere Zugabe erfasst wurde."
+        elif reason == "missing_following_measurement":
+            message = "Fuer die letzte Chlorzugabe fehlt noch eine passende Nachmessung im gueltigen Zeitfenster."
+
+        if message:
+            await async_send_notification(self.hass, self.config, message, "chlor_sample_status")
+            self.maintenance_history["last_chlor_sample_status_token"] = state_token
 
     async def _send_follow_up(self, _):
         await self._async_check_follow_up_notification()
@@ -1170,6 +1262,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             weather_today=weather_today,
             pump_active=pump_active,
         )
+        sample_diagnosis = diagnose_chlorine_dose_samples(
+            self.maintenance_history,
+            conf,
+            self._parse_ts_aware,
+            dt_util.now(),
+        )
+        await self._async_notify_latest_chlor_sample_status(sample_diagnosis)
         learned_dose_factor = None
         dose_factor_attrs = chlorine_learning.get("chlor_dose_factor_attributes")
         if (

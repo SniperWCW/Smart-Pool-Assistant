@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.10] - 2026-06-28
+
+- **Erste gueltige Nachmessung statt erste Nachmessung**: Fuer die Dosierqualitaet wird jetzt die erste Chlor-Nachmessung im gueltigen Fenster von `30 Minuten` bis `12 Stunden` nach der Zugabe verwendet. Zu fruehe Messungen blockieren damit kein spaeteres gueltiges Sample mehr.
+- **Push-Hinweise fuer Dosier-Samples**: Nach einer Chlorzugabe weist die Integration jetzt auf das gueltige Nachmessfenster hin und informiert bei Sample-Erfolg oder Verwerfung mit Grund wie `zu frueh`, `zu spaet` oder `Faktor ausserhalb des Bereichs`.
+
 ## [3.0.9] - 2026-06-28
 
 - **Manueller Reparatur-Service fuer Lernhistorie**: Neuer Service `smart_pool_assistant.repair_learning_history`, der den Lernhistorie-Abgleich erneut ausfuehrt und optional vorher einen frischen PoolLab-Abruf starten kann.

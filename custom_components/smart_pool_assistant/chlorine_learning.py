@@ -243,7 +243,13 @@ def diagnose_chlorine_dose_samples(
     rejected = []
     for index, dose in enumerate(doses):
         previous = _latest_measurement_before(measurements, dose["dt"])
-        following = _first_measurement_after(measurements, dose["dt"])
+        first_following = _first_measurement_after(measurements, dose["dt"])
+        following = _first_measurement_after_in_range(
+            measurements,
+            dose["dt"],
+            min_hours=MIN_DOSE_EFFECT_HOURS,
+            max_hours=MAX_DOSE_EFFECT_HOURS,
+        )
         next_dose = doses[index + 1] if index + 1 < len(doses) else None
 
         entry = {
@@ -251,19 +257,35 @@ def diagnose_chlorine_dose_samples(
             "dose_amount": round(float(dose["amount"]), 2),
             "previous_at": previous["dt"].isoformat() if previous else None,
             "following_at": following["dt"].isoformat() if following else None,
+            "first_following_at": first_following["dt"].isoformat() if first_following else None,
         }
 
         if previous is None:
             entry["reason"] = "missing_previous_measurement"
             rejected.append(entry)
             continue
-        if following is None:
+        if following is None and first_following is None:
             entry["reason"] = "missing_following_measurement"
             rejected.append(entry)
             continue
-        if next_dose and next_dose["dt"] <= following["dt"]:
+        if following is None and first_following is not None:
+            first_effect_hours = (first_following["dt"] - dose["dt"]).total_seconds() / 3600.0
+            entry["effect_hours"] = round(first_effect_hours, 2)
+            entry["following_at"] = first_following["dt"].isoformat()
+            if first_effect_hours < MIN_DOSE_EFFECT_HOURS:
+                entry["reason"] = "follow_up_too_early"
+            else:
+                entry["reason"] = "follow_up_too_late"
+            rejected.append(entry)
+            continue
+        if next_dose and following is not None and next_dose["dt"] <= following["dt"]:
             entry["reason"] = "next_dose_before_follow_up"
             entry["next_dose_at"] = next_dose["dt"].isoformat()
+            rejected.append(entry)
+            continue
+
+        if following is None:
+            entry["reason"] = "missing_following_measurement"
             rejected.append(entry)
             continue
 
@@ -587,7 +609,12 @@ def _build_dose_effects(
     effects = []
     for index, dose in enumerate(doses):
         previous = _latest_measurement_before(measurements, dose["dt"])
-        following = _first_measurement_after(measurements, dose["dt"])
+        following = _first_measurement_after_in_range(
+            measurements,
+            dose["dt"],
+            min_hours=MIN_DOSE_EFFECT_HOURS,
+            max_hours=MAX_DOSE_EFFECT_HOURS,
+        )
         next_dose = doses[index + 1] if index + 1 < len(doses) else None
 
         if previous is None or following is None:
@@ -883,6 +910,25 @@ def _first_measurement_after(measurements: list[dict], dt: datetime) -> dict | N
     for item in measurements:
         if item["dt"] > dt:
             return item
+    return None
+
+
+def _first_measurement_after_in_range(
+    measurements: list[dict],
+    dt: datetime,
+    *,
+    min_hours: float,
+    max_hours: float,
+) -> dict | None:
+    for item in measurements:
+        if item["dt"] <= dt:
+            continue
+        hours = (item["dt"] - dt).total_seconds() / 3600.0
+        if hours < min_hours:
+            continue
+        if hours > max_hours:
+            return None
+        return item
     return None
 
 
