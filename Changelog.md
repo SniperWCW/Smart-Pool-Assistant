@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.8] - 2026-06-28
+
+- **Quellsaubere Lernzeitstempel**: Chlor-, pH- und CYA-Lernen speichern Messpunkte jetzt mit dem Zeitstempel der tatsaechlichen Messquelle statt mit einem globalen Anzeige-Zeitstempel.
+- **Reparaturpfad fuer Lernhistorie**: Historische PoolLab-BLE- und Cloud-Messungen werden beim Abruf in die Lernhistorie zurueckgespielt, damit verpasste Samples nach einem Timestamp-Mismatch wieder aufgebaut werden koennen.
+
 ## [3.0.7] - 2026-06-27
 
 - **CYA-Verlauf als Prognosemodell**: Die Integration speichert jetzt CYA-Messpunkte dauerhaft und berechnet daraus zusammen mit Chlorprodukt, Chlorzugaben und Wasserwechseln einen modellierten CYA-Verlauf.

@@ -133,6 +133,121 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         return ble_dt.isoformat()
 
+    def _normalize_ble_history_ts(
+        self,
+        raw_ts: int,
+        *,
+        latest_raw_ts: int | None,
+        fetched_at_iso: str | None,
+    ) -> str | None:
+        """Map stored BLE history timestamps onto the current fetch timeline.
+
+        PoolLab timestamps are often offset, but their relative spacing is useful.
+        We anchor the newest chemistry timestamp to the fetch completion time and
+        preserve the deltas for older records so stored BLE history can repair
+        learning samples retroactively.
+        """
+        fetched_at_dt = self._parse_ts_aware(fetched_at_iso) if fetched_at_iso else None
+        if fetched_at_dt is None:
+            return None
+        if latest_raw_ts is None:
+            return fetched_at_dt.isoformat()
+        delta_seconds = raw_ts - latest_raw_ts
+        normalized_dt = fetched_at_dt + timedelta(seconds=delta_seconds)
+        return normalized_dt.isoformat()
+
+    def _backfill_ble_learning_history(self, ble_data, fetched_at_iso: str | None) -> None:
+        """Import historical BLE chemistry measurements into learning storage."""
+        measurements = getattr(ble_data, "measurements", None)
+        if not isinstance(measurements, dict) or not measurements:
+            return
+
+        chlor_type_ids = {1, 3, 8}
+        ph_type_ids = {9, 27, 28, 29, 30, 31, 32, 33, 34, 36, 48}
+        cya_type_id = 11
+
+        chemistry_measurements = [
+            item for item in measurements.values()
+            if getattr(item, "measure_type", None) in chlor_type_ids | ph_type_ids | {cya_type_id}
+        ]
+        if not chemistry_measurements:
+            return
+
+        latest_raw_ts = max(getattr(item, "timestamp", 0) for item in chemistry_measurements)
+        imported_chlor = 0
+        imported_ph = 0
+        imported_cya = 0
+
+        for item in sorted(chemistry_measurements, key=lambda measurement: getattr(measurement, "timestamp", 0)):
+            normalized_ts = self._normalize_ble_history_ts(
+                int(item.timestamp),
+                latest_raw_ts=latest_raw_ts,
+                fetched_at_iso=fetched_at_iso,
+            )
+            if not normalized_ts:
+                continue
+            if item.measure_type in chlor_type_ids:
+                before = len(self.maintenance_history.get("chlor_learning_measurements", []) or [])
+                record_chlor_measurement(self.maintenance_history, normalized_ts, item.value)
+                after = len(self.maintenance_history.get("chlor_learning_measurements", []) or [])
+                if after > before:
+                    imported_chlor += 1
+            elif item.measure_type in ph_type_ids:
+                before = len(self.maintenance_history.get("ph_learning_measurements", []) or [])
+                record_ph_measurement(self.maintenance_history, normalized_ts, item.value)
+                after = len(self.maintenance_history.get("ph_learning_measurements", []) or [])
+                if after > before:
+                    imported_ph += 1
+            elif item.measure_type == cya_type_id:
+                before = len(self.maintenance_history.get("cya_learning_measurements", []) or [])
+                record_cya_measurement(self.maintenance_history, normalized_ts, item.value)
+                after = len(self.maintenance_history.get("cya_learning_measurements", []) or [])
+                if after > before:
+                    imported_cya += 1
+
+        if imported_chlor or imported_ph or imported_cya:
+            _LOGGER.debug(
+                "Backfilled BLE learning history: chlor=%s ph=%s cya=%s",
+                imported_chlor,
+                imported_ph,
+                imported_cya,
+            )
+
+    def _backfill_cloud_learning_history(self, last_measurements: list[dict]) -> None:
+        """Import cloud chemistry history into learning storage when available."""
+        if not isinstance(last_measurements, list):
+            return
+
+        imported_chlor = 0
+        imported_ph = 0
+        for item in last_measurements:
+            if not isinstance(item, dict):
+                continue
+            raw_ts = item.get("timestamp")
+            parameter = item.get("parameter")
+            value = item.get("value")
+            if not isinstance(raw_ts, str) or not raw_ts:
+                continue
+            if parameter == "PL Chlorine Free":
+                before = len(self.maintenance_history.get("chlor_learning_measurements", []) or [])
+                record_chlor_measurement(self.maintenance_history, raw_ts, value)
+                after = len(self.maintenance_history.get("chlor_learning_measurements", []) or [])
+                if after > before:
+                    imported_chlor += 1
+            elif parameter == "PL pH":
+                before = len(self.maintenance_history.get("ph_learning_measurements", []) or [])
+                record_ph_measurement(self.maintenance_history, raw_ts, value)
+                after = len(self.maintenance_history.get("ph_learning_measurements", []) or [])
+                if after > before:
+                    imported_ph += 1
+
+        if imported_chlor or imported_ph:
+            _LOGGER.debug(
+                "Backfilled cloud learning history: chlor=%s ph=%s",
+                imported_chlor,
+                imported_ph,
+            )
+
     @property
     def config(self):
         """Return combined config from data and options."""
@@ -578,7 +693,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 return None, None
 
         def add_value_candidate(
-            bucket: list[tuple[datetime | None, object, str]],
+            bucket: list[tuple[datetime | None, object, str, str | None]],
             value: object,
             source: str,
             ts_raw: str | None,
@@ -586,19 +701,19 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             """Track candidate values so the newest source wins per metric."""
             if value is None:
                 return
-            bucket.append((self._parse_ts_aware(ts_raw), value, source))
+            bucket.append((self._parse_ts_aware(ts_raw), value, source, ts_raw))
 
         def select_latest_candidate(
-            bucket: list[tuple[datetime | None, object, str]],
-        ) -> tuple[object | None, str | None]:
-            """Return the newest candidate value and its source."""
+            bucket: list[tuple[datetime | None, object, str, str | None]],
+        ) -> tuple[object | None, str | None, str | None]:
+            """Return the newest candidate value, source and raw timestamp."""
             if not bucket:
-                return None, None
-            dt_value, value, source = max(
+                return None, None, None
+            dt_value, value, source, ts_raw = max(
                 bucket,
                 key=lambda item: item[0] or dt_util.parse_datetime("1970-01-01T00:00:00+00:00"),
             )
-            return value, source
+            return value, source, ts_raw
 
         # 1. Bestehende Daten laden
         # Immer einen aktuellen Zeitstempel für den "letzten Lauf" parat haben
@@ -623,10 +738,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         c_ist = ph_ist = temp_ist = cya_ist = None
         chlor_source = ph_source = temp_source = cya_source = None
-        c_candidates: list[tuple[datetime | None, object, str]] = []
-        ph_candidates: list[tuple[datetime | None, object, str]] = []
-        temp_candidates: list[tuple[datetime | None, object, str]] = []
-        cya_candidates: list[tuple[datetime | None, object, str]] = []
+        c_meas_raw = ph_meas_raw = temp_meas_raw = cya_meas_raw = None
+        c_candidates: list[tuple[datetime | None, object, str, str | None]] = []
+        ph_candidates: list[tuple[datetime | None, object, str, str | None]] = []
+        temp_candidates: list[tuple[datetime | None, object, str, str | None]] = []
+        cya_candidates: list[tuple[datetime | None, object, str, str | None]] = []
         # Lade letzte bekannte API-Messwerte aus dem Speicher
         last_api_measurements = self.maintenance_history.get("last_api_measurements", [])
 
@@ -659,6 +775,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         poollab_fetch_error = None
                         poollab_fetch_completed_at = dt_util.now().isoformat()
                         self._set_poollab_cooldown(_BLE_SUCCESS_COOLDOWN)
+                        self._backfill_ble_learning_history(ble_data, poollab_fetch_completed_at)
                         ble_selection = select_poollab_ble_measurements(
                             ble_data,
                             poollab_fetch_completed_at,
@@ -697,10 +814,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         add_value_candidate(
                             cya_candidates, ble_selection.cyanuric_acid, "Bluetooth", ble_selection.measurement_raw
                         )
-                        c_ist, chlor_source = select_latest_candidate(c_candidates)
-                        ph_ist, ph_source = select_latest_candidate(ph_candidates)
-                        temp_ist, temp_source = select_latest_candidate(temp_candidates)
-                        cya_ist, cya_source = select_latest_candidate(cya_candidates)
+                        c_ist, chlor_source, c_meas_raw = select_latest_candidate(c_candidates)
+                        ph_ist, ph_source, ph_meas_raw = select_latest_candidate(ph_candidates)
+                        temp_ist, temp_source, temp_meas_raw = select_latest_candidate(temp_candidates)
+                        cya_ist, cya_source, cya_meas_raw = select_latest_candidate(cya_candidates)
                         _LOGGER.debug(
                             "BLE source assignment: chlor=%s ph=%s temp=%s cya=%s",
                             chlor_source,
@@ -751,6 +868,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 if cloud_result.last_measurements:
                     last_api_measurements = cloud_result.last_measurements
                     self.maintenance_history["last_api_measurements"] = last_api_measurements
+                    self._backfill_cloud_learning_history(last_api_measurements)
 
                 add_value_candidate(
                     c_candidates, cloud_result.chlor, "Cloud", cloud_result.measurement_raw
@@ -764,10 +882,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 add_value_candidate(
                     cya_candidates, cloud_result.cyanuric_acid, "Cloud", cloud_result.measurement_raw
                 )
-                c_ist, chlor_source = select_latest_candidate(c_candidates)
-                ph_ist, ph_source = select_latest_candidate(ph_candidates)
-                temp_ist, temp_source = select_latest_candidate(temp_candidates)
-                cya_ist, cya_source = select_latest_candidate(cya_candidates)
+                c_ist, chlor_source, c_meas_raw = select_latest_candidate(c_candidates)
+                ph_ist, ph_source, ph_meas_raw = select_latest_candidate(ph_candidates)
+                temp_ist, temp_source, temp_meas_raw = select_latest_candidate(temp_candidates)
+                cya_ist, cya_source, cya_meas_raw = select_latest_candidate(cya_candidates)
 
                 if cloud_result.found:
                     cloud_found = True
@@ -813,10 +931,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 or cached_ble_cya is not None
             ):
                 cached_ble_found = True
-                c_ist, chlor_source = select_latest_candidate(c_candidates)
-                ph_ist, ph_source = select_latest_candidate(ph_candidates)
-                temp_ist, temp_source = select_latest_candidate(temp_candidates)
-                cya_ist, cya_source = select_latest_candidate(cya_candidates)
+                c_ist, chlor_source, c_meas_raw = select_latest_candidate(c_candidates)
+                ph_ist, ph_source, ph_meas_raw = select_latest_candidate(ph_candidates)
+                temp_ist, temp_source, temp_meas_raw = select_latest_candidate(temp_candidates)
+                cya_ist, cya_source, cya_meas_raw = select_latest_candidate(cya_candidates)
                 _LOGGER.debug(
                     "Considering cached BLE values in source selection: ble=%s api=%s selected=(%s,%s,%s,%s)",
                     ble_ts_str,
@@ -839,10 +957,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         add_value_candidate(ph_candidates, ph_man, "Manuell", ph_man_ts)
         add_value_candidate(temp_candidates, temp_man, "Manuell", temp_man_ts)
 
-        c_ist, chlor_source = select_latest_candidate(c_candidates)
-        ph_ist, ph_source = select_latest_candidate(ph_candidates)
-        temp_ist, temp_source = select_latest_candidate(temp_candidates)
-        cya_ist, cya_source = select_latest_candidate(cya_candidates)
+        c_ist, chlor_source, c_meas_raw = select_latest_candidate(c_candidates)
+        ph_ist, ph_source, ph_meas_raw = select_latest_candidate(ph_candidates)
+        temp_ist, temp_source, temp_meas_raw = select_latest_candidate(temp_candidates)
+        cya_ist, cya_source, cya_meas_raw = select_latest_candidate(cya_candidates)
 
         for ts_candidate in (c_man_ts, ph_man_ts, temp_man_ts):
             if not ts_candidate:
@@ -964,10 +1082,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         weather_data = await async_get_weather_data(self.hass, conf, limit=2)
         weather_today = weather_data.get("today") if isinstance(weather_data, dict) else None
         weather_forecast_days = weather_data.get("forecast_days") if isinstance(weather_data, dict) else []
-        if c_ist is not None and last_meas_raw:
+        if c_ist is not None and c_meas_raw:
             record_chlor_measurement(
                 self.maintenance_history,
-                last_meas_raw,
+                c_meas_raw,
                 c_ist,
                 temperature=temp_ist,
                 pool_covered=self.pool_covered,
@@ -979,10 +1097,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 pump_runtime_hours_total=pump_runtime_hours_total,
                 pump_active=pump_active,
             )
-        if ph_ist is not None and last_meas_raw:
-            record_ph_measurement(self.maintenance_history, last_meas_raw, ph_ist)
-        if cya_ist is not None and last_meas_raw:
-            record_cya_measurement(self.maintenance_history, last_meas_raw, cya_ist)
+        if ph_ist is not None and ph_meas_raw:
+            record_ph_measurement(self.maintenance_history, ph_meas_raw, ph_ist)
+        if cya_ist is not None and cya_meas_raw:
+            record_cya_measurement(self.maintenance_history, cya_meas_raw, cya_ist)
         chlorine_learning = calculate_chlorine_learning(
             self.maintenance_history,
             conf,
