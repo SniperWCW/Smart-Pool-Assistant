@@ -315,6 +315,7 @@ def diagnose_chlorine_dose_samples(
 
         entry["theoretical_increase"] = round(theoretical_increase, 3)
         entry["corrected_increase"] = round(corrected_increase, 3)
+        entry["observed_increase"] = round(float(following["chlor"]) - float(previous["chlor"]), 3)
         entry["dose_factor"] = round(dose_factor, 3) if dose_factor is not None else None
 
         if dose_factor is None or dose_factor <= 0.2 or dose_factor > 1.8:

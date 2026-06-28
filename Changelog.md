@@ -1,5 +1,9 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.11] - 2026-06-28
+
+- **Sample-Diagnose in Push erweitert**: Benachrichtigungen zu gewerteten oder verworfenen Chlor-Dosier-Samples enthalten jetzt direkt Vorherwert, Nachherwert, geloggte Gramm, theoretischen Anstieg und beobachteten Anstieg.
+
 ## [3.0.10] - 2026-06-28
 
 - **Erste gueltige Nachmessung statt erste Nachmessung**: Fuer die Dosierqualitaet wird jetzt die erste Chlor-Nachmessung im gueltigen Fenster von `30 Minuten` bis `12 Stunden` nach der Zugabe verwendet. Zu fruehe Messungen blockieren damit kein spaeteres gueltiges Sample mehr.

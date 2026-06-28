@@ -734,11 +734,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         reason = latest_entry.get("reason")
         message = None
+        details = (
+            f"Vorher: {latest_entry.get('previous_chlor')} mg/l, "
+            f"Nachher: {latest_entry.get('following_chlor')} mg/l, "
+            f"Zugabe: {latest_entry.get('dose_amount')} g, "
+            f"Theoretisch: {latest_entry.get('theoretical_increase')} mg/l, "
+            f"Beobachtet: {latest_entry.get('observed_increase')} mg/l."
+        )
         if reason == "accepted":
             message = (
                 "Dosier-Sample erfolgreich erkannt. "
                 f"Nachmessung um {self._format_local_time(self._parse_ts_aware(latest_entry.get('following_at')))} Uhr "
-                f"wurde verwendet. Faktor: {latest_entry.get('dose_factor')}."
+                f"wurde verwendet. Faktor: {latest_entry.get('dose_factor')}. {details}"
             )
         elif reason == "follow_up_too_early":
             dose_dt = self._parse_ts_aware(latest_entry.get("dose_at"))
@@ -753,7 +760,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         elif reason == "dose_factor_out_of_range":
             message = (
                 "Dosier-Sample konnte nicht gewertet werden. "
-                f"Der berechnete Faktor ({latest_entry.get('dose_factor')}) liegt ausserhalb des erlaubten Bereichs."
+                f"Der berechnete Faktor ({latest_entry.get('dose_factor')}) liegt ausserhalb des erlaubten Bereichs. "
+                f"{details}"
             )
         elif reason == "next_dose_before_follow_up":
             message = "Dosier-Sample konnte nicht gewertet werden, weil vor der gueltigen Nachmessung bereits eine weitere Zugabe erfasst wurde."
