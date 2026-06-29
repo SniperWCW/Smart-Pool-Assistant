@@ -31,6 +31,17 @@ from .const import (
     CONF_WEATHER_ENTITY, CONF_UV_SENSOR,
 )
 SERVICE_UUID = "a7ee04a9-507b-4910-a528-b619d5501924"
+REMOVABLE_OPTIONAL_FIELDS = (
+    CONF_CHLOR_SENSOR,
+    CONF_PH_SENSOR,
+    CONF_TEMP_SENSOR,
+    CONF_PUMP_ENTITY,
+    CONF_POOL_CONNECTION_SENSOR,
+    CONF_WEATHER_ENTITY,
+    CONF_UV_SENSOR,
+    CONF_NOTIFY_SERVICE,
+    CONF_NOTIFY_SERVICE_2,
+)
 
 def validate_data_source(user_input: dict[str, Any]) -> bool:
     """Überprüft, ob mindestens eine gültige Datenquelle konfiguriert wurde."""
@@ -43,6 +54,15 @@ def validate_data_source(user_input: dict[str, Any]) -> bool:
     has_manual = bool(chlor_sensor) and bool(ph_sensor)
 
     return bool(api_key or ble_address or has_manual)
+
+
+def _normalize_optional_fields(user_input: dict[str, Any] | None) -> dict[str, Any]:
+    """Keep cleared optional fields explicit so options can override old entry data."""
+    normalized = dict(user_input or {})
+    for key in REMOVABLE_OPTIONAL_FIELDS:
+        if key not in normalized:
+            normalized[key] = ""
+    return normalized
 
 
 def _range_defaults(defaults: dict[str, Any]) -> dict[str, float]:
@@ -91,6 +111,7 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
+            user_input = _normalize_optional_fields(user_input)
             ble_address = user_input.get(CONF_BLE_ADDRESS)
             if isinstance(ble_address, str) and ble_address.strip():
                 await self.async_set_unique_id(ble_address.strip())
@@ -258,6 +279,7 @@ class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         errors = {}
         if user_input is not None:
+            user_input = _normalize_optional_fields(user_input)
             if not validate_data_source(user_input):
                 errors["base"] = "missing_data_source"
             elif not validate_target_ranges(user_input):

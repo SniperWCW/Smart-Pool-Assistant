@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.20] - 2026-06-29
+
+- **Regenanzeige fuer Daily-Forecasts korrigiert**: Die Lovelace-Karte verarbeitet normalisierte Forecast-Tage jetzt auch dann korrekt, wenn der Wetter-Provider nur `precipitation` bzw. `precipitation_amount` in `mm` liefert statt einer `precipitation_probability`.
+- **Regeneinheit fachlich sauber dargestellt**: In Wetter-Zusammenfassung und Tageskarten erscheint Niederschlag nun als `%` bei Wahrscheinlichkeiten oder als `mm` bei Niederschlagsmenge, statt alles pauschal als Prozent zu labeln.
+- **Optionalen UV-Sensor wieder entfernbar gemacht**: Der Options-/Reconfigure-Flow schreibt geleerte optionale Felder jetzt explizit zurueck, sodass ein zuvor gesetzter `uv_sensor` sauber entfernt werden kann, wenn der `uv_index` bereits aus der Wetter-Entitaet kommt.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.20` angehoben.
+
 ## [3.0.19] - 2026-06-29
 
 - **Anorganische Chlorlogik getrennt**: Bei `inorganic` wird `chlor_pre` jetzt als minimale Vor-Baden-Korrektur bis `chlor_min` berechnet, waehrend `chlor_dose` die eigentliche aktive Desinfektionszugabe nach der Nutzung repraesentiert.

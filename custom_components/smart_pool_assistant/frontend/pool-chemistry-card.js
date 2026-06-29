@@ -330,6 +330,20 @@ class PoolChemistryCard extends HTMLElement {
     return num >= 20 ? `${num.toFixed(0)} km/h` : `${num.toFixed(1)} m/s`;
   }
 
+  _getWeatherPrecipitation(entry) {
+    const probability = entry?.precipitation_probability;
+    if (probability !== null && probability !== undefined) {
+      return { value: probability, unit: "%" };
+    }
+
+    const amount = entry?.precipitation_amount ?? entry?.precipitation ?? entry?.native_precipitation;
+    if (amount !== null && amount !== undefined) {
+      return { value: amount, unit: " mm" };
+    }
+
+    return { value: null, unit: "" };
+  }
+
   _formatDoseAmount(value, unit) {
     const num = Number(value);
     if (!Number.isFinite(num)) return `--${unit}`;
@@ -740,11 +754,13 @@ class PoolChemistryCard extends HTMLElement {
       const label = date
         ? date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })
         : fallbackLabel;
+      const precipitation = this._getWeatherPrecipitation(entry);
 
       return {
         label: index === 0 ? `Heute · ${label}` : `Morgen · ${label}`,
         condition: entry.condition,
-        precipitation: entry.precipitation_probability ?? entry.precipitation ?? entry.native_precipitation ?? null,
+        precipitation: precipitation.value,
+        precipitationUnit: precipitation.unit,
         uv: index === 0
           ? (this._lastAttr?.weather_uv_today ?? entry.uv_index ?? entry.uv ?? null)
           : (entry.uv_index ?? entry.uv ?? null),
@@ -766,6 +782,9 @@ class PoolChemistryCard extends HTMLElement {
     const temperature = attr.weather_temperature_today ?? weatherState?.attributes?.temperature ?? null;
     const wind = attr.weather_wind_speed_today ?? weatherState?.attributes?.wind_speed ?? null;
     const precipitation = attr.weather_rain_probability_today ?? attr.weather_rain_amount_today ?? null;
+    const precipitationUnit = attr.weather_rain_probability_today !== null && attr.weather_rain_probability_today !== undefined
+      ? "%"
+      : (attr.weather_rain_amount_today !== null && attr.weather_rain_amount_today !== undefined ? " mm" : "");
     const uv = attr.weather_uv_today ?? null;
 
     if (
@@ -782,6 +801,7 @@ class PoolChemistryCard extends HTMLElement {
       label: "Heute",
       condition,
       precipitation,
+      precipitationUnit,
       uv,
       wind,
       windUnit: attr.weather_wind_speed_unit ?? weatherState?.attributes?.wind_speed_unit ?? null,
@@ -869,7 +889,7 @@ class PoolChemistryCard extends HTMLElement {
     if (today?.condition) summaryParts.push(this._getWeatherConditionLabel(today.condition));
     if (today?.temperature !== null && today?.temperature !== undefined) summaryParts.push(this._formatWeatherValue(today.temperature, "°"));
     if (today?.uv !== null && today?.uv !== undefined) summaryParts.push(`UV ${this._formatWeatherValue(today.uv)}`);
-    if (today?.precipitation !== null && today?.precipitation !== undefined) summaryParts.push(`Regen ${this._formatWeatherValue(today.precipitation, "%")}`);
+    if (today?.precipitation !== null && today?.precipitation !== undefined) summaryParts.push(`Regen ${this._formatWeatherValue(today.precipitation, today.precipitationUnit || "")}`);
     if (today?.wind !== null && today?.wind !== undefined) summaryParts.push(`Wind ${this._formatWeatherWind(today.wind, today.windUnit)}`);
     const weatherSummary = summaryParts.join(", ") || "Heute";
 
@@ -888,7 +908,7 @@ class PoolChemistryCard extends HTMLElement {
             </div>
             <div class="weather-metrics">
               <div class="weather-metric"><span>Sonne/UV</span><b class="${this._getUvColorClass(day.uv)}">${this._formatWeatherValue(day.uv)}</b></div>
-              <div class="weather-metric"><span>Regen</span><b>${this._formatWeatherValue(day.precipitation, "%")}</b></div>
+              <div class="weather-metric"><span>Regen</span><b>${this._formatWeatherValue(day.precipitation, day.precipitationUnit || "")}</b></div>
               <div class="weather-metric"><span>Wind</span><b>${this._formatWeatherWind(day.wind, day.windUnit)}</b></div>
             </div>
           </div>
