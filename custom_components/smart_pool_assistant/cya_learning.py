@@ -328,10 +328,19 @@ def _build_forecast_message(
     if estimated_daily_change is None:
         return "Keine CYA-Prognose verfuegbar."
     if abs(estimated_daily_change) < 0.1:
-        return f"CYA bleibt bei aktuellem Verlauf voraussichtlich nahe {current_cya:.0f} ppm."
+        return (
+            f"CYA bleibt bei aktuellem Verlauf voraussichtlich nahe {current_cya:.0f} ppm "
+            "und aendert sich im Modell aktuell kaum."
+        )
     if estimated_daily_change < 0:
-        return f"CYA sinkt aktuell modelliert um etwa {abs(estimated_daily_change):.2f} ppm pro Tag."
-    return f"CYA steigt aktuell modelliert um etwa {estimated_daily_change:.2f} ppm pro Tag."
+        return (
+            f"Das Modell erwartet aktuell netto etwa {abs(estimated_daily_change):.2f} ppm/Tag weniger CYA, "
+            "typischerweise durch dokumentierten Wasserwechsel."
+        )
+    return (
+        f"Das Modell erwartet aktuell netto etwa {estimated_daily_change:.2f} ppm/Tag mehr CYA, "
+        "typischerweise durch stabilisierte Chlorzugaben."
+    )
 
 
 def _dose_to_cya_ppm(amount: float, volume_m3: float, chlor_content: float, cya_ratio: float) -> float:
