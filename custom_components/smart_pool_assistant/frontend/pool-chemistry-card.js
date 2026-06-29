@@ -1926,7 +1926,6 @@ class PoolChemistryCard extends HTMLElement {
     const cyaModelNode = this.querySelector('#cya-model');
     const cyaHistNode = this.querySelector('#cya-hist');
     const modeledCya = Number(attr.cya_estimated_current);
-    const dailyCyaChange = Number(attr.cya_estimated_daily_change);
     if (cyaForecastNode) {
       cyaForecastNode.innerHTML = attr.cya_forecast_message || 'Keine CYA-Prognose verfuegbar.';
     }
@@ -1934,10 +1933,6 @@ class PoolChemistryCard extends HTMLElement {
       const modelParts = [];
       if (Number.isFinite(modeledCya)) {
         modelParts.push(`Modell aktuell: ${modeledCya.toFixed(1)} ppm`);
-      }
-      if (Number.isFinite(dailyCyaChange)) {
-        const sign = dailyCyaChange > 0 ? '+' : '';
-        modelParts.push(`Netto: ${sign}${dailyCyaChange.toFixed(2)} ppm/Tag`);
       }
       cyaModelNode.style.display = modelParts.length ? 'block' : 'none';
       cyaModelNode.textContent = modelParts.join(' | ');
