@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.16] - 2026-06-29
+
+- **CYA-Prognosetext fachlich praezisiert**: Die Anzeige beschreibt sinkende oder steigende Werte jetzt als modellierten Netto-Effekt statt als natuerlichen CYA-Abbau.
+- **CYA-Ursachen klar benannt**: Sinkende Werte werden im Text auf dokumentierten Wasserwechsel, steigende Werte auf stabilisierte Chlorzugaben zurueckgefuehrt.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.16` angehoben.
+
 ## [3.0.15] - 2026-06-28
 
 - **Schockchlorung jetzt konfigurierbar gedeckelt**: Neues Feld `chlor_shock_max` fuer die maximale automatische Schockchlorung in `mg/l`, z.B. `3.0` fuer Whirlpools.
