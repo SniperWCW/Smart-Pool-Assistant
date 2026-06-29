@@ -122,19 +122,31 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             dt = dt.replace(tzinfo=dt_util.UTC)
         return dt
 
-    def _normalize_ble_measurement_ts(self, ts: int, fetched_at_iso: str | None) -> str:
-        """Use the actual BLE fetch completion time as authoritative measurement time."""
+    def _normalize_ble_measurement_ts(
+        self,
+        ts: int,
+        fetched_at_iso: str | None,
+        *,
+        latest_raw_ts: int | None = None,
+    ) -> str:
+        """Map BLE timestamps onto the fetch timeline while preserving spacing."""
         fetched_at_dt = self._parse_ts_aware(fetched_at_iso) if fetched_at_iso else None
         ble_dt = dt_util.utc_from_timestamp(ts)
 
         if fetched_at_dt:
-            if ble_dt != fetched_at_dt:
+            if latest_raw_ts is None:
+                latest_raw_ts = ts
+            delta_seconds = ts - latest_raw_ts
+            normalized_dt = fetched_at_dt + timedelta(seconds=delta_seconds)
+            if ble_dt != normalized_dt:
                 _LOGGER.debug(
-                    "Ignoring raw PoolLab BLE timestamp in favor of fetch completion time: ble=%s fetched_at=%s",
+                    "Normalizing PoolLab BLE timestamp relative to latest chemistry sample: ble=%s latest_raw=%s fetched_at=%s normalized=%s",
                     ble_dt.isoformat(),
+                    dt_util.utc_from_timestamp(latest_raw_ts).isoformat(),
                     fetched_at_dt.isoformat(),
+                    normalized_dt.isoformat(),
                 )
-            return fetched_at_dt.isoformat()
+            return normalized_dt.isoformat()
 
         return ble_dt.isoformat()
 

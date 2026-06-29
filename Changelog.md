@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.18] - 2026-06-29
+
+- **BLE-Zeitstempel relativ normalisiert**: Der neueste BLE-Chemiewert wird weiter am Abrufzeitpunkt verankert, aeltere Chlor-, Temperatur- und CYA-Werte behalten aber jetzt ihren zeitlichen Abstand statt ebenfalls auf `jetzt` zu springen.
+- **Messlauf-Unterscheidung wieder brauchbar**: Einzelne frische pH-Messungen koennen damit in der Tabelle sichtbar neuer sein als aeltere gespeicherte Chlor- oder CYA-Werte aus demselben PoolLab-Abruf.
+- **Anzeige und Lernhistorie vereinheitlicht**: Die sichtbaren BLE-Messzeiten folgen jetzt demselben relativen Modell wie das Backfill der Lernspeicher, damit beide Pfade dieselbe Chronologie verwenden.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.18` angehoben.
+
 ## [3.0.17] - 2026-06-29
 
 - **CYA-Block fachlich ueberarbeitet**: Bei zu hohem CYA nennt die Karte jetzt anhand des konfigurierten Beckenvolumens eine konkrete Wasserwechsel-Schaetzung bis etwa `50 ppm`.

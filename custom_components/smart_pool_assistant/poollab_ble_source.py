@@ -44,7 +44,7 @@ class PoolLabBLESelection:
 def select_poollab_ble_measurements(
     ble_data: PoolLabData,
     fetched_at_iso: str | None,
-    normalize_measurement_ts: Callable[[int, str | None], str],
+    normalize_measurement_ts: Callable[..., str],
 ) -> PoolLabBLESelection:
     """Select current pool values from raw PoolLab BLE measurements."""
     m_chlor = _get_ble_measurement(ble_data, _CHLORINE_TYPE_IDS)
@@ -57,6 +57,7 @@ def select_poollab_ble_measurements(
         for measurement in (m_chlor, m_ph, m_temp, m_cya)
         if measurement is not None
     ]
+    latest_raw_ts = max(ble_ts_list) if ble_ts_list else None
 
     _LOGGER.debug(
         "BLE selection result: available_types=%s chlor=%s ph=%s temp=%s cya=%s",
@@ -78,11 +79,31 @@ def select_poollab_ble_measurements(
         ph=m_ph.value if m_ph else None,
         temperature=m_temp.value if m_temp else None,
         cyanuric_acid=m_cya.value if m_cya else None,
-        measurement_raw=normalize_measurement_ts(max(ble_ts_list), fetched_at_iso) if ble_ts_list else None,
-        chlor_measurement_raw=normalize_measurement_ts(m_chlor.timestamp, fetched_at_iso) if m_chlor else None,
-        ph_measurement_raw=normalize_measurement_ts(m_ph.timestamp, fetched_at_iso) if m_ph else None,
-        temperature_measurement_raw=normalize_measurement_ts(m_temp.timestamp, fetched_at_iso) if m_temp else None,
-        cyanuric_acid_measurement_raw=normalize_measurement_ts(m_cya.timestamp, fetched_at_iso) if m_cya else None,
+        measurement_raw=normalize_measurement_ts(
+            latest_raw_ts,
+            fetched_at_iso,
+            latest_raw_ts=latest_raw_ts,
+        ) if latest_raw_ts is not None else None,
+        chlor_measurement_raw=normalize_measurement_ts(
+            m_chlor.timestamp,
+            fetched_at_iso,
+            latest_raw_ts=latest_raw_ts,
+        ) if m_chlor else None,
+        ph_measurement_raw=normalize_measurement_ts(
+            m_ph.timestamp,
+            fetched_at_iso,
+            latest_raw_ts=latest_raw_ts,
+        ) if m_ph else None,
+        temperature_measurement_raw=normalize_measurement_ts(
+            m_temp.timestamp,
+            fetched_at_iso,
+            latest_raw_ts=latest_raw_ts,
+        ) if m_temp else None,
+        cyanuric_acid_measurement_raw=normalize_measurement_ts(
+            m_cya.timestamp,
+            fetched_at_iso,
+            latest_raw_ts=latest_raw_ts,
+        ) if m_cya else None,
     )
 
 
