@@ -2020,12 +2020,14 @@ class PoolChemistryCard extends HTMLElement {
     const phSource = attr.ph_source || '--';
     const tempSource = attr.temp_source || '--';
     const cyaSource = attr.cyanuric_acid_source || '--';
-    const lastMeasurement = attr.last_measurement && attr.last_measurement !== "Noch keine Messung"
-      ? attr.last_measurement
-      : "";
-    const sourceWithTime = (source) => {
-      const time = lastMeasurement && attr.last_measurement_source === source
-        ? `<span class="table-sub">${lastMeasurement}</span>`
+    const chlorMeasurement = attr.chlor_measurement || "";
+    const phMeasurement = attr.ph_measurement || "";
+    const tempMeasurement = attr.temp_measurement || "";
+    const cyaMeasurement = attr.cyanuric_acid_measurement || "";
+    const bleMeasurement = attr.ble_measurement || "";
+    const sourceWithTime = (source, measurementTime = "") => {
+      const time = measurementTime
+        ? `<span class="table-sub">${measurementTime}</span>`
         : "";
       return `<span class="table-source">${source}</span>${time}`;
     };
@@ -2058,19 +2060,19 @@ class PoolChemistryCard extends HTMLElement {
         <div class="table-label">Chlor</div>
         <div class="table-value" data-label="Ist"><span class="${chlorColor}">${c_ist} mg/l</span></div>
         <div class="table-target" data-label="Ziel">${c_target}</div>
-        <div class="table-meta" data-label="Quelle">${sourceWithTime(chlorSource)}</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(chlorSource, chlorMeasurement)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">pH-Wert</div>
         <div class="table-value" data-label="Ist"><span class="${phColor}">${ph_ist}</span></div>
         <div class="table-target" data-label="Ziel">${ph_target}</div>
-        <div class="table-meta" data-label="Quelle">${sourceWithTime(phSource)}</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(phSource, phMeasurement)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">Temperatur</div>
         <div class="table-value" data-label="Ist">${t_ist}°C</div>
         <div class="table-target" data-label="Ziel">--</div>
-        <div class="table-meta" data-label="Quelle">${sourceWithTime(tempSource)}</div>
+        <div class="table-meta" data-label="Quelle">${sourceWithTime(tempSource, tempMeasurement)}</div>
       </div>
       <div class="table-row">
         <div class="table-label">Cyanurs\u00e4ure</div>
@@ -2080,14 +2082,14 @@ class PoolChemistryCard extends HTMLElement {
           <span class="table-sub ${cyaAssessment.className}">${cyaAssessment.label}</span>
         </div>
         <div class="table-meta" data-label="Quelle">
-          ${sourceWithTime(cyaSource)}
+          ${sourceWithTime(cyaSource, cyaMeasurement)}
           <span class="table-sub">${cyaAssessment.action}</span>
         </div>
       </div>
       <div class="table-row">
         <div class="table-label">BT Verbindung</div>
         <div class="table-value" data-label="Status">${bluetoothBadge}</div>
-        <div class="table-target" data-label="Messung">${lastMeasurement && attr.last_measurement_source === "Bluetooth" ? lastMeasurement : "--"}</div>
+        <div class="table-target" data-label="Messung">${bleMeasurement || "--"}</div>
         <div class="table-meta" data-label="Quelle">${bluetoothConnected ? 'aktiv' : 'inaktiv'}</div>
       </div>
     `;
@@ -2846,7 +2848,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.16 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.17 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

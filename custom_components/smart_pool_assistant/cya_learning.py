@@ -16,6 +16,7 @@ FORECAST_WINDOW_DAYS = 30
 FORECAST_HORIZON_DAYS = 180
 TARGET_THRESHOLD = 80.0
 CRITICAL_THRESHOLD = 100.0
+CYA_IDEAL_MAX = 50.0
 
 
 def record_cya_measurement(
@@ -149,6 +150,17 @@ def calculate_cya_learning(
     trend = _trend_label(forecast["estimated_daily_change"])
     latest_measurement = measurements[-1] if measurements else None
     latest_exchange = water_exchanges[-1] if water_exchanges else None
+    recommended_exchange_percent, recommended_exchange_liters = _recommended_water_exchange(
+        estimated_current,
+        volume_m3,
+        CYA_IDEAL_MAX,
+    )
+    message = _build_cya_status_message(
+        estimated_current=estimated_current,
+        latest_measurement=latest_measurement,
+        recommended_exchange_percent=recommended_exchange_percent,
+        recommended_exchange_liters=recommended_exchange_liters,
+    )
 
     return {
         "cya_estimated_current": round(estimated_current, 2) if estimated_current is not None else current_cya,
@@ -157,7 +169,7 @@ def calculate_cya_learning(
         "cya_days_to_100": forecast["days_to_100"],
         "cya_forecast_confidence": forecast["confidence"],
         "cya_trend": trend,
-        "cya_forecast_message": forecast["message"],
+        "cya_forecast_message": message,
         "cya_forecast_attributes": {
             "basis": basis,
             "trend": trend,
@@ -171,6 +183,9 @@ def calculate_cya_learning(
             "latest_measured_at": latest_measurement["raw_ts"] if latest_measurement else None,
             "latest_water_exchange_liters": latest_exchange["liters"] if latest_exchange else None,
             "latest_water_exchange_percent": latest_exchange["percent"] if latest_exchange else None,
+            "recommended_exchange_liters": recommended_exchange_liters,
+            "recommended_exchange_percent": recommended_exchange_percent,
+            "recommended_target_cya": CYA_IDEAL_MAX,
             "recent_measurements": [
                 {"raw_ts": item["raw_ts"], "cya": item["cya"]}
                 for item in measurements[-6:]
@@ -302,13 +317,12 @@ def _simulate_forecast(
             days_to_100 = day
 
     confidence = "high" if daily_exchange_fraction > 0 else "medium" if daily_cya_input > 0 else "low"
-    message = _build_forecast_message(now, modeled, estimated_daily_change, days_to_80, days_to_100)
     return {
         "estimated_daily_change": estimated_daily_change,
         "days_to_80": days_to_80,
         "days_to_100": days_to_100,
         "confidence": confidence,
-        "message": message,
+        "message": _build_forecast_message(now, modeled, estimated_daily_change, days_to_80, days_to_100),
     }
 
 
@@ -341,6 +355,49 @@ def _build_forecast_message(
         f"Das Modell erwartet aktuell netto etwa {estimated_daily_change:.2f} ppm/Tag mehr CYA, "
         "typischerweise durch stabilisierte Chlorzugaben."
     )
+
+
+def _build_cya_status_message(
+    *,
+    estimated_current: float | None,
+    latest_measurement: dict | None,
+    recommended_exchange_percent: float | None,
+    recommended_exchange_liters: float | None,
+) -> str:
+    if latest_measurement is not None:
+        measured_value = latest_measurement["cya"]
+        measured_date = latest_measurement["dt"].strftime("%d.%m.%Y")
+        measurement_text = f"Letzter CYA-Messwert: {measured_value:.1f} ppm am {measured_date}."
+    elif estimated_current is not None:
+        measurement_text = f"Aktueller CYA-Wert: {estimated_current:.1f} ppm."
+    else:
+        return "Kein CYA-Messwert vorhanden."
+
+    if estimated_current is None or estimated_current <= CYA_IDEAL_MAX:
+        return measurement_text
+
+    if recommended_exchange_percent is None or recommended_exchange_liters is None:
+        return f"CYA zu hoch. Teilwasserwechsel einplanen. {measurement_text}"
+
+    return (
+        f"CYA zu hoch: fuer etwa {CYA_IDEAL_MAX:.0f} ppm ca. {recommended_exchange_liters:.0f} l "
+        f"({recommended_exchange_percent:.1f} %) Wasser wechseln. {measurement_text}"
+    )
+
+
+def _recommended_water_exchange(
+    current_cya: float | None,
+    volume_m3: float,
+    target_cya: float,
+) -> tuple[float | None, float | None]:
+    if current_cya is None or current_cya <= target_cya or volume_m3 <= 0:
+        return None, None
+
+    exchange_fraction = 1.0 - (target_cya / current_cya)
+    exchange_fraction = max(0.0, min(exchange_fraction, 1.0))
+    percent = round(exchange_fraction * 100.0, 1)
+    liters = round(volume_m3 * 1000.0 * exchange_fraction, 0)
+    return percent, liters
 
 
 def _dose_to_cya_ppm(amount: float, volume_m3: float, chlor_content: float, cya_ratio: float) -> float:

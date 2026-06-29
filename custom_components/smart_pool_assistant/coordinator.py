@@ -138,6 +138,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         return ble_dt.isoformat()
 
+    def _format_measurement_ts(self, ts_raw: str | None) -> str | None:
+        """Format a raw timestamp for compact frontend display."""
+        dt_value = self._parse_ts_aware(ts_raw)
+        if dt_value is None:
+            return None
+        return dt_util.as_local(dt_value).strftime("%d.%m.%Y %H:%M Uhr")
+
     def _normalize_ble_history_ts(
         self,
         raw_ts: int,
@@ -953,25 +960,29 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                         if ble_selection.chlor is not None:
                             self.maintenance_history["last_ble_c"] = ble_selection.chlor
+                            self.maintenance_history["last_ble_chlor_raw"] = ble_selection.chlor_measurement_raw
                         if ble_selection.ph is not None:
                             self.maintenance_history["last_ble_ph"] = ble_selection.ph
+                            self.maintenance_history["last_ble_ph_raw"] = ble_selection.ph_measurement_raw
                         if ble_selection.temperature is not None:
                             self.maintenance_history["last_ble_temp"] = ble_selection.temperature
+                            self.maintenance_history["last_ble_temp_raw"] = ble_selection.temperature_measurement_raw
                         if ble_selection.cyanuric_acid is not None:
                             self.maintenance_history["cyanuric_acid"] = ble_selection.cyanuric_acid
                             self.maintenance_history["last_ble_cya"] = ble_selection.cyanuric_acid
+                            self.maintenance_history["last_ble_cya_raw"] = ble_selection.cyanuric_acid_measurement_raw
 
                         add_value_candidate(
-                            c_candidates, ble_selection.chlor, "Bluetooth", ble_selection.measurement_raw
+                            c_candidates, ble_selection.chlor, "Bluetooth", ble_selection.chlor_measurement_raw
                         )
                         add_value_candidate(
-                            ph_candidates, ble_selection.ph, "Bluetooth", ble_selection.measurement_raw
+                            ph_candidates, ble_selection.ph, "Bluetooth", ble_selection.ph_measurement_raw
                         )
                         add_value_candidate(
-                            temp_candidates, ble_selection.temperature, "Bluetooth", ble_selection.measurement_raw
+                            temp_candidates, ble_selection.temperature, "Bluetooth", ble_selection.temperature_measurement_raw
                         )
                         add_value_candidate(
-                            cya_candidates, ble_selection.cyanuric_acid, "Bluetooth", ble_selection.measurement_raw
+                            cya_candidates, ble_selection.cyanuric_acid, "Bluetooth", ble_selection.cyanuric_acid_measurement_raw
                         )
                         c_ist, chlor_source, c_meas_raw = select_latest_candidate(c_candidates)
                         ph_ist, ph_source, ph_meas_raw = select_latest_candidate(ph_candidates)
@@ -1024,22 +1035,30 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                 if cloud_result.measurement_raw:
                     self.maintenance_history["last_api_measurement_raw"] = cloud_result.measurement_raw
+                if cloud_result.chlor_measurement_raw:
+                    self.maintenance_history["last_api_chlor_raw"] = cloud_result.chlor_measurement_raw
+                if cloud_result.ph_measurement_raw:
+                    self.maintenance_history["last_api_ph_raw"] = cloud_result.ph_measurement_raw
+                if cloud_result.temperature_measurement_raw:
+                    self.maintenance_history["last_api_temp_raw"] = cloud_result.temperature_measurement_raw
+                if cloud_result.cyanuric_acid_measurement_raw:
+                    self.maintenance_history["last_api_cya_raw"] = cloud_result.cyanuric_acid_measurement_raw
                 if cloud_result.last_measurements:
                     last_api_measurements = cloud_result.last_measurements
                     self.maintenance_history["last_api_measurements"] = last_api_measurements
                     self._backfill_cloud_learning_history(last_api_measurements)
 
                 add_value_candidate(
-                    c_candidates, cloud_result.chlor, "Cloud", cloud_result.measurement_raw
+                    c_candidates, cloud_result.chlor, "Cloud", cloud_result.chlor_measurement_raw
                 )
                 add_value_candidate(
-                    ph_candidates, cloud_result.ph, "Cloud", cloud_result.measurement_raw
+                    ph_candidates, cloud_result.ph, "Cloud", cloud_result.ph_measurement_raw
                 )
                 add_value_candidate(
-                    temp_candidates, cloud_result.temperature, "Cloud", cloud_result.measurement_raw
+                    temp_candidates, cloud_result.temperature, "Cloud", cloud_result.temperature_measurement_raw
                 )
                 add_value_candidate(
-                    cya_candidates, cloud_result.cyanuric_acid, "Cloud", cloud_result.measurement_raw
+                    cya_candidates, cloud_result.cyanuric_acid, "Cloud", cloud_result.cyanuric_acid_measurement_raw
                 )
                 c_ist, chlor_source, c_meas_raw = select_latest_candidate(c_candidates)
                 ph_ist, ph_source, ph_meas_raw = select_latest_candidate(ph_candidates)
@@ -1077,11 +1096,15 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             cached_ble_ph = self.maintenance_history.get("last_ble_ph")
             cached_ble_temp = self.maintenance_history.get("last_ble_temp")
             cached_ble_cya = self.maintenance_history.get("last_ble_cya")
+            cached_ble_c_raw = self.maintenance_history.get("last_ble_chlor_raw") or ble_ts_str
+            cached_ble_ph_raw = self.maintenance_history.get("last_ble_ph_raw") or ble_ts_str
+            cached_ble_temp_raw = self.maintenance_history.get("last_ble_temp_raw") or ble_ts_str
+            cached_ble_cya_raw = self.maintenance_history.get("last_ble_cya_raw") or ble_ts_str
 
-            add_value_candidate(c_candidates, cached_ble_c, "Bluetooth", ble_ts_str)
-            add_value_candidate(ph_candidates, cached_ble_ph, "Bluetooth", ble_ts_str)
-            add_value_candidate(temp_candidates, cached_ble_temp, "Bluetooth", ble_ts_str)
-            add_value_candidate(cya_candidates, cached_ble_cya, "Bluetooth", ble_ts_str)
+            add_value_candidate(c_candidates, cached_ble_c, "Bluetooth", cached_ble_c_raw)
+            add_value_candidate(ph_candidates, cached_ble_ph, "Bluetooth", cached_ble_ph_raw)
+            add_value_candidate(temp_candidates, cached_ble_temp, "Bluetooth", cached_ble_temp_raw)
+            add_value_candidate(cya_candidates, cached_ble_cya, "Bluetooth", cached_ble_cya_raw)
 
             if (
                 cached_ble_c is not None
@@ -1136,30 +1159,38 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             c_ist = self.maintenance_history.get("last_c")
             if c_ist is not None:
                 chlor_source = "Speicher"
+                c_meas_raw = self.maintenance_history.get("last_chlor_measurement_raw")
         else:
             self.maintenance_history["last_c"] = c_ist
+            self.maintenance_history["last_chlor_measurement_raw"] = c_meas_raw
 
         if ph_ist is None:
             ph_ist = self.maintenance_history.get("last_ph")
             if ph_ist is not None:
                 ph_source = "Speicher"
+                ph_meas_raw = self.maintenance_history.get("last_ph_measurement_raw")
         else:
             self.maintenance_history["last_ph"] = ph_ist
+            self.maintenance_history["last_ph_measurement_raw"] = ph_meas_raw
 
         if temp_ist is None:
             temp_ist = self.maintenance_history.get("last_temp")
             if temp_ist is not None:
                 temp_source = "Speicher"
+                temp_meas_raw = self.maintenance_history.get("last_temp_measurement_raw")
         else:
             self.maintenance_history["last_temp"] = temp_ist
+            self.maintenance_history["last_temp_measurement_raw"] = temp_meas_raw
 
         if cya_ist is None:
             cya_ist = self.maintenance_history.get("cyanuric_acid")
             if cya_ist is not None:
                 cya_source = self.maintenance_history.get("cyanuric_acid_source") or "Speicher"
+                cya_meas_raw = self.maintenance_history.get("last_cya_measurement_raw")
         else:
             self.maintenance_history["cyanuric_acid"] = cya_ist
             self.maintenance_history["cyanuric_acid_source"] = cya_source
+            self.maintenance_history["last_cya_measurement_raw"] = cya_meas_raw
 
         last_activities = self._collect_last_activities()
         if last_activities:
@@ -1233,6 +1264,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             last_meas_raw,
         )
         dt_last_meas = self._parse_ts_aware(last_meas_raw)
+        chlor_measurement = self._format_measurement_ts(c_meas_raw)
+        ph_measurement = self._format_measurement_ts(ph_meas_raw)
+        temp_measurement = self._format_measurement_ts(temp_meas_raw)
+        cya_measurement = self._format_measurement_ts(cya_meas_raw)
+        ble_measurement = self._format_measurement_ts(ble_ts_str)
         dt_last_chlor_action = self._get_action_dt("chlor")
         dt_last_ph_plus_action = self._get_action_dt("ph_plus")
         dt_last_ph_minus_action = self._get_action_dt("ph_minus")
@@ -1337,6 +1373,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "last_measurement": dt_util.as_local(self._parse_ts_aware(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
                 "last_measurement_raw": last_meas_raw,
                 "last_measurement_source": last_meas_source,
+                "chlor_measurement": chlor_measurement,
+                "chlor_measurement_raw": c_meas_raw,
+                "ph_measurement": ph_measurement,
+                "ph_measurement_raw": ph_meas_raw,
+                "temp_measurement": temp_measurement,
+                "temp_measurement_raw": temp_meas_raw,
+                "cyanuric_acid_measurement": cya_measurement,
+                "cyanuric_acid_measurement_raw": cya_meas_raw,
+                "ble_measurement": ble_measurement,
+                "ble_measurement_raw": ble_ts_str,
                 "last_api_measurements": last_api_measurements,
                 "last_activities": last_activities,
                 "last_chlor_action": self.maintenance_history.get("chlor"),
@@ -1498,6 +1544,16 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "last_measurement": dt_util.as_local(self._parse_ts_aware(last_meas_raw)).strftime("%d.%m.%Y %H:%M Uhr") if last_meas_raw else "Noch keine Messung",
             "last_measurement_raw": last_meas_raw,
             "last_measurement_source": last_meas_source,
+            "chlor_measurement": chlor_measurement,
+            "chlor_measurement_raw": c_meas_raw,
+            "ph_measurement": ph_measurement,
+            "ph_measurement_raw": ph_meas_raw,
+            "temp_measurement": temp_measurement,
+            "temp_measurement_raw": temp_meas_raw,
+            "cyanuric_acid_measurement": cya_measurement,
+            "cyanuric_acid_measurement_raw": cya_meas_raw,
+            "ble_measurement": ble_measurement,
+            "ble_measurement_raw": ble_ts_str,
             "chlor_target": c_ziel,
             "chlor_min": c_min,
             "chlor_max": c_max,

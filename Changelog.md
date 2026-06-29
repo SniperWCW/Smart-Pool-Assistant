@@ -1,5 +1,13 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.17] - 2026-06-29
+
+- **CYA-Block fachlich ueberarbeitet**: Bei zu hohem CYA nennt die Karte jetzt anhand des konfigurierten Beckenvolumens eine konkrete Wasserwechsel-Schaetzung bis etwa `50 ppm`.
+- **CYA-Info bei normalen Werten entschlackt**: Liegt CYA im Zielbereich oder darunter, zeigt der Block jetzt nur noch den letzten Messwert mit Datum statt einer missverstaendlichen Trendbotschaft.
+- **Messwert-Zeitstempel pro Parameter korrigiert**: Chlor, pH, Temperatur und CYA zeigen in der Tabelle jetzt ihren jeweils eigenen Messzeitpunkt statt eines gemeinsamen Quellen-Zeitstempels.
+- **BLE- und Cloud-Auswahl praezisiert**: Feldspezifische Zeitstempel werden jetzt bis in Coordinator, Sensorattribute und Frontend durchgereicht, damit einzelne frischere pH-Messungen nicht mehr Chlor oder CYA mit aktualisieren.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.17` angehoben.
+
 ## [3.0.16] - 2026-06-29
 
 - **CYA-Prognosetext fachlich praezisiert**: Die Anzeige beschreibt sinkende oder steigende Werte jetzt als modellierten Netto-Effekt statt als natuerlichen CYA-Abbau.

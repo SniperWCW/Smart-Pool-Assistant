@@ -25,6 +25,10 @@ class PoolLabBLESelection:
     temperature: float | None = None
     cyanuric_acid: float | None = None
     measurement_raw: str | None = None
+    chlor_measurement_raw: str | None = None
+    ph_measurement_raw: str | None = None
+    temperature_measurement_raw: str | None = None
+    cyanuric_acid_measurement_raw: str | None = None
 
     @property
     def found(self) -> bool:
@@ -48,11 +52,11 @@ def select_poollab_ble_measurements(
     m_temp = ble_data.measurements.get(_TEMPERATURE_TYPE_ID)
     m_cya = ble_data.measurements.get(_CYANURIC_ACID_TYPE_ID)
 
-    ble_ts_list = []
-    if m_chlor:
-        ble_ts_list.append(m_chlor.timestamp)
-    if m_ph:
-        ble_ts_list.append(m_ph.timestamp)
+    ble_ts_list = [
+        measurement.timestamp
+        for measurement in (m_chlor, m_ph, m_temp, m_cya)
+        if measurement is not None
+    ]
 
     _LOGGER.debug(
         "BLE selection result: available_types=%s chlor=%s ph=%s temp=%s cya=%s",
@@ -75,6 +79,10 @@ def select_poollab_ble_measurements(
         temperature=m_temp.value if m_temp else None,
         cyanuric_acid=m_cya.value if m_cya else None,
         measurement_raw=normalize_measurement_ts(max(ble_ts_list), fetched_at_iso) if ble_ts_list else None,
+        chlor_measurement_raw=normalize_measurement_ts(m_chlor.timestamp, fetched_at_iso) if m_chlor else None,
+        ph_measurement_raw=normalize_measurement_ts(m_ph.timestamp, fetched_at_iso) if m_ph else None,
+        temperature_measurement_raw=normalize_measurement_ts(m_temp.timestamp, fetched_at_iso) if m_temp else None,
+        cyanuric_acid_measurement_raw=normalize_measurement_ts(m_cya.timestamp, fetched_at_iso) if m_cya else None,
     )
 
 

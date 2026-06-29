@@ -21,6 +21,10 @@ class PoolLabCloudResult:
     temperature: float | None = None
     cyanuric_acid: float | None = None
     measurement_raw: str | None = None
+    chlor_measurement_raw: str | None = None
+    ph_measurement_raw: str | None = None
+    temperature_measurement_raw: str | None = None
+    cyanuric_acid_measurement_raw: str | None = None
     last_measurements: list[dict] = field(default_factory=list)
 
     @property
@@ -78,12 +82,16 @@ async def async_fetch_poollab_cloud_measurements(session, api_key: str) -> PoolL
 
         if p_name == "PL Chlorine Free" and cloud_result.chlor is None:
             cloud_result.chlor = p_val
+            cloud_result.chlor_measurement_raw = _measurement_timestamp_iso(obs)
         if p_name == "PL pH" and cloud_result.ph is None:
             cloud_result.ph = p_val
+            cloud_result.ph_measurement_raw = _measurement_timestamp_iso(obs)
         if p_name == "PL Temperature" and cloud_result.temperature is None:
             cloud_result.temperature = p_val
+            cloud_result.temperature_measurement_raw = _measurement_timestamp_iso(obs)
         if p_name in ("PL Cyanuric Acid", "PL Cyanuric acid", "PL CYA") and cloud_result.cyanuric_acid is None:
             cloud_result.cyanuric_acid = p_val
+            cloud_result.cyanuric_acid_measurement_raw = _measurement_timestamp_iso(obs)
         if (
             cloud_result.chlor is not None
             and cloud_result.ph is not None
@@ -107,13 +115,20 @@ async def async_fetch_poollab_cloud_measurements(session, api_key: str) -> PoolL
 def _latest_chemistry_timestamp(measurements: list[dict]) -> str | None:
     chemistry_measurements = [
         obs for obs in measurements
-        if obs.get("parameter") in ("PL Chlorine Free", "PL pH")
+        if obs.get("parameter") in ("PL Chlorine Free", "PL pH", "PL Temperature", "PL Cyanuric Acid", "PL Cyanuric acid", "PL CYA")
     ]
 
-    if chemistry_measurements and (latest_ts := chemistry_measurements[0].get("timestamp")):
-        return dt_util.utc_from_timestamp(latest_ts).isoformat()
+    if chemistry_measurements:
+        return _measurement_timestamp_iso(chemistry_measurements[0])
 
     return None
+
+
+def _measurement_timestamp_iso(measurement: dict) -> str | None:
+    timestamp = measurement.get("timestamp")
+    if timestamp is None:
+        return None
+    return dt_util.utc_from_timestamp(timestamp).isoformat()
 
 
 def _last_measurements_for_display(measurements: list[dict]) -> list[dict]:
