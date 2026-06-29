@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.19] - 2026-06-29
+
+- **Anorganische Chlorlogik getrennt**: Bei `inorganic` wird `chlor_pre` jetzt als minimale Vor-Baden-Korrektur bis `chlor_min` berechnet, waehrend `chlor_dose` die eigentliche aktive Desinfektionszugabe nach der Nutzung repraesentiert.
+- **Empfehlungen fachlich praezisiert**: Niedrige Chlorwerte verweisen bei anorganischem Chlor jetzt auf Mindestwert vor dem Baden und die eigentliche Chlorung nach der Nutzung statt auf dieselbe pauschale Vorab-Dosierung.
+- **Karte und Sensornamen angepasst**: Die Lovelace-Karte trennt fuer anorganisches Chlor sichtbar zwischen Vor-Baden-Korrektur und Nach-Nutzungs-Desinfektion; die UI-Namen wurden dazu auf `Chlor Hauptdosierung` und `Chlor vor Baden Minimum` umgestellt.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.19` angehoben.
+
 ## [3.0.18] - 2026-06-29
 
 - **BLE-Zeitstempel relativ normalisiert**: Der neueste BLE-Chemiewert wird weiter am Abrufzeitpunkt verankert, aeltere Chlor-, Temperatur- und CYA-Werte behalten aber jetzt ihren zeitlichen Abstand statt ebenfalls auf `jetzt` zu springen.

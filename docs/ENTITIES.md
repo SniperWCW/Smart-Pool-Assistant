@@ -31,6 +31,9 @@ Die Integration stellt unter anderem folgende Entitaeten bereit:
 - `sensor.pool_chlor_bis_0_6`
 - `sensor.pool_chlor_prognose`
 - `sensor.pool_chlor_stabilitaet`
+
+Die Entity-IDs bleiben aus Kompatibilitaetsgruenden unveraendert. In der UI heissen
+sie jetzt `Chlor Hauptdosierung` und `Chlor vor Baden Minimum`.
 - `sensor.pool_ph_drift_24h`
 - `sensor.pool_ph_drift_7d`
 - `sensor.pool_ph_drift_14d`

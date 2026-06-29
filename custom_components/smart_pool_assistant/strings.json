@@ -79,8 +79,8 @@
   },
   "entity": {
     "sensor": {
-      "chlor_dose": { "name": "Chlor Nachdosierung" },
-      "chlor_pre": { "name": "Chlor vor dem Baden" },
+      "chlor_dose": { "name": "Chlor Hauptdosierung" },
+      "chlor_pre": { "name": "Chlor vor Baden Minimum" },
       "ph_senker_total": { "name": "pH-Minus Menge" },
       "ph_erhoeher_total": { "name": "pH-Plus Menge" },
       "chlor_ist": { "name": "Chlor Istwert" },

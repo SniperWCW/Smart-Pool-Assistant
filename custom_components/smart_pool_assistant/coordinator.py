@@ -1528,6 +1528,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             c_min,
             c_max,
             s_g,
+            chlor_pre,
         )
 
         # Zeitstempel der Berechnung bei jedem erfolgreichen Durchlauf aktualisieren

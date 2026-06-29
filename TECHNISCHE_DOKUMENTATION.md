@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-06-28  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-29 auf Basis von `manifest.json` Version `3.0.18`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurueckgenommenem zusaetzlichem BLE-Connect-Timeout, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, persoenlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitaetsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitaetssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursaeure/CYA als aktuellem Messwert mit Quellenanzeige, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Schockchlorungsbereich-Bewertung, konfigurierbarer Schockchlorungs-Obergrenze, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen spaete Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples, CYA-Prognose, chlorproduktabhaengiger Wirkstoff-Defaults und FAQ fuer typische Diagnose- und Supportfaelle
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-06-29 auf Basis von `manifest.json` Version `3.0.19`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurueckgenommenem zusaetzlichem BLE-Connect-Timeout, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, persoenlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitaetsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitaetssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursaeure/CYA als aktuellem Messwert mit Quellenanzeige, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Schockchlorungsbereich-Bewertung, konfigurierbarer Schockchlorungs-Obergrenze, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen spaete Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples, CYA-Prognose, chlorproduktabhaengiger Wirkstoff-Defaults und FAQ fuer typische Diagnose- und Supportfaelle
 
 ---
 
@@ -763,11 +763,10 @@ chlor_dose = 0.0
 - `chlor_dose`
 - `chlor_pre`
 
-`chlor_pre` wird aktuell berechnet als:
-
-```python
-round(max(chlor_dose * 0.3, 1.0 * pool_volume), 1) if chlor_dose > 0 else 0.0
-```
+`chlor_pre` ist die minimale Vor-Baden-Korrektur. Bei organischem Chlor bleibt es
+eine kleine Teilmenge der Hauptdosierung. Bei anorganischem Chlor wird `chlor_pre`
+separat nur aus der Anhebung bis `chlor_min` berechnet, waehrend `chlor_dose`
+die eigentliche aktive Desinfektionszugabe nach der Nutzung repraesentiert.
 
 ### Breakdown-Werte
 
@@ -1038,8 +1037,8 @@ Für `set_covered` gilt:
 Beim Setup werden aktuell diese Sensoren angelegt:
 
 ```python
-Pool Chlor Nachdosierung
-Pool Chlor Vor Baden
+Pool Chlor Hauptdosierung
+Pool Chlor Vor Baden Minimum
 Pool PH-Minus
 Pool PH-Plus
 Pool Chlor Istwert

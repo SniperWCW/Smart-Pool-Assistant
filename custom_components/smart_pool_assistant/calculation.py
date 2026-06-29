@@ -144,6 +144,7 @@ def calculate_pool_chemistry(
     chlor_breakdown_shock_adj_raw = applied_shock_target_extra * volume_m3 / wirkstoff
     target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
     raw_chlor = target_diff * volume_m3 / wirkstoff
+    raw_pre_bath = c_diff * volume_m3 / wirkstoff
 
     if c_ist is not None and c_ist >= c_min:
         s_g = 0.0
@@ -153,6 +154,11 @@ def calculate_pool_chemistry(
             if c_ist is not None
             else 0.0
         )
+
+    if chlor_product_type == "inorganic":
+        chlor_pre = round_to_measuring_spoons(raw_pre_bath) if raw_pre_bath > 0 else 0.0
+    else:
+        chlor_pre = round_to_measuring_spoons(max(s_g * 0.3, 1.0 * volume_m3)) if s_g > 0 else 0.0
 
     weather_note = None
     if weather_today and weather_today.get("has_forecast"):
@@ -183,7 +189,7 @@ def calculate_pool_chemistry(
 
     return {
         "chlor_dose": s_g,
-        "chlor_pre": round_to_measuring_spoons(max(s_g * 0.3, 1.0 * volume_m3)) if s_g > 0 else 0.0,
+        "chlor_pre": chlor_pre,
         "ph_senker_total": ph_senker_ml,
         "ph_erhoeher_total": ph_erhoeher_g,
         "ph_diff": ph_diff,
@@ -278,6 +284,7 @@ def build_recommendation(
     c_min: float,
     c_max: float,
     chlor_dose: float,
+    chlor_pre: float,
 ) -> str:
     """Build the user-facing recommendation text."""
     warnings = []
@@ -299,11 +306,20 @@ def build_recommendation(
         if min(3.0, chlor_shock_max) <= current_c <= chlor_shock_max:
             warnings.append("Chlor im Schockchlorungsbereich")
         elif current_c < 0.5:
-            warnings.append("Schockchlorung empfohlen")
+            if normalize_chlor_product_type(chlor_product_type) == "inorganic":
+                warnings.append("Vor dem Baden Mindestwert absichern, danach nach Nutzung chloren")
+            else:
+                warnings.append("Schockchlorung empfohlen")
         elif current_c > (target_c_max + 0.2):
             warnings.append("Chlor zu hoch")
-        elif current_c < (target_c_min - 0.2) and chlor_dose > 0:
-            warnings.append("Chlor nachdosieren")
+        elif current_c < (target_c_min - 0.2):
+            if normalize_chlor_product_type(chlor_product_type) == "inorganic":
+                if chlor_pre > 0:
+                    warnings.append("Vor dem Baden Chlor leicht anheben")
+                elif chlor_dose > 0:
+                    warnings.append("Nach Nutzung anorganisch chloren")
+            elif chlor_dose > 0:
+                warnings.append("Chlor nachdosieren")
 
     current_cya = float(cya_ist) if cya_ist is not None else None
     if current_cya is not None and current_cya > 100:

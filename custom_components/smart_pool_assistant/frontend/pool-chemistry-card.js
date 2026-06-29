@@ -1834,12 +1834,29 @@ class PoolChemistryCard extends HTMLElement {
       const chlorDoseText = this._formatDoseAmount(attr.chlor_dose, "g");
       const chlorPreText = this._formatDoseAmount(attr.chlor_pre, "g");
       const chlorSpoons = this._getMeasuringSpoonText(attr.chlor_dose, "g");
+      const chlorPreSpoons = this._getMeasuringSpoonText(attr.chlor_pre, "g");
       const chlorSpoonHint = chlorSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorSpoons})</span>` : "";
-      this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
-        ? `Bitte <b>${chlorDoseText}</b> Chlor für den Zielbereich hinzufügen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
-        : (chlorHighDiff > 0.2
-            ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorHighDiff.toFixed(2)} mg/l)</span>`
-            : (chlorLowDiff > 0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist im Zielbereich.`));
+      const chlorPreSpoonHint = chlorPreSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorPreSpoons})</span>` : "";
+      const isInorganicChlor = attr.chlor_product_type === "inorganic";
+      if (isInorganicChlor && (attr.chlor_dose > 0 || attr.chlor_pre > 0)) {
+        if (attr.chlor_pre > 0 && attr.chlor_dose > 0) {
+          this.querySelector('#chlor-rec').innerHTML =
+            `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}. ` +
+            `Nach der Nutzung <b>${chlorDoseText}</b> anorganisches Chlor zur aktiven Desinfektion zugeben${chlorSpoonHint}.`;
+        } else if (attr.chlor_pre > 0) {
+          this.querySelector('#chlor-rec').innerHTML =
+            `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}.`;
+        } else {
+          this.querySelector('#chlor-rec').innerHTML =
+            `Nach der Nutzung <b>${chlorDoseText}</b> anorganisches Chlor zur aktiven Desinfektion zugeben${chlorSpoonHint}.`;
+        }
+      } else {
+        this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
+          ? `Bitte <b>${chlorDoseText}</b> Chlor für den Zielbereich hinzufügen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
+          : (chlorHighDiff > 0.2
+              ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorHighDiff.toFixed(2)} mg/l)</span>`
+              : (chlorLowDiff > 0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist im Zielbereich.`));
+      }
     }
 
     const lastChlorAction = attr.last_chlor_action || {};
@@ -2843,7 +2860,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.18 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.19 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

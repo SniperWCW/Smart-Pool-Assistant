@@ -23,8 +23,8 @@ async def async_setup_entry(
     coordinator: SmartPoolCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     sensors = [
-        PoolAssistantSensor(coordinator, "Chlor Nachdosierung", "chlor_dose", "g", "mdi:pill"),
-        PoolAssistantSensor(coordinator, "Chlor Vor Baden", "chlor_pre", "g", "mdi:pill"),
+        PoolAssistantSensor(coordinator, "Chlor Hauptdosierung", "chlor_dose", "g", "mdi:pill"),
+        PoolAssistantSensor(coordinator, "Chlor Vor Baden Minimum", "chlor_pre", "g", "mdi:pill"),
         PoolAssistantSensor(coordinator, "PH-Minus", "ph_senker_total", "ml", "mdi:arrow-down-bold"),
         PoolAssistantSensor(coordinator, "PH-Plus", "ph_erhoeher_total", "g", "mdi:arrow-up-bold"),
         PoolAssistantSensor(coordinator, "Chlor Istwert", "chlor_ist", "mg/l", "mdi:water-percent"),
