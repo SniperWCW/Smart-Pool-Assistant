@@ -171,6 +171,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         }
         return mapping.get(normalized, normalized)
 
+    def _is_chemistry_measurement_parameter(self, parameter: str | None) -> bool:
+        """Return whether a normalized parameter belongs to chemistry history."""
+        return parameter in {"Chlor", "pH", "Cyanursaeure"}
+
     def _build_recent_measurement_entry(
         self,
         *,
@@ -189,6 +193,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         canonical_parameter = self._canonical_measurement_parameter(parameter)
         if not canonical_parameter:
+            return None
+        if not self._is_chemistry_measurement_parameter(canonical_parameter):
             return None
 
         try:
