@@ -65,6 +65,14 @@ def _normalize_optional_fields(user_input: dict[str, Any] | None) -> dict[str, A
     return normalized
 
 
+def _selector_default(defaults: dict[str, Any], key: str) -> Any:
+    """Return undefined for empty optional selector values."""
+    value = defaults.get(key, vol.UNDEFINED)
+    if value in ("", None):
+        return vol.UNDEFINED
+    return value
+
+
 def _range_defaults(defaults: dict[str, Any]) -> dict[str, float]:
     """Return target ranges with backwards-compatible fallbacks."""
     old_chlor_target = defaults.get(CONF_CHLOR_TARGET, 1.5)
@@ -199,13 +207,13 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Required(CONF_UPDATE_INTERVAL, default=defaults.get(CONF_UPDATE_INTERVAL, 5)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="min", step=1, min=1, max=60)
         ),
-        vol.Optional(CONF_CHLOR_SENSOR, default=defaults.get(CONF_CHLOR_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
-        vol.Optional(CONF_PH_SENSOR, default=defaults.get(CONF_PH_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
-        vol.Optional(CONF_TEMP_SENSOR, default=defaults.get(CONF_TEMP_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
-        vol.Optional(CONF_PUMP_ENTITY, default=defaults.get(CONF_PUMP_ENTITY, vol.UNDEFINED)): selector.EntitySelector({"domain": ["switch", "binary_sensor"]}),
-        vol.Optional(CONF_POOL_CONNECTION_SENSOR, default=defaults.get(CONF_POOL_CONNECTION_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "binary_sensor"}),
-        vol.Optional(CONF_WEATHER_ENTITY, default=defaults.get(CONF_WEATHER_ENTITY, vol.UNDEFINED)): selector.EntitySelector({"domain": "weather"}),
-        vol.Optional(CONF_UV_SENSOR, default=defaults.get(CONF_UV_SENSOR, vol.UNDEFINED)): selector.EntitySelector({"domain": "sensor"}),
+        vol.Optional(CONF_CHLOR_SENSOR, default=_selector_default(defaults, CONF_CHLOR_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
+        vol.Optional(CONF_PH_SENSOR, default=_selector_default(defaults, CONF_PH_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
+        vol.Optional(CONF_TEMP_SENSOR, default=_selector_default(defaults, CONF_TEMP_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
+        vol.Optional(CONF_PUMP_ENTITY, default=_selector_default(defaults, CONF_PUMP_ENTITY)): selector.EntitySelector({"domain": ["switch", "binary_sensor"]}),
+        vol.Optional(CONF_POOL_CONNECTION_SENSOR, default=_selector_default(defaults, CONF_POOL_CONNECTION_SENSOR)): selector.EntitySelector({"domain": "binary_sensor"}),
+        vol.Optional(CONF_WEATHER_ENTITY, default=_selector_default(defaults, CONF_WEATHER_ENTITY)): selector.EntitySelector({"domain": "weather"}),
+        vol.Optional(CONF_UV_SENSOR, default=_selector_default(defaults, CONF_UV_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
         vol.Required(CONF_POOL_VOLUME, default=defaults.get(CONF_POOL_VOLUME, 0.916)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="m³", step="any")
         ),
@@ -280,9 +288,10 @@ class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             user_input = _normalize_optional_fields(user_input)
-            if not validate_data_source(user_input):
+            effective_config = {**self.config_entry.data, **self.config_entry.options, **user_input}
+            if not validate_data_source(effective_config):
                 errors["base"] = "missing_data_source"
-            elif not validate_target_ranges(user_input):
+            elif not validate_target_ranges(effective_config):
                 errors["base"] = "invalid_target_range"
             else:
                 return self.async_create_entry(title="", data=user_input)
