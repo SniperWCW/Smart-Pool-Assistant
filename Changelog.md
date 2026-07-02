@@ -1,5 +1,13 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.21] - 2026-07-02
+
+- **Optionale Messsensoren im Options-Flow robuster validiert**: Leere optionale Chlor-, pH-, Temperatur-, Wetter-, UV-, Pumpen- und Verbindungs-Selektoren werden jetzt sauber als `UNDEFINED` behandelt, und die Validierung beruecksichtigt die bestehende Konfiguration beim Speichern.
+- **Bestehende Datenquellen bleiben bei Teilanpassungen gueltig**: Wer im Reconfigure-/Options-Flow nur Teilbereiche aendert, verliert dadurch keine zuvor gesetzte gueltige Datenquelle mehr durch eine zu enge Pruefung des reinen `user_input`.
+- **Gemischte Messhistorie in der Karte eingefuehrt**: Die Lovelace-Karte zeigt jetzt die letzten Messungen aus API, BLE und manuellen Eintraegen gemeinsam in einer einheitlichen Historie inklusive Quelle.
+- **Messhistorie im Backend vereinheitlicht**: Der Coordinator normalisiert Parameter-Namen, dedupliziert Eintraege quellenuebergreifend und stellt bis zu 40 aktuelle Messungen fuer die Anzeige bereit.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md` und diese Release Notes wurden auf `3.0.21` angehoben.
+
 ## [3.0.20] - 2026-06-29
 
 - **Regenanzeige fuer Daily-Forecasts korrigiert**: Die Lovelace-Karte verarbeitet normalisierte Forecast-Tage jetzt auch dann korrekt, wenn der Wetter-Provider nur `precipitation` bzw. `precipitation_amount` in `mm` liefert statt einer `precipitation_probability`.
