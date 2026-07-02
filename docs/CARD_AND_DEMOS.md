@@ -11,18 +11,20 @@ Navigation:
 
 ## Demo-Galerie
 
+Aktueller Screenshot-Stand der Karte vom 2026-07-02:
+
 <p>
-  <a href="../demo/overview-status.jpg"><img src="../demo/overview-status.jpg" alt="Status und Dosierempfehlung" width="220"></a>
-  <a href="../demo/sections-collapsed.jpg"><img src="../demo/sections-collapsed.jpg" alt="Uebersicht der eingeklappten Bereiche" width="220"></a>
-  <a href="../demo/weather-expanded.jpg"><img src="../demo/weather-expanded.jpg" alt="Erweiterte Wetteransicht" width="220"></a>
-  <a href="../demo/stability-expanded.jpg"><img src="../demo/stability-expanded.jpg" alt="Erweiterte Stabilitaetsansicht" width="220"></a>
+  <a href="../demo/overview-status.png"><img src="../demo/overview-status.png" alt="Status und Dosierempfehlung" width="220"></a>
+  <a href="../demo/sections-collapsed.png"><img src="../demo/sections-collapsed.png" alt="Uebersicht der eingeklappten Bereiche" width="220"></a>
+  <a href="../demo/weather-expanded.png"><img src="../demo/weather-expanded.png" alt="Erweiterte Wetteransicht" width="220"></a>
+  <a href="../demo/stability-expanded.png"><img src="../demo/stability-expanded.png" alt="Erweiterte Stabilitaetsansicht" width="220"></a>
 </p>
 
 <p>
-  <a href="../demo/measurements-expanded.jpg"><img src="../demo/measurements-expanded.jpg" alt="Erweiterte Messwertetabelle" width="220"></a>
-  <a href="../demo/layzspa-expanded.jpg"><img src="../demo/layzspa-expanded.jpg" alt="LayZSpa Bereich" width="220"></a>
-  <a href="../demo/activities-expanded.jpg"><img src="../demo/activities-expanded.jpg" alt="Letzte Aktivitaeten" width="220"></a>
-  <a href="../demo/maintenance-status.jpg"><img src="../demo/maintenance-status.jpg" alt="Filterwartung und Status" width="220"></a>
+  <a href="../demo/measurements-expanded.png"><img src="../demo/measurements-expanded.png" alt="Erweiterte Messwertetabelle" width="220"></a>
+  <a href="../demo/layzspa-expanded.png"><img src="../demo/layzspa-expanded.png" alt="LayZSpa Bereich" width="220"></a>
+  <a href="../demo/activities-expanded.png"><img src="../demo/activities-expanded.png" alt="Letzte Aktivitaeten und Cloud-Messwerte" width="220"></a>
+  <a href="../demo/maintenance-status.png"><img src="../demo/maintenance-status.png" alt="Filterwartung und Status & Nutzung" width="220"></a>
 </p>
 
 ## Frontend: Pool Chemistry Card
@@ -64,9 +66,10 @@ layzspa:
 - aktuelle Chlor-Prognose mit Konfidenz
 - einklappbare Stabilitaetssektion fuer Chlor und pH
 - Messwertetabelle mit `Messwert`, `Ist`, `Ziel` und `Quelle`
+- eingeklappte Kopfzeilen mit Live-Zusammenfassungen je Bereich
 - Wetter-Zusammenfassung und erweiterte Wetteransicht
 - LayZSpa-Bereich inklusive optionaler Heizzeit-Prognose
-- Letzte Aktivitaeten und Filterwartungsstatus
+- Letzte Aktivitaeten, letzte Cloud-Messwerte (API) und Filterwartungsstatus
 
 ## Hinweise zur Bedienung
 

@@ -30,7 +30,8 @@ Der **Smart Pool Assistant** ist eine Home Assistant Integration fuer Pool- und 
 ## Vorschau
 
 <p align="center">
-  <a href="demo/overview-status.jpg"><img src="demo/overview-status.jpg" alt="Status und Dosierempfehlung" width="320"></a>
+  <a href="demo/sections-collapsed.png"><img src="demo/sections-collapsed.png" alt="Uebersicht der eingeklappten Bereiche" width="320"></a>
+  <a href="demo/overview-status.png"><img src="demo/overview-status.png" alt="Status und Dosierempfehlung" width="320"></a>
 </p>
 
 ## Dokumentation

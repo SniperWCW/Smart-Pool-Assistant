@@ -1170,7 +1170,8 @@ Die Karte:
 - zeigt Filterwartung
 - zeigt Berechnungsdetails
 - zeigt letzte Aktivitäten
-- zeigt Cloud-Messhistorie
+- zeigt letzte Cloud-Messwerte (API)
+- zeigt Status & Nutzung inklusive Abdeckung und Nutzungsmodus
 - zeigt optional Wetter heute und morgen aus einer `weather`-Entität
 - unterstützt optional ein LayZSpa-Panel
 
@@ -1303,7 +1304,7 @@ Chlor: grün bis ±0.3, gelb bis ±0.7, sonst rot
 pH:    grün bis ±0.1, gelb bis ±0.3, sonst rot
 ```
 
-### Cloud-Historie
+### Letzte Cloud-Messwerte (API)
 
 Wenn `last_api_measurements` vorhanden ist, wird eine Tabelle mit:
 
