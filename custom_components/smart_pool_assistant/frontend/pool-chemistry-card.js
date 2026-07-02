@@ -2149,6 +2149,10 @@ class PoolChemistryCard extends HTMLElement {
     // Mixed Measurement History Display
     const apiHistorySection = this.querySelector('#api-history-section');
     const apiHistoryList = this.querySelector('#api-history-list');
+    const apiHistorySummary = apiHistorySection?.querySelector('summary');
+    if (apiHistorySummary) {
+      apiHistorySummary.textContent = 'Letzte 5 Chemie-Messwerte';
+    }
     const measurementHistory = Array.isArray(attr.last_measurements_display) && attr.last_measurements_display.length > 0
       ? attr.last_measurements_display
       : (Array.isArray(attr.last_api_measurements) ? attr.last_api_measurements.map((m) => ({ ...m, source: 'API' })) : []);

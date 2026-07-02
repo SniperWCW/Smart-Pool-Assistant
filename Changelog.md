@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.24] - 2026-07-02
+
+- **Persistierte Messhistorie beim Laden bereinigt**: Alte Eintraege in `last_measurements_display` werden jetzt schon waehrend `async_load_history()` normalisiert, damit Temperaturreste nicht bis zum naechsten Messzyklus sichtbar bleiben.
+- **Historien-Titel an Inhalt angepasst**: Die Karte benennt den Bereich jetzt eindeutig als `Letzte 5 Chemie-Messwerte` statt weiterhin auf reine Cloud-API-Werte zu verweisen.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md` und neue Release Notes wurden auf `3.0.24` angehoben.
+
 ## [3.0.23] - 2026-07-02
 
 - **Persistierte Temperaturreste aus Messhistorie entfernt**: Bereits gespeicherte Eintraege in `last_measurements_display` werden beim Zusammenfuehren jetzt ebenfalls auf echte Chemieparameter gefiltert, damit alte Temperaturwerte nicht weiter in der kompakten Historie auftauchen.

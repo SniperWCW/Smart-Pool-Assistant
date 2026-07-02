@@ -133,6 +133,58 @@ def normalize_loaded_history(
         if changed:
             history[CONTEXT_HISTORY_KEY] = normalized_context[-MAX_CONTEXT_HISTORY_ITEMS:]
 
+    measurement_history = history.get("last_measurements_display")
+    if isinstance(measurement_history, list):
+        normalized_measurements: list[dict] = []
+        changed = False
+        allowed_parameters = {"Chlor", "pH", "Cyanursaeure"}
+        parameter_aliases = {
+            "PL Chlorine Free": "Chlor",
+            "PL pH": "pH",
+            "PL Temperature": "Temperatur",
+            "PL Cyanuric Acid": "Cyanursaeure",
+            "PL Cyanuric acid": "Cyanursaeure",
+            "PL CYA": "Cyanursaeure",
+            "chlor": "Chlor",
+            "ph": "pH",
+            "temperature": "Temperatur",
+            "cyanuric_acid": "Cyanursaeure",
+        }
+        seen_measurements: set[tuple[str | None, str | None, str | None, str]] = set()
+
+        for entry in measurement_history:
+            if not isinstance(entry, dict):
+                changed = True
+                continue
+
+            raw_parameter = entry.get("parameter")
+            normalized_parameter = parameter_aliases.get(raw_parameter, raw_parameter)
+            if normalized_parameter not in allowed_parameters:
+                changed = True
+                continue
+
+            timestamp = entry.get("timestamp")
+            source = entry.get("source")
+            value = entry.get("value")
+            dedupe_key = (timestamp, normalized_parameter, source, str(value))
+            if dedupe_key in seen_measurements:
+                changed = True
+                continue
+
+            seen_measurements.add(dedupe_key)
+            normalized_entry = {
+                "timestamp": timestamp,
+                "parameter": normalized_parameter,
+                "source": source,
+                "value": value,
+            }
+            if normalized_entry != entry:
+                changed = True
+            normalized_measurements.append(normalized_entry)
+
+        if changed:
+            history["last_measurements_display"] = normalized_measurements
+
     history.pop("bluetooth_connected", None)
 
     return history
