@@ -1335,7 +1335,7 @@ class PoolChemistryCard extends HTMLElement {
             .history-table .table-head,
             .history-table .table-row {
               display: grid;
-              grid-template-columns: minmax(120px, 1.1fr) minmax(140px, 1.2fr) minmax(90px, 0.8fr);
+              grid-template-columns: minmax(70px, 0.7fr) minmax(110px, 1fr) minmax(85px, 0.8fr) minmax(90px, 0.9fr);
               gap: 12px;
               align-items: center;
               padding: 7px 0;
@@ -1967,12 +1967,8 @@ class PoolChemistryCard extends HTMLElement {
       cyaForecastNode.innerHTML = attr.cya_forecast_message || 'Keine CYA-Prognose verfuegbar.';
     }
     if (cyaModelNode) {
-      const modelParts = [];
-      if (Number.isFinite(modeledCya)) {
-        modelParts.push(`Modell aktuell: ${modeledCya.toFixed(1)} ppm`);
-      }
-      cyaModelNode.style.display = modelParts.length ? 'block' : 'none';
-      cyaModelNode.textContent = modelParts.join(' | ');
+      cyaModelNode.style.display = 'none';
+      cyaModelNode.textContent = '';
     }
     if (cyaHistNode) {
       const liters = Number(lastWaterExchangeAction.liters);
@@ -2150,25 +2146,31 @@ class PoolChemistryCard extends HTMLElement {
       filterSummary.textContent = `Reinigung ${cleanText}, Wechsel ${replaceText}`;
     }
 
-    // Cloud History Display
+    // Mixed Measurement History Display
     const apiHistorySection = this.querySelector('#api-history-section');
     const apiHistoryList = this.querySelector('#api-history-list');
-    const hasApiHistory = attr.last_api_measurements && attr.last_api_measurements.length > 0;
+    const measurementHistory = Array.isArray(attr.last_measurements_display) && attr.last_measurements_display.length > 0
+      ? attr.last_measurements_display
+      : (Array.isArray(attr.last_api_measurements) ? attr.last_api_measurements.map((m) => ({ ...m, source: 'API' })) : []);
+    const hasApiHistory = measurementHistory.length > 0;
     if (hasApiHistory) {
         apiHistorySection.style.display = 'block';
         apiHistoryList.innerHTML = `
           <div class="table-head">
+            <div>Quelle</div>
             <div>Parameter</div>
             <div>Wert</div>
             <div>Zeit</div>
           </div>
-          ${attr.last_api_measurements.map(m => {
+          ${measurementHistory.slice(0, 5).map(m => {
             const time = m.timestamp ? new Date(m.timestamp).toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : '--';
             const param = m.parameter ? m.parameter.replace('PL ', '') : 'Unbekannt';
             const val = !isNaN(parseFloat(m.value)) ? Number(m.value).toFixed(2) : m.value;
+            const source = m.source || 'API';
             return `
               <div class="table-row">
-                <div class="table-label">${param}</div>
+                <div class="table-label">${source}</div>
+                <div>${param}</div>
                 <div class="table-value"><b>${val}</b></div>
                 <div class="table-meta">${time}</div>
               </div>

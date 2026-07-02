@@ -243,6 +243,7 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "data_source": data.get("data_source"),
             "bluetooth_connected": data.get("bluetooth_connected"),
             "last_api_measurements": data.get("last_api_measurements"),
+            "last_measurements_display": data.get("last_measurements_display"),
             "poollab_fetch_result": data.get("poollab_fetch_result"),
             "poollab_fetch_error": data.get("poollab_fetch_error"),
             "last_poollab_fetch_requested_at": data.get("last_poollab_fetch_requested_at"),

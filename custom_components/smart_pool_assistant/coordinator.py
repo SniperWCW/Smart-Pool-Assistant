@@ -76,6 +76,7 @@ _STORAGE_KEY = f"{DOMAIN}_maintenance"
 _DEFAULT_UPDATE_INTERVAL_MINUTES = 5
 _BLE_SUCCESS_COOLDOWN = timedelta(seconds=20)
 _BLE_ERROR_COOLDOWN = timedelta(seconds=30)
+_RECENT_MEASUREMENTS_HISTORY_LIMIT = 40
 
 class SmartPoolCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
@@ -149,6 +150,86 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             return normalized_dt.isoformat()
 
         return ble_dt.isoformat()
+
+    def _canonical_measurement_parameter(self, parameter: str | None) -> str | None:
+        """Normalize measurement labels across API, BLE and manual sources."""
+        if not parameter:
+            return None
+
+        normalized = str(parameter).strip()
+        mapping = {
+            "PL Chlorine Free": "Chlor",
+            "PL pH": "pH",
+            "PL Temperature": "Temperatur",
+            "PL Cyanuric Acid": "Cyanursaeure",
+            "PL Cyanuric acid": "Cyanursaeure",
+            "PL CYA": "Cyanursaeure",
+            "chlor": "Chlor",
+            "ph": "pH",
+            "temperature": "Temperatur",
+            "cyanuric_acid": "Cyanursaeure",
+        }
+        return mapping.get(normalized, normalized)
+
+    def _build_recent_measurement_entry(
+        self,
+        *,
+        parameter: str | None,
+        value: object,
+        timestamp_raw: str | None,
+        source: str,
+    ) -> dict | None:
+        """Create a normalized history row for the Lovelace card."""
+        if value is None or not timestamp_raw:
+            return None
+
+        parsed_ts = self._parse_ts_aware(timestamp_raw)
+        if parsed_ts is None:
+            return None
+
+        canonical_parameter = self._canonical_measurement_parameter(parameter)
+        if not canonical_parameter:
+            return None
+
+        try:
+            numeric_value = round(float(value), 2)
+        except (TypeError, ValueError):
+            numeric_value = value
+
+        return {
+            "parameter": canonical_parameter,
+            "value": numeric_value,
+            "timestamp": parsed_ts.isoformat(),
+            "source": source,
+        }
+
+    def _merge_recent_measurements(self, new_entries: list[dict]) -> list[dict]:
+        """Persist a deduplicated mixed-source measurement history for display."""
+        existing = self.maintenance_history.get("last_measurements_display", [])
+        merged: list[dict] = []
+        seen: set[tuple[str | None, str | None, str | None, str]] = set()
+
+        for item in [*(existing if isinstance(existing, list) else []), *new_entries]:
+            if not isinstance(item, dict):
+                continue
+            key = (
+                item.get("timestamp"),
+                item.get("parameter"),
+                item.get("source"),
+                str(item.get("value")),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+
+        merged.sort(
+            key=lambda item: self._parse_ts_aware(item.get("timestamp")) or dt_util.utc_from_timestamp(0),
+            reverse=True,
+        )
+        merged = merged[:_RECENT_MEASUREMENTS_HISTORY_LIMIT]
+        self.maintenance_history["last_measurements_display"] = merged
+        return merged
 
     def _format_measurement_ts(self, ts_raw: str | None) -> str | None:
         """Format a raw timestamp for compact frontend display."""
@@ -1281,6 +1362,38 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         temp_measurement = self._format_measurement_ts(temp_meas_raw)
         cya_measurement = self._format_measurement_ts(cya_meas_raw)
         ble_measurement = self._format_measurement_ts(ble_ts_str)
+        recent_measurement_entries: list[dict] = []
+        for api_item in last_api_measurements if isinstance(last_api_measurements, list) else []:
+            if not isinstance(api_item, dict):
+                continue
+            entry = self._build_recent_measurement_entry(
+                parameter=api_item.get("parameter"),
+                value=api_item.get("value"),
+                timestamp_raw=api_item.get("timestamp"),
+                source="API",
+            )
+            if entry:
+                recent_measurement_entries.append(entry)
+
+        for parameter, value, timestamp_raw, source in (
+            ("chlor", self.maintenance_history.get("last_ble_c"), self.maintenance_history.get("last_ble_chlor_raw") or ble_ts_str, "BLE"),
+            ("ph", self.maintenance_history.get("last_ble_ph"), self.maintenance_history.get("last_ble_ph_raw") or ble_ts_str, "BLE"),
+            ("temperature", self.maintenance_history.get("last_ble_temp"), self.maintenance_history.get("last_ble_temp_raw") or ble_ts_str, "BLE"),
+            ("cyanuric_acid", self.maintenance_history.get("last_ble_cya"), self.maintenance_history.get("last_ble_cya_raw") or ble_ts_str, "BLE"),
+            ("chlor", c_man, c_man_ts.isoformat() if isinstance(c_man_ts, datetime) else c_man_ts, "Manuell"),
+            ("ph", ph_man, ph_man_ts.isoformat() if isinstance(ph_man_ts, datetime) else ph_man_ts, "Manuell"),
+            ("temperature", temp_man, temp_man_ts.isoformat() if isinstance(temp_man_ts, datetime) else temp_man_ts, "Manuell"),
+        ):
+            entry = self._build_recent_measurement_entry(
+                parameter=parameter,
+                value=value,
+                timestamp_raw=timestamp_raw,
+                source=source,
+            )
+            if entry:
+                recent_measurement_entries.append(entry)
+
+        recent_measurements_display = self._merge_recent_measurements(recent_measurement_entries)[:5]
         dt_last_chlor_action = self._get_action_dt("chlor")
         dt_last_ph_plus_action = self._get_action_dt("ph_plus")
         dt_last_ph_minus_action = self._get_action_dt("ph_minus")
@@ -1396,6 +1509,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "ble_measurement": ble_measurement,
                 "ble_measurement_raw": ble_ts_str,
                 "last_api_measurements": last_api_measurements,
+                "last_measurements_display": recent_measurements_display,
                 "last_activities": last_activities,
                 "last_chlor_action": self.maintenance_history.get("chlor"),
                 "last_ph_plus_action": self.maintenance_history.get("ph_plus"),
@@ -1567,6 +1681,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "cyanuric_acid_measurement_raw": cya_meas_raw,
             "ble_measurement": ble_measurement,
             "ble_measurement_raw": ble_ts_str,
+            "last_measurements_display": recent_measurements_display,
             "chlor_target": c_ziel,
             "chlor_min": c_min,
             "chlor_max": c_max,
