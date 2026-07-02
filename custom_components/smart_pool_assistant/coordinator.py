@@ -218,16 +218,27 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         for item in [*(existing if isinstance(existing, list) else []), *new_entries]:
             if not isinstance(item, dict):
                 continue
+            parameter = self._canonical_measurement_parameter(item.get("parameter"))
+            if not self._is_chemistry_measurement_parameter(parameter):
+                continue
+            timestamp = item.get("timestamp")
+            source = item.get("source")
+            value = item.get("value")
             key = (
-                item.get("timestamp"),
-                item.get("parameter"),
-                item.get("source"),
-                str(item.get("value")),
+                timestamp,
+                parameter,
+                source,
+                str(value),
             )
             if key in seen:
                 continue
             seen.add(key)
-            merged.append(item)
+            merged.append({
+                "timestamp": timestamp,
+                "parameter": parameter,
+                "source": source,
+                "value": value,
+            })
 
         merged.sort(
             key=lambda item: self._parse_ts_aware(item.get("timestamp")) or dt_util.utc_from_timestamp(0),

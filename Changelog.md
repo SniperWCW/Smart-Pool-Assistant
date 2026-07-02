@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.23] - 2026-07-02
+
+- **Persistierte Temperaturreste aus Messhistorie entfernt**: Bereits gespeicherte Eintraege in `last_measurements_display` werden beim Zusammenfuehren jetzt ebenfalls auf echte Chemieparameter gefiltert, damit alte Temperaturwerte nicht weiter in der kompakten Historie auftauchen.
+- **Messhistorie bleibt quellenuebergreifend, aber chemiefokussiert**: Die Karte zeigt in diesem Bereich weiterhin API-, BLE- und manuelle Werte gemeinsam, jedoch nur noch fuer `Chlor`, `pH` und `Cyanursaeure`.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md` und neue Release Notes wurden auf `3.0.23` angehoben.
+
 ## [3.0.22] - 2026-07-02
 
 - **Messhistorie auf Chemieparameter fokussiert**: Die gemischte Historie in der Lovelace-Karte filtert jetzt auf `Chlor`, `pH` und `Cyanursaeure`, damit Temperaturwerte die Chemieansicht nicht verwässern.
