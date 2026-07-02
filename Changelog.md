@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.22] - 2026-07-02
+
+- **Messhistorie auf Chemieparameter fokussiert**: Die gemischte Historie in der Lovelace-Karte filtert jetzt auf `Chlor`, `pH` und `Cyanursaeure`, damit Temperaturwerte die Chemieansicht nicht verwässern.
+- **Demo-Galerie modernisiert**: README und Karten-Doku verwenden jetzt aktuelle `.png`-Screenshots der Bereiche `Overview`, `Sections`, `Weather`, `Stability`, `Measurements`, `LayZSpa`, `Activities` und `Maintenance`.
+- **Kartendoku fachlich nachgezogen**: Die technische Dokumentation beschreibt die aktuellen Kopfboxen, die Status-/Nutzungsanzeige und die API-Messwertetabelle jetzt konsistenter zum Frontend.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md` und diese Release Notes wurden auf `3.0.22` angehoben.
+
 ## [3.0.21] - 2026-07-02
 
 - **Optionale Messsensoren im Options-Flow robuster validiert**: Leere optionale Chlor-, pH-, Temperatur-, Wetter-, UV-, Pumpen- und Verbindungs-Selektoren werden jetzt sauber als `UNDEFINED` behandelt, und die Validierung beruecksichtigt die bestehende Konfiguration beim Speichern.
