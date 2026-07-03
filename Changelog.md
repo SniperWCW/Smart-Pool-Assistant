@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.26] - 2026-07-03
+
+- **Umlaute in Push- und UI-Texten korrigiert**: Benachrichtigungen, Sensornamen, Frontend-Texte sowie Config-/Service-Labels verwenden jetzt wieder saubere deutsche Umlaute statt ASCII-Umschreibungen oder fehlerhaften Encoding-Resten.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.26` angehoben.
+
 ## [3.0.25] - 2026-07-03
 
 - **Vor-Baden-Plan direkt in der Karte**: Im Panel `Status & Nutzung` kann jetzt `Baden in X Stunden` gesetzt werden, damit die Vor-Baden-Dosierung auf einen geplanten Badezeitpunkt statt nur auf den aktuellen Messzeitpunkt ausgerichtet wird.
