@@ -70,6 +70,7 @@ layzspa:
 - Wetter-Zusammenfassung und erweiterte Wetteransicht
 - LayZSpa-Bereich inklusive optionaler Heizzeit-Prognose
 - Letzte Aktivitaeten, letzte Cloud-Messwerte (API) und Filterwartungsstatus
+- im Panel `Status & Nutzung` die Eingaben fuer Abdeckung, reduzierte Nutzungswahl und `Baden in`
 
 ## Hinweise zur Bedienung
 
@@ -77,6 +78,8 @@ layzspa:
 - In **Aktuelle Messwerte** erscheint Cyanursaeure/CYA jetzt als eigener Messwert inklusive Quelle.
 - Nach Chemiezugaben sperrt die Karte die Eingabe bis zur naechsten Messung.
 - In den Berechnungsdetails siehst du, warum hohe Empfehlungen zustande kommen.
+- In **Status & Nutzung** kannst du direkt `Baden in X Stunden` setzen. Damit richtet sich die Vor-Baden-Menge auf den geplanten Badezeitpunkt aus.
+- Die Kartenbuttons fuer Nutzung sind bewusst auf `Keine` und `Party` reduziert. `Normal` bleibt intern und per Service moeglich, ist aber nicht mehr Teil des Standard-Workflows.
 - Der visuelle Karten-Editor beschraenkt sich auf die LayZSpa-Optionen. Wetter und UV werden in der Integration konfiguriert.
 
 ## Weiterfuehrende Seiten

@@ -84,6 +84,16 @@ Meist nein. Diese Kontextdaten beeinflussen vor allem Verbrauch, Prognose und St
 - Lernfaktor / effektivem Wirkstoff
 - sehr niedrigem Ist-Chlor
 
+## Wie funktioniert `Baden in X Stunden`?
+
+Wenn du in der Karte einen Badezeitpunkt setzt, berechnet die Integration die Vor-Baden-Menge nicht mehr nur fuer den aktuellen Moment.
+
+- `chlor_pre` wird dann auf den geplanten Badezeitpunkt ausgerichtet.
+- Dazu wird der erwartete Chlorverlust bis dahin abgeschaetzt.
+- Ohne gesetzte Zeit bleibt die Hauptlogik wie bisher auf die Nach-Nutzungs-Dosierung ausgelegt.
+
+Das ist vor allem fuer Werktage praktisch, wenn zwischen Messung und Baden mehrere Stunden liegen.
+
 ## Wann ist eine Nachmessung fuer den Dosierfaktor sinnvoll?
 
 Am besten:

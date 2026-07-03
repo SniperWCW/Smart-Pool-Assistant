@@ -4,7 +4,7 @@
 **Repository:** https://github.com/SniperWCW/Smart-Pool-Assistant  
 **Integration Domain:** `smart_pool_assistant`  
 **Dokumentationsstand:** 2026-07-02  
-**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-07-02 auf Basis von `manifest.json` Version `3.0.24`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurueckgenommenem zusaetzlichem BLE-Connect-Timeout, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, persoenlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitaetsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitaetssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursaeure/CYA als aktuellem Messwert mit Quellenanzeige, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Schockchlorungsbereich-Bewertung, konfigurierbarer Schockchlorungs-Obergrenze, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen spaete Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples, CYA-Prognose, chlorproduktabhaengiger Wirkstoff-Defaults, auf Chemieparameter fokussierter Messhistorie aus API/BLE/manuell, Bereinigung persistierter Messhistorie schon beim Laden und FAQ fuer typische Diagnose- und Supportfaelle
+**Bezugsstand Codebasis:** lokaler Arbeitsstand am 2026-07-03 auf Basis von `manifest.json` Version `3.0.25`, inklusive manueller PoolLab-Abruf-UI als dritte obere Kartenbox, Live-BLE-Status, eigenem rotierenden Diagnose-Logfile, robusterem PoolLab-BLE-Cleanup bei Timeout, zurueckgenommenem zusaetzlichem BLE-Connect-Timeout, Zielbereichen fuer Chlor und pH, lernender Chloranalyse mit persoenlichem Chlorfaktor, persoenlichem Chlor-Dosierfaktor, Chlor-Prognose, pH-Stabilitaetsanalyse mit bereinigter Drift, einklappbarer Frontend-Stabilitaetssektion, Nachmess-Workflow bei einzelner Chemiezugabe, Messloeffel-Dosierung, Badeampel, vier-spaltiger und mobil optimierter Messwertetabelle, Cyanursaeure/CYA als aktuellem Messwert mit Quellenanzeige, geplanter Vor-Baden-Dosierung ueber `Baden in`, vereinfachter Nutzungswahl in der Karte, ausgelagerter Berechnungs-, Wartungs-, Benachrichtigungs-, Wetter-, PoolLab-Cloud-, Chlor-Lern-, pH-Lern- und PoolLab-BLE-Auswahllogik sowie optionaler Wetterintegration mit Backend-Forecast-Fallback, separatem UV-Sensor, optionaler Pumpenlaufzeit-Erfassung, einklappbarer Wettersektion, LayZSpa-Zieltemperatur-Steuerung, LayZSpa-Heizzeit-Prognose, Pool-Verbindungswarnung, event-loop-sicherer Frontend-Registrierung, einheitlichen Doku-Einstiegsseiten, gemeinsamer Status-/Baden-/PoolLab-Kopfbox, korrigierter Schockchlorungsbereich-Bewertung, konfigurierbarer Schockchlorungs-Obergrenze, angepassten Badetemperatur-Schwellen, sauberem Reset der Filterreinigung beim Filterwechsel, sichtbarer Volumen-Diagnose im Chlor-Breakdown, abgesicherter Dosierfaktor-Lernlogik gegen spaete Nachmessungen, spaeterer Aktivierung des Dosierfaktors ab 5 Samples, CYA-Prognose, chlorproduktabhaengiger Wirkstoff-Defaults, auf Chemieparameter fokussierter Messhistorie aus API/BLE/manuell, Bereinigung persistierter Messhistorie schon beim Laden und FAQ fuer typische Diagnose- und Supportfaelle
 
 ---
 
@@ -763,10 +763,16 @@ chlor_dose = 0.0
 - `chlor_dose`
 - `chlor_pre`
 
-`chlor_pre` ist die minimale Vor-Baden-Korrektur. Bei organischem Chlor bleibt es
+`chlor_pre` ist die Vor-Baden-Dosis. Ohne geplanten Badezeitpunkt bleibt es die
+minimale Vor-Baden-Korrektur. Bei organischem Chlor bleibt es dann typischerweise
 eine kleine Teilmenge der Hauptdosierung. Bei anorganischem Chlor wird `chlor_pre`
-separat nur aus der Anhebung bis `chlor_min` berechnet, waehrend `chlor_dose`
-die eigentliche aktive Desinfektionszugabe nach der Nutzung repraesentiert.
+separat aus der benoetigten Anhebung fuer den Badezeitpunkt berechnet, waehrend
+`chlor_dose` die eigentliche aktive Desinfektionszugabe nach der Nutzung repraesentiert.
+
+Wenn in der Karte `Baden in X Stunden` gesetzt ist, verwendet die Berechnung fuer
+`chlor_pre` zusaetzlich die vorhandene Chlor-Prognose beziehungsweise einen
+konservativen Fallback-Verlust, damit der Wert zum geplanten Badezeitpunkt noch
+im sicheren Bereich liegt.
 
 ### Breakdown-Werte
 
@@ -900,6 +906,7 @@ filter_clean
 filter_replace
 set_covered
 set_usage
+set_bath_plan
 ```
 
 ### `async_log_maintenance()`
@@ -909,12 +916,14 @@ Diese Methode:
 1. speichert die Aktion in `maintenance_history`
 2. aktualisiert `last_action`
 3. pflegt `last_activities`
-4. aktualisiert Pool-Abdeckung oder Nutzungsmodus
+4. aktualisiert Pool-Abdeckung, Nutzungsmodus oder Badeplan
 5. sendet optional Benachrichtigungen
 6. startet bei Chemieaktionen einen Follow-up-Timer
 7. triggert einen Refresh
 
 Bei `set_covered` und `set_usage` wird zusätzlich ein Verlauf in `pool_context_history` geschrieben. Dieser Verlauf dient der Chlor-Lernanalyse, um Intervalle wie `5 Stunden offen / 19 Stunden geschlossen` oder gemischte Nutzung innerhalb von 24 Stunden korrekt zeitgewichtet zu bewerten.
+
+Bei `set_bath_plan` wird kein Kontextverlauf geschrieben. Stattdessen speichert die Integration einen geplanten Badezeitpunkt mit Reststunden und Ablaufzeit. Nach Ablauf faellt der Zustand automatisch wieder auf normalen Betrieb ohne Badeplan zurueck.
 
 ### Follow-up
 
@@ -1023,11 +1032,20 @@ Für `set_usage` gilt:
 2 = party
 ```
 
+Die Frontend-Karte zeigt bewusst nur die Schnellwahl `Keine` und `Party`. Der Zwischenwert `normal` bleibt service-seitig weiterhin gueltig.
+
 Für `set_covered` gilt:
 
 ```text
 0 = offen
 1 = abgedeckt
+```
+
+Für `set_bath_plan` gilt:
+
+```text
+0   = Badeplan zurücksetzen
+> 0 = Baden in X Stunden
 ```
 
 ---
@@ -1081,6 +1099,11 @@ Wichtige aktuelle Attribute:
 - `ph_target`
 - `chlor_dose`
 - `chlor_pre`
+- `chlor_pre_target`
+- `chlor_pre_loss_buffer`
+- `bath_plan_hours`
+- `bath_plan_until`
+- `bath_plan_active`
 - `ph_senker_total`
 - `ph_erhoeher_total`
 - `data_source`
@@ -1171,7 +1194,7 @@ Die Karte:
 - zeigt Berechnungsdetails
 - zeigt letzte Aktivitäten
 - zeigt letzte Cloud-Messwerte (API)
-- zeigt Status & Nutzung inklusive Abdeckung und Nutzungsmodus
+- zeigt Status & Nutzung inklusive Abdeckung, reduzierter Nutzungswahl und Badeplan `Baden in`
 - zeigt optional Wetter heute und morgen aus einer `weather`-Entität
 - unterstützt optional ein LayZSpa-Panel
 

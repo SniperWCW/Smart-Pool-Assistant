@@ -20,6 +20,7 @@ from .const import (
 )
 
 MEASURING_SPOON_SIZES = (1.0, 2.5, 5.0, 7.5, 15.0)
+DEFAULT_PRE_BATH_DAILY_LOSS = 0.8
 
 
 def round_to_measuring_spoons(amount: float | int | None) -> float:
@@ -64,6 +65,8 @@ def calculate_pool_chemistry(
     usage_mode: str,
     weather_today: dict | None,
     chlor_dose_factor: float | None = None,
+    bath_hours_until: float | None = None,
+    forecast_hourly_loss: float | None = None,
 ) -> dict:
     """Calculate dosage recommendations and detailed chemistry breakdowns."""
     volumen = conf.get(CONF_POOL_VOLUME, 1.0)
@@ -144,7 +147,18 @@ def calculate_pool_chemistry(
     chlor_breakdown_shock_adj_raw = applied_shock_target_extra * volume_m3 / wirkstoff
     target_diff = max(effective_target - float(c_ist), 0.0) if c_ist is not None else 0.0
     raw_chlor = target_diff * volume_m3 / wirkstoff
-    raw_pre_bath = c_diff * volume_m3 / wirkstoff
+    pre_bath_loss_buffer = 0.0
+    if bath_hours_until is not None and bath_hours_until > 0:
+        effective_hourly_loss = forecast_hourly_loss
+        if effective_hourly_loss is None or effective_hourly_loss <= 0:
+            effective_hourly_loss = DEFAULT_PRE_BATH_DAILY_LOSS / 24.0
+        pre_bath_loss_buffer = max(effective_hourly_loss * float(bath_hours_until), 0.0)
+
+    pre_bath_target = c_min
+    if bath_hours_until is not None and bath_hours_until > 0:
+        pre_bath_target = min(c_max, c_min + pre_bath_loss_buffer)
+    pre_bath_diff = max(float(pre_bath_target) - float(c_ist), 0.0) if c_ist is not None else 0.0
+    raw_pre_bath = pre_bath_diff * volume_m3 / wirkstoff
 
     if c_ist is not None and c_ist >= c_min:
         s_g = 0.0
@@ -158,7 +172,10 @@ def calculate_pool_chemistry(
     if chlor_product_type == "inorganic":
         chlor_pre = round_to_measuring_spoons(raw_pre_bath) if raw_pre_bath > 0 else 0.0
     else:
-        chlor_pre = round_to_measuring_spoons(max(s_g * 0.3, 1.0 * volume_m3)) if s_g > 0 else 0.0
+        if bath_hours_until is not None and bath_hours_until > 0:
+            chlor_pre = round_to_measuring_spoons(raw_pre_bath) if raw_pre_bath > 0 else 0.0
+        else:
+            chlor_pre = round_to_measuring_spoons(max(s_g * 0.3, 1.0 * volume_m3)) if s_g > 0 else 0.0
 
     weather_note = None
     if weather_today and weather_today.get("has_forecast"):
@@ -212,6 +229,8 @@ def calculate_pool_chemistry(
         "chlor_breakdown_bather_adj": round(chlor_breakdown_bather_adj_raw, 2),
         "chlor_breakdown_sum_raw": round(raw_chlor, 2),
         "chlor_breakdown_min_dose_applied": round(min_dose, 2) if (s_g > 0 and raw_chlor < min_dose) else 0.0,
+        "chlor_pre_target": round(pre_bath_target, 2),
+        "chlor_pre_loss_buffer": round(pre_bath_loss_buffer, 2),
         "weather_note": weather_note,
         "volume_m3": volume_m3,
         "volume_liters": round(volume_m3 * 1000.0, 0),

@@ -116,7 +116,8 @@
             "filter_clean": "Filter gereinigt",
             "filter_replace": "Filter gewechselt",
             "set_covered": "Abdeckung Status (0=Offen, 1=Abgedeckt)",
-            "set_usage": "Nutzungsmodus (0=Kein, 1=Normal, 2=Party)"
+            "set_usage": "Nutzungsmodus (0=Kein, 1=Normal, 2=Party)",
+            "set_bath_plan": "Baden in Stunden (0=Zuruecksetzen)"
           }
         },
         "amount": {

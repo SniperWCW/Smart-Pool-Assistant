@@ -10,6 +10,9 @@ from homeassistant.util import dt as dt_util
 VISIBLE_ACTIVITY_TYPES = ("chlor", "ph_plus", "ph_minus", "water_exchange", "filter_clean", "filter_replace")
 CONTEXT_HISTORY_KEY = "pool_context_history"
 MAX_CONTEXT_HISTORY_ITEMS = 240
+BATH_PLAN_HOURS_KEY = "bath_plan_hours"
+BATH_PLAN_UNTIL_KEY = "bath_plan_until_raw"
+BATH_PLAN_SET_AT_KEY = "bath_plan_set_at_raw"
 
 
 def activity_text(

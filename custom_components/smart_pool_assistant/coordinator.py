@@ -50,6 +50,9 @@ from .ph_learning import (
     record_ph_measurement,
 )
 from .maintenance import (
+    BATH_PLAN_HOURS_KEY,
+    BATH_PLAN_SET_AT_KEY,
+    BATH_PLAN_UNTIL_KEY,
     activity_text,
     collect_last_activities,
     get_action_dt,
@@ -254,6 +257,34 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if dt_value is None:
             return None
         return dt_util.as_local(dt_value).strftime("%d.%m.%Y %H:%M Uhr")
+
+    def _get_bath_plan_state(
+        self,
+        now: datetime | None = None,
+    ) -> tuple[float | None, str | None, str | None, bool]:
+        """Return the active bath plan and clear it once it has expired."""
+        now_dt = now if isinstance(now, datetime) else dt_util.now()
+        planned_until_raw = self.maintenance_history.get(BATH_PLAN_UNTIL_KEY)
+        planned_until_dt = self._parse_ts_aware(planned_until_raw)
+        if planned_until_dt is None:
+            self.maintenance_history.pop(BATH_PLAN_HOURS_KEY, None)
+            self.maintenance_history.pop(BATH_PLAN_UNTIL_KEY, None)
+            self.maintenance_history.pop(BATH_PLAN_SET_AT_KEY, None)
+            return None, None, None, False
+
+        remaining_hours = (planned_until_dt - now_dt).total_seconds() / 3600.0
+        if remaining_hours <= 0:
+            self.maintenance_history.pop(BATH_PLAN_HOURS_KEY, None)
+            self.maintenance_history.pop(BATH_PLAN_UNTIL_KEY, None)
+            self.maintenance_history.pop(BATH_PLAN_SET_AT_KEY, None)
+            return None, None, None, True
+
+        return (
+            round(remaining_hours, 1),
+            planned_until_dt.isoformat(),
+            self.maintenance_history.get(BATH_PLAN_SET_AT_KEY),
+            False,
+        )
 
     def _normalize_ble_history_ts(
         self,
@@ -686,6 +717,19 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             now.isoformat(),
         )
         details = None
+        if m_type == "set_bath_plan":
+            planned_hours = float(amount or 0)
+            if planned_hours > 0:
+                self.maintenance_history[BATH_PLAN_HOURS_KEY] = round(planned_hours, 1)
+                self.maintenance_history[BATH_PLAN_SET_AT_KEY] = now.isoformat()
+                self.maintenance_history[BATH_PLAN_UNTIL_KEY] = (now + timedelta(hours=planned_hours)).isoformat()
+            else:
+                self.maintenance_history.pop(BATH_PLAN_HOURS_KEY, None)
+                self.maintenance_history.pop(BATH_PLAN_SET_AT_KEY, None)
+                self.maintenance_history.pop(BATH_PLAN_UNTIL_KEY, None)
+            await self._store.async_save(self.maintenance_history)
+            await self.async_request_refresh()
+            return
         if m_type == "water_exchange":
             pool_volume_liters = max(float(self.config.get(CONF_POOL_VOLUME, 0.0)) * 1000.0, 0.0)
             details = normalize_water_exchange(amount, percent, pool_volume_liters)
@@ -736,6 +780,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             delay = conf.get(CONF_FOLLOW_UP_TIME, 0)
             if delay > 0:
                 async_call_later(self.hass, delay * 60, self._send_follow_up)
+        await self.async_request_refresh()
 
     async def async_repair_learning_history(self, *, fetch_poollab: bool = False) -> None:
         """Re-run learning backfill and log why dose samples are accepted or rejected."""
@@ -1419,6 +1464,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         weather_data = await async_get_weather_data(self.hass, conf, limit=2)
         weather_today = weather_data.get("today") if isinstance(weather_data, dict) else None
         weather_forecast_days = weather_data.get("forecast_days") if isinstance(weather_data, dict) else []
+        current_now = dt_util.now()
+        bath_plan_hours, bath_plan_until_raw, bath_plan_set_at_raw, bath_plan_expired = self._get_bath_plan_state(current_now)
         if c_ist is not None and c_meas_raw:
             record_chlor_measurement(
                 self.maintenance_history,
@@ -1442,7 +1489,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.maintenance_history,
             conf,
             self._parse_ts_aware,
-            dt_util.now(),
+            current_now,
             current_chlorine=c_ist,
             current_temperature=temp_ist,
             pool_covered=self.pool_covered,
@@ -1454,7 +1501,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.maintenance_history,
             conf,
             self._parse_ts_aware,
-            dt_util.now(),
+            current_now,
         )
         await self._async_notify_latest_chlor_sample_status(sample_diagnosis)
         learned_dose_factor = None
@@ -1468,13 +1515,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.maintenance_history,
             conf,
             self._parse_ts_aware,
-            dt_util.now(),
+            current_now,
         )
         cya_learning = calculate_cya_learning(
             self.maintenance_history,
             conf,
             self._parse_ts_aware,
-            dt_util.now(),
+            current_now,
             current_cya=cya_ist,
         )
         ph_learning_attr = ph_learning.get("ph_stability_attributes") or {}
@@ -1547,6 +1594,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "chlor_breakdown_bather_adj": 0.0,
                 "chlor_breakdown_sum_raw": 0.0,
                 "chlor_breakdown_min_dose_applied": 0.0,
+                "chlor_pre_target": None,
+                "chlor_pre_loss_buffer": None,
+                "bath_plan_hours": bath_plan_hours,
+                "bath_plan_until": bath_plan_until_raw,
+                "bath_plan_set_at": bath_plan_set_at_raw,
+                "bath_plan_active": bath_plan_hours is not None,
+                "bath_plan_expired": bath_plan_expired,
                 "poollab_fetch_result": poollab_fetch_result,
                 "poollab_fetch_error": poollab_fetch_error,
                 "last_poollab_fetch_requested_at": self.maintenance_history.get("last_poollab_fetch_requested_at"),
@@ -1584,6 +1638,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.usage_mode,
             weather_today,
             learned_dose_factor,
+            bath_plan_hours,
+            chlorine_learning.get("chlor_forecast_hourly_loss"),
         )
         s_g = chemistry["chlor_dose"]
         chlor_pre = chemistry["chlor_pre"]
@@ -1605,6 +1661,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         chlor_breakdown_bather_adj = chemistry["chlor_breakdown_bather_adj"]
         chlor_breakdown_sum_raw = chemistry["chlor_breakdown_sum_raw"]
         chlor_breakdown_min_dose_applied = chemistry["chlor_breakdown_min_dose_applied"]
+        chlor_pre_target = chemistry["chlor_pre_target"]
+        chlor_pre_loss_buffer = chemistry["chlor_pre_loss_buffer"]
         volume_m3 = chemistry["volume_m3"]
         volume_liters = chemistry["volume_liters"]
         effective_chlor_content = chemistry["effective_chlor_content"]
@@ -1726,6 +1784,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "chlor_breakdown_bather_adj": chlor_breakdown_bather_adj,
             "chlor_breakdown_sum_raw": chlor_breakdown_sum_raw,
             "chlor_breakdown_min_dose_applied": chlor_breakdown_min_dose_applied,
+            "chlor_pre_target": chlor_pre_target,
+            "chlor_pre_loss_buffer": chlor_pre_loss_buffer,
             "volume_m3": volume_m3,
             "volume_liters": volume_liters,
             "effective_chlor_content": effective_chlor_content,
@@ -1753,6 +1813,11 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "hours_since_filter_clean": hours_since_filter_clean,
             "pool_covered": self.pool_covered,
             "usage_mode": self.usage_mode,
+            "bath_plan_hours": bath_plan_hours,
+            "bath_plan_until": bath_plan_until_raw,
+            "bath_plan_set_at": bath_plan_set_at_raw,
+            "bath_plan_active": bath_plan_hours is not None,
+            "bath_plan_expired": bath_plan_expired,
             "filter_clean_status": filter_clean_status,
             "filter_clean_interval": filter_clean_interval,
             "days_since_filter_replace": days_since_filter_replace,

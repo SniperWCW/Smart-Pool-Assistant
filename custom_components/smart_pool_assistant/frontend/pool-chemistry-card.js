@@ -350,6 +350,13 @@ class PoolChemistryCard extends HTMLElement {
     return `${num.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}${unit}`;
   }
 
+  _formatBathPlanTime(rawValue) {
+    if (!rawValue) return "--";
+    const planDate = new Date(rawValue);
+    if (Number.isNaN(planDate.getTime())) return "--";
+    return planDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  }
+
   _getMeasuringSpoonText(value, unit) {
     let remaining = Math.round(Number(value) * 2);
     if (!Number.isFinite(remaining) || remaining <= 0) return "";
@@ -1154,10 +1161,18 @@ class PoolChemistryCard extends HTMLElement {
                     </div>
                     <div id="usage-modes" class="usage-grid">
                       <button class="mode-btn" data-mode="0"><ha-icon icon="mdi:sleep"></ha-icon> Keine</button>
-                      <button class="mode-btn" data-mode="1"><ha-icon icon="mdi:account-group"></ha-icon> Normal</button>
                       <button class="mode-btn" data-mode="2"><ha-icon icon="mdi:party-popper"></ha-icon> Party</button>
                     </div>
                   </div>
+                  <div class="log-input bath-plan-row">
+                    <div class="field-with-label bath-plan-input">
+                      <div class="field-label">Baden in</div>
+                      <input type="number" id="input-set_bath_plan" min="0.5" max="24" step="0.5" placeholder="Stunden">
+                    </div>
+                    <button id="btn-bath-plan">Setzen</button>
+                    <button id="btn-bath-plan-clear" class="small-btn">Zuruecksetzen</button>
+                  </div>
+                  <div id="bath-plan-info" class="bath-plan-info"></div>
                 </div>
               </div>
             </div>
@@ -1599,6 +1614,9 @@ class PoolChemistryCard extends HTMLElement {
             }
             .small-btn { height: 28px; padding: 0 10px; font-size: 0.85em; flex-shrink: 0; }
             .usage-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+            .bath-plan-row { margin-top: 10px; align-items: end; gap: 8px; }
+            .bath-plan-input { min-width: 120px; }
+            .bath-plan-info { margin-top: 8px; font-size: 0.9em; color: var(--secondary-text-color); }
 
             .info-row-container { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
             .info-row-container > * { flex: 1; min-width: 250px; margin-top: 0 !important; }
@@ -1773,6 +1791,8 @@ class PoolChemistryCard extends HTMLElement {
       this.querySelectorAll('.mode-btn').forEach(btn => {
         btn.onclick = () => this._handleAdd('set_usage', btn.dataset.mode);
       });
+      this.querySelector('#btn-bath-plan').onclick = () => this._handleAdd('set_bath_plan');
+      this.querySelector('#btn-bath-plan-clear').onclick = () => this._handleAdd('set_bath_plan', 0);
       this.querySelector('#btn-filter-clean').onclick = () => this._handleAdd('filter_clean');
       this.querySelector('#btn-filter-replace').onclick = () => this._handleAdd('filter_replace');
       this.querySelector('#measurements-header').onclick = () => this._toggleCardPanel('measurements');
@@ -1858,14 +1878,21 @@ class PoolChemistryCard extends HTMLElement {
       const chlorSpoonHint = chlorSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorSpoons})</span>` : "";
       const chlorPreSpoonHint = chlorPreSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorPreSpoons})</span>` : "";
       const isInorganicChlor = attr.chlor_product_type === "inorganic";
+      const bathPlanHours = Number(attr.bath_plan_hours);
+      const bathPlanActive = attr.bath_plan_active === true && Number.isFinite(bathPlanHours) && bathPlanHours > 0;
+      const bathPlanTimeLabel = this._formatBathPlanTime(attr.bath_plan_until);
       if (isInorganicChlor && (attr.chlor_dose > 0 || attr.chlor_pre > 0)) {
         if (attr.chlor_pre > 0 && attr.chlor_dose > 0) {
           this.querySelector('#chlor-rec').innerHTML =
-            `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}. ` +
+            `${bathPlanActive
+              ? `Vor dem Baden in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> <b>${chlorPreText}</b> einplanen, damit der Mindestwert gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}. `
+              : `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}. `}` +
             `Nach der Nutzung <b>${chlorDoseText}</b> anorganisches Chlor zur aktiven Desinfektion zugeben${chlorSpoonHint}.`;
         } else if (attr.chlor_pre > 0) {
           this.querySelector('#chlor-rec').innerHTML =
-            `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}.`;
+            bathPlanActive
+              ? `Vor dem Baden in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> <b>${chlorPreText}</b> einplanen, damit der Mindestwert gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}.`
+              : `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}.`;
         } else {
           this.querySelector('#chlor-rec').innerHTML =
             `Nach der Nutzung <b>${chlorDoseText}</b> anorganisches Chlor zur aktiven Desinfektion zugeben${chlorSpoonHint}.`;
@@ -2270,14 +2297,22 @@ class PoolChemistryCard extends HTMLElement {
     btnCover.textContent = attr.pool_covered ? 'Abgedeckt' : 'Offen';
     iconCover.icon = attr.pool_covered ? 'mdi:pool' : 'mdi:sun-side';
 
-    const usageModes = ["none", "normal", "party"];
+    const usageModes = ["none", "party"];
     const usageLabels = { none: "Keine", normal: "Normal", party: "Party" };
     this.querySelectorAll('.mode-btn').forEach(btn => {
       btn.className = `mode-btn ${usageModes[btn.dataset.mode] === attr.usage_mode ? 'active' : ''}`;
     });
     const usageSummary = this.querySelector('#usage-summary');
+    const bathPlanInfo = this.querySelector('#bath-plan-info');
+    const bathPlanHoursSummary = Number(attr.bath_plan_hours);
+    const hasBathPlan = attr.bath_plan_active === true && Number.isFinite(bathPlanHoursSummary) && bathPlanHoursSummary > 0;
     if (usageSummary) {
-      usageSummary.textContent = `${attr.pool_covered ? 'Abgedeckt' : 'Offen'}, Nutzung ${usageLabels[attr.usage_mode] || 'Keine'}`;
+      usageSummary.textContent = `${attr.pool_covered ? 'Abgedeckt' : 'Offen'}, Nutzung ${usageLabels[attr.usage_mode] || 'Keine'}${hasBathPlan ? `, Baden in ${bathPlanHoursSummary.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h` : ''}`;
+    }
+    if (bathPlanInfo) {
+      bathPlanInfo.textContent = hasBathPlan
+        ? `Badeplan aktiv: in ${bathPlanHoursSummary.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h, geplant fuer ${this._formatBathPlanTime(attr.bath_plan_until)} Uhr.`
+        : "Kein Badezeitpunkt geplant. Ohne Zeitangabe bleibt die Hauptdosierung fuer nach der Nutzung.";
     }
 
     // Fallback auf den letzten Update-Zeitpunkt der Entität selbst, falls das Attribut fehlt
@@ -2675,6 +2710,14 @@ class PoolChemistryCard extends HTMLElement {
         this.querySelector('#btn-toggle-cover').textContent = val > 0 ? 'Abgedeckt' : 'Offen';
         this.querySelector('#icon-covered').icon = val > 0 ? 'mdi:pool' : 'mdi:sun-side';
       }
+      if (type === 'set_bath_plan') {
+        const bathPlanInfo = this.querySelector('#bath-plan-info');
+        if (bathPlanInfo) {
+          bathPlanInfo.textContent = val > 0
+            ? 'Badeplan wird gespeichert und neu berechnet.'
+            : 'Badeplan wird zurueckgesetzt.';
+        }
+      }
 
       const serviceData = {
         entity_id: this.config.recommendation_entity,
@@ -2886,7 +2929,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.19 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.25 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

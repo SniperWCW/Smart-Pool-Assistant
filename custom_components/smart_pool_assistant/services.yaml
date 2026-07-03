@@ -19,6 +19,7 @@ log_maintenance:
             - "filter_replace"
             - "set_covered"
             - "set_usage"
+            - "set_bath_plan"
     amount:
       required: true
       selector:

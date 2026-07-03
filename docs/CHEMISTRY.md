@@ -25,6 +25,17 @@ Die Chlorempfehlung beruecksichtigt:
 
 Der Wirkstoffanteil wird nicht pauschal aus dem Produkttyp abgeleitet, sondern sollte dem realen Produkt entsprechen. `Anorganisch` bedeutet hier nur `ohne eingebauten Stabilisator`, nicht automatisch `100 % Wirkstoff`.
 
+### Vor-Baden-Planung
+
+In der Karte kann zusaetzlich `Baden in X Stunden` gesetzt werden.
+
+- Mit aktivem Badeplan berechnet die Integration fuer `chlor_pre` nicht mehr nur eine statische Mindestkorrektur fuer `jetzt`.
+- Stattdessen wird der erwartete Chlorverlust bis zum Badezeitpunkt abgeschaetzt und die Vor-Baden-Menge darauf ausgerichtet.
+- Wenn keine Zeit gesetzt ist, bleibt `chlor_dose` die Hauptempfehlung fuer die Desinfektion nach der Nutzung.
+- Fuer anorganisches Chlor ist diese Trennung fachlich besonders relevant: `chlor_pre` dient dem sicheren Badezeitpunkt, `chlor_dose` der aktiven Nach-Nutzungs-Desinfektion.
+
+Die Abschaetzung nutzt bevorzugt die vorhandene Chlor-Prognose und faellt sonst konservativ auf einen Basisverlust zurueck.
+
 ### Schockchlorungsziel
 
 Das Schockchlorungsziel ist stufenweise definiert:
@@ -84,6 +95,7 @@ Ein **Sample** ist genau ein verwertbares Zugabe-/Nachmess-Paar fuer die Lernlog
 - Die Prognose schaetzt den erwarteten Tagesverlust und die Zeit bis zur Zieluntergrenze oder bis `0,6 mg/l`.
 - Die Prognose nutzt Temperatur, Abdeckung, Nutzung, UV, Regen und optional Pumpenlaufzeit als Kontextgewichtung.
 - Die Konfidenz wird als `high`, `medium`, `low` oder `learning` ausgegeben.
+- Die Vor-Baden-Planung kann diese Prognose direkt nutzen, um `chlor_pre` auf einen geplanten Badezeitpunkt statt nur auf den aktuellen Messzeitpunkt auszurichten.
 - Fuer die Stabilitaet bleibt der angezeigte `24 h`-, `7 d`- und `14 d`-Verbrauch roh beobachtet.
 - Die Stabilitaetsbewertung selbst nutzt zusaetzlich eine kontextbereinigte Reihe, damit offene Abdeckung oder hohe Nutzung die Ampel nicht unnoetig verzerren.
 

@@ -1,5 +1,12 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.25] - 2026-07-03
+
+- **Vor-Baden-Plan direkt in der Karte**: Im Panel `Status & Nutzung` kann jetzt `Baden in X Stunden` gesetzt werden, damit die Vor-Baden-Dosierung auf einen geplanten Badezeitpunkt statt nur auf den aktuellen Messzeitpunkt ausgerichtet wird.
+- **`chlor_pre` fachlich erweitert**: Mit aktivem Badeplan nutzt die Berechnung bevorzugt die vorhandene Chlor-Prognose und faellt sonst konservativ auf einen Basisverlust zurueck, damit der Mindestwert zum Badezeitpunkt noch gehalten wird.
+- **Nutzungswahl in der Karte vereinfacht**: Die Frontend-Schnellwahl zeigt jetzt nur noch `Keine` und `Party`; `normal` bleibt service-seitig weiter gueltig, ist aber nicht mehr Teil des Standard-Workflows.
+- **Doku und Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `FAQ.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, `docs/CHEMISTRY.md`, `docs/CARD_AND_DEMOS.md`, `docs/ENTITIES.md` und neue Release Notes wurden auf `3.0.25` angehoben.
+
 ## [3.0.24] - 2026-07-02
 
 - **Persistierte Messhistorie beim Laden bereinigt**: Alte Eintraege in `last_measurements_display` werden jetzt schon waehrend `async_load_history()` normalisiert, damit Temperaturreste nicht bis zum naechsten Messzyklus sichtbar bleiben.

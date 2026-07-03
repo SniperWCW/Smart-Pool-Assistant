@@ -33,7 +33,13 @@ Die Integration stellt unter anderem folgende Entitaeten bereit:
 - `sensor.pool_chlor_stabilitaet`
 
 Die Entity-IDs bleiben aus Kompatibilitaetsgruenden unveraendert. In der UI heissen
-sie jetzt `Chlor Hauptdosierung` und `Chlor vor Baden Minimum`.
+sie weiter `Chlor Hauptdosierung` und `Chlor vor Baden Minimum`.
+
+Wichtig zur Semantik:
+
+- `chlor_dose` bleibt die Hauptdosierung fuer die Desinfektion nach der Nutzung.
+- `chlor_pre` ist die Vor-Baden-Menge.
+- Mit aktivem Kartenfeld `Baden in X Stunden` repraesentiert `chlor_pre` nicht nur ein Mindestniveau fuer sofortiges Baden, sondern die eingeplante Vor-Baden-Dosis fuer den gewuenschten Badezeitpunkt.
 - `sensor.pool_ph_drift_24h`
 - `sensor.pool_ph_drift_7d`
 - `sensor.pool_ph_drift_14d`
