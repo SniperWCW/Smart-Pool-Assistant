@@ -153,9 +153,9 @@ class PoolChemistryCard extends HTMLElement {
       return {
         entityId: buttonEntity,
         disabled: true,
-        label: "Abruf läuft...",
+        label: "Abruf l\u00e4uft...",
         status: "PoolLab wird gerade abgefragt.",
-        meta: "läuft",
+        meta: "l\u00e4uft",
       };
     }
 
@@ -174,7 +174,7 @@ class PoolChemistryCard extends HTMLElement {
         entityId: buttonEntity,
         disabled: true,
         label: `Warten (${remainingSeconds}s)`,
-        status: `Nächster Abruf in ${remainingSeconds} Sekunden möglich.`,
+        status: `N\u00e4chster Abruf in ${remainingSeconds} Sekunden m\u00f6glich.`,
         meta: "warte",
       };
     }
@@ -203,14 +203,14 @@ class PoolChemistryCard extends HTMLElement {
       entityId: buttonEntity,
       disabled: false,
       label: "Messwerte abrufen",
-      status: "Bereit für einen manuellen PoolLab-Abruf.",
+      status: "Bereit f\u00fcr einen manuellen PoolLab-Abruf.",
       meta: "bereit",
     };
   }
 
   _getPoolLabFetchBadgeClass(meta) {
     if (meta === "fehler") return "critical";
-    if (meta === "warte" || meta === "lÃ¤uft") return "waiting";
+    if (meta === "warte" || meta === "l\u00e4uft") return "waiting";
     return "ok";
   }
 
@@ -484,9 +484,9 @@ class PoolChemistryCard extends HTMLElement {
   }
 
   _formatLearningNumber(value, suffix = "", digits = 2, signed = false) {
-    if (!this._isKnownValue(value)) return "Nicht genügend Daten";
+    if (!this._isKnownValue(value)) return "Nicht gen\u00fcgend Daten";
     const num = Number(value);
-    if (!Number.isFinite(num)) return "Nicht genügend Daten";
+    if (!Number.isFinite(num)) return "Nicht gen\u00fcgend Daten";
     const formatted = num.toLocaleString("de-DE", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
@@ -498,12 +498,12 @@ class PoolChemistryCard extends HTMLElement {
   _formatLearningStars(value) {
     if (!this._isKnownValue(value)) return "Noch keine Bewertung";
     if (typeof value === "string" && /^[*-]{5}$/.test(value)) {
-      return value.replaceAll("*", "★").replaceAll("-", "☆");
+      return value.replaceAll("*", "\u2605").replaceAll("-", "\u2606");
     }
     const quality = Number(value);
     if (!Number.isFinite(quality) || quality <= 0) return "Noch keine Bewertung";
     const rounded = Math.max(0, Math.min(5, Math.round(quality)));
-    return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+    return "\u2605".repeat(rounded) + "\u2606".repeat(5 - rounded);
   }
 
   _getLearningSampleCount(value) {
@@ -518,7 +518,7 @@ class PoolChemistryCard extends HTMLElement {
       variable: "Schwankend",
       unstable: "Instabil",
     };
-    return labels[status] || "Nicht genügend Daten";
+    return labels[status] || "Nicht gen\u00fcgend Daten";
   }
 
   _getPhTrendLabel(trend) {
@@ -526,9 +526,9 @@ class PoolChemistryCard extends HTMLElement {
       learning: "Lernphase",
       stable: "stabil",
       rising: "steigt",
-      falling: "fällt",
+      falling: "f\u00e4llt",
     };
-    return labels[trend] || "Nicht genügend Daten";
+    return labels[trend] || "Nicht gen\u00fcgend Daten";
   }
 
   _getLearningSummary(kind, data) {
@@ -542,7 +542,7 @@ class PoolChemistryCard extends HTMLElement {
   }
 
   _formatForecastDuration(hoursValue) {
-    if (!Number.isFinite(hoursValue) || hoursValue < 0) return "Nicht genÃ¼gend Daten";
+    if (!Number.isFinite(hoursValue) || hoursValue < 0) return "Nicht gen\u00fcgend Daten";
     if (hoursValue <= 0.2) return "jetzt";
     const totalMinutes = Math.max(1, Math.round(hoursValue * 60));
     const hours = Math.floor(totalMinutes / 60);
@@ -570,7 +570,7 @@ class PoolChemistryCard extends HTMLElement {
     const chlorStatus = attr.chlor_stability || "learning";
     const phStatus = attr.ph_stability || "learning";
     const phTrend = phAttr.trend || attr.ph_trend;
-    const forecastMessage = attr.chlor_forecast_message || "Keine Prognose verfÃ¼gbar";
+    const forecastMessage = attr.chlor_forecast_message || "Keine Prognose verf\u00fcgbar";
     const forecastConfidenceLabels = {
       high: "hoch",
       medium: "mittel",
@@ -579,7 +579,7 @@ class PoolChemistryCard extends HTMLElement {
       unknown: "unbekannt",
     };
     const forecastBasisLabels = {
-      similar_intervals: "Ã¤hnliche Intervalle",
+      similar_intervals: "\u00e4hnliche Intervalle",
       "14d_average": "14-Tage-Mittel",
       learning: "Lernphase",
       no_measurement: "keine Messung",
@@ -588,7 +588,7 @@ class PoolChemistryCard extends HTMLElement {
 
     const chlorData = { samples: chlorSamples, status: chlorStatus, quality: chlorQuality };
     const phData = { samples: phSamples, status: phStatus, quality: phQuality };
-    const summary = `${this._getLearningSummary("Chlor", chlorData)} · ${this._getLearningSummary("pH", phData)}`;
+    const summary = `${this._getLearningSummary("Chlor", chlorData)} \u00b7 ${this._getLearningSummary("pH", phData)}`;
 
     const renderMetric = (label, value) => `
       <div class="stability-metric">
@@ -601,7 +601,7 @@ class PoolChemistryCard extends HTMLElement {
     container.innerHTML = `
       <div class="stability-panel ${this._stability_expanded ? 'expanded' : ''}">
         <div class="stability-header" id="stability-header">
-          <div class="stability-title"><ha-icon icon="mdi:chart-bell-curve"></ha-icon> Stabilität</div>
+          <div class="stability-title"><ha-icon icon="mdi:chart-bell-curve"></ha-icon> Stabilit\u00e4t</div>
           <div class="stability-summary">${summary}</div>
           <ha-icon icon="${this._stability_expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
         </div>
@@ -615,14 +615,14 @@ class PoolChemistryCard extends HTMLElement {
                 </div>
                 <div class="stability-stars">${this._formatLearningStars(chlorQuality)}</div>
               </div>
-              ${renderMetric("Ø 14 Tage", this._formatLearningNumber(chlorAttr.average_daily_loss ?? attr.chlor_consumption_14d, " mg/l/d", 2))}
+              ${renderMetric("\u00d8 14 Tage", this._formatLearningNumber(chlorAttr.average_daily_loss ?? attr.chlor_consumption_14d, " mg/l/d", 2))}
               ${renderMetric("24h", this._formatLearningNumber(attr.chlor_consumption_24h, " mg/l/d", 2))}
               ${renderMetric("7 Tage", this._formatLearningNumber(attr.chlor_consumption_7d, " mg/l/d", 2))}
               ${renderMetric("Min / Max", `${this._formatLearningNumber(chlorAttr.min_daily_loss, " mg/l/d", 2)} / ${this._formatLearningNumber(chlorAttr.max_daily_loss, " mg/l/d", 2)}`)}
-              ${renderMetric("Persönlicher Faktor", this._formatLearningNumber(chlorAttr.personal_chlor_factor ?? attr.personal_chlor_factor, "", 2))}
+              ${renderMetric("Pers\u00f6nlicher Faktor", this._formatLearningNumber(chlorAttr.personal_chlor_factor ?? attr.personal_chlor_factor, "", 2))}
               ${renderMetric("Dosierfaktor", this._formatLearningNumber(attr.personal_chlor_dose_factor, "", 2))}
               ${renderMetric("Effektiver Wirkstoff", this._formatLearningNumber(attr.effective_chlor_content, "", 3))}
-              ${renderMetric("Dosierqualität", `${this._formatLearningStars(doseQuality)} · ${doseSamples} Samples`)}
+              ${renderMetric("Dosierqualit\u00e4t", `${this._formatLearningStars(doseQuality)} \u00b7 ${doseSamples} Samples`)}
               ${renderMetric("Prognose", forecastMessage)}
               ${renderMetric("Bis Minimum", this._formatForecastDuration(Number(attr.chlor_hours_to_min)))}
               ${renderMetric("Bis 0,6 mg/l", this._formatForecastDuration(Number(attr.chlor_hours_to_critical_low)))}
@@ -637,7 +637,7 @@ class PoolChemistryCard extends HTMLElement {
                 </div>
                 <div class="stability-stars">${this._formatLearningStars(phQuality)}</div>
               </div>
-              ${renderMetric("Ø 14 Tage", this._formatLearningNumber(phAttr.average_daily_drift ?? attr.ph_drift_14d, " pH/d", 3, true))}
+              ${renderMetric("\u00d8 14 Tage", this._formatLearningNumber(phAttr.average_daily_drift ?? attr.ph_drift_14d, " pH/d", 3, true))}
               ${renderMetric("24h", this._formatLearningNumber(attr.ph_drift_24h, " pH/d", 3, true))}
               ${renderMetric("7 Tage", this._formatLearningNumber(attr.ph_drift_7d, " pH/d", 3, true))}
               ${renderMetric("Min / Max", `${this._formatLearningNumber(phAttr.min_daily_drift, " pH/d", 3, true)} / ${this._formatLearningNumber(phAttr.max_daily_drift, " pH/d", 3, true)}`)}
@@ -764,7 +764,7 @@ class PoolChemistryCard extends HTMLElement {
       const precipitation = this._getWeatherPrecipitation(entry);
 
       return {
-        label: index === 0 ? `Heute · ${label}` : `Morgen · ${label}`,
+        label: index === 0 ? `Heute \u00b7 ${label}` : `Morgen \u00b7 ${label}`,
         condition: entry.condition,
         precipitation: precipitation.value,
         precipitationUnit: precipitation.unit,
@@ -876,7 +876,7 @@ class PoolChemistryCard extends HTMLElement {
     };
 
     if (!weatherState) {
-      renderPanel("", `<div class="weather-empty">Wetter-Entitaet <b>${weatherEntityId}</b> nicht gefunden.</div>`);
+      renderPanel("", `<div class="weather-empty">Wetter-Entit\u00e4t <b>${weatherEntityId}</b> nicht gefunden.</div>`);
       return;
     }
 
@@ -885,7 +885,7 @@ class PoolChemistryCard extends HTMLElement {
         <div class="weather-empty">
           ${this._weatherForecastInFlight[weatherEntityId]
             ? 'Lade Tagesvorhersage...'
-            : 'Keine Tagesvorhersage gefunden. Die Karte prueft zuerst <code>attributes.forecast</code> und laedt dann den Home-Assistant-Forecast-Endpunkt fuer <code>daily</code> nach.'}
+            : 'Keine Tagesvorhersage gefunden. Die Karte pr\u00fcft zuerst <code>attributes.forecast</code> und l\u00e4dt dann den Home-Assistant-Forecast-Endpunkt f\u00fcr <code>daily</code> nach.'}
         </div>
       `);
       return;
@@ -894,7 +894,7 @@ class PoolChemistryCard extends HTMLElement {
     const today = days[0] || null;
     const summaryParts = [];
     if (today?.condition) summaryParts.push(this._getWeatherConditionLabel(today.condition));
-    if (today?.temperature !== null && today?.temperature !== undefined) summaryParts.push(this._formatWeatherValue(today.temperature, "°"));
+    if (today?.temperature !== null && today?.temperature !== undefined) summaryParts.push(this._formatWeatherValue(today.temperature, "\u00b0"));
     if (today?.uv !== null && today?.uv !== undefined) summaryParts.push(`UV ${this._formatWeatherValue(today.uv)}`);
     if (today?.precipitation !== null && today?.precipitation !== undefined) summaryParts.push(`Regen ${this._formatWeatherValue(today.precipitation, today.precipitationUnit || "")}`);
     if (today?.wind !== null && today?.wind !== undefined) summaryParts.push(`Wind ${this._formatWeatherWind(today.wind, today.windUnit)}`);
@@ -911,7 +911,7 @@ class PoolChemistryCard extends HTMLElement {
             </div>
             <div class="weather-condition">${this._getWeatherConditionLabel(day.condition)}</div>
             <div class="weather-temp">
-              ${this._formatWeatherValue(day.temperature, "°")} / ${this._formatWeatherValue(day.templow, "°")}
+              ${this._formatWeatherValue(day.temperature, "\u00b0")} / ${this._formatWeatherValue(day.templow, "\u00b0")}
             </div>
             <div class="weather-metrics">
               <div class="weather-metric"><span>Sonne/UV</span><b class="${this._getUvColorClass(day.uv)}">${this._formatWeatherValue(day.uv)}</b></div>
@@ -953,12 +953,12 @@ class PoolChemistryCard extends HTMLElement {
       else if (attr.is_shock === true) issues.push("Chlor im Schockchlorungsbereich");
       else if (chlor > 5 || chlorHighDiff > 0.9) issues.push("Chlor zu hoch");
       else if (chlorLowDiff > 0.3) warnings.push("Chlor niedrig");
-      else if (chlorHighDiff > 0.3) warnings.push("Chlor erhöht");
+      else if (chlorHighDiff > 0.3) warnings.push("Chlor erh\u00f6ht");
     }
 
     if (Number.isFinite(ph) && phRange) {
       const phDiff = ph < phRange.low ? phRange.low - ph : ph > phRange.high ? ph - phRange.high : 0;
-      if (ph < 6.8 || ph > 7.8 || Math.abs(phDiff) > 0.4) issues.push("pH deutlich außerhalb");
+      if (ph < 6.8 || ph > 7.8 || Math.abs(phDiff) > 0.4) issues.push("pH deutlich au\u00dferhalb");
       else if (Math.abs(phDiff) > 0.15) warnings.push("pH nicht ideal");
     }
 
@@ -983,7 +983,7 @@ class PoolChemistryCard extends HTMLElement {
     if (issues.length > 0) {
       return {
         className: "critical",
-        icon: "🔴",
+        icon: "\u{1F534}",
         title: "Nicht empfohlen",
         detail: issues.slice(0, 2).join(", "),
       };
@@ -991,16 +991,16 @@ class PoolChemistryCard extends HTMLElement {
     if (warnings.length > 0) {
       return {
         className: "warning",
-        icon: "🟡",
-        title: "Baden möglich",
+        icon: "\u{1F7E1}",
+        title: "Baden m\u00f6glich",
         detail: warnings.slice(0, 2).join(", "),
       };
     }
     return {
       className: "ok",
-      icon: "🟢",
-      title: "Viel Spaß beim Baden",
-      detail: "Werte im grünen Bereich",
+      icon: "\u{1F7E2}",
+      title: "Viel Spa\u00df beim Baden",
+      detail: "Werte im gr\u00fcnen Bereich",
     };
   }
 
@@ -1022,8 +1022,8 @@ class PoolChemistryCard extends HTMLElement {
       this.innerHTML = `
         <ha-card>
           <div style="padding: 16px; color: var(--error-color); text-align: center;">
-            Entität <b>${this.config.recommendation_entity}</b> nicht gefunden.<br>
-            Bitte prüfe die Dashboard-Konfiguration!
+            Entit\u00e4t <b>${this.config.recommendation_entity}</b> nicht gefunden.<br>
+            Bitte pr\u00fcfe die Dashboard-Konfiguration!
           </div>
         </ha-card>
       `;
@@ -1041,7 +1041,7 @@ class PoolChemistryCard extends HTMLElement {
     // Erstelle das Skelett der Karte nur einmal
     if (!this.content) {
       this.innerHTML = `
-        <ha-card header="💧 Smart Pool Assistant">
+        <ha-card header="\u{1F4A7} Smart Pool Assistant">
           <div class="card-content">
             <div id="top-status-card" class="top-status-card">
               <div id="status-box" class="status-segment"></div>
@@ -1117,11 +1117,11 @@ class PoolChemistryCard extends HTMLElement {
 
             <div class="info-row-container">
               <details id="maintenance-section" class="measurements-section history-section" style="display: none;">
-                <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">🕒 Letzte Aktivitäten</summary>
+                <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">\u{1F552} Letzte Aktivit\u00e4ten</summary>
                 <div id="maintenance-info" class="history-table" style="margin-top: 8px;"></div>
               </details>
               <details id="api-history-section" class="measurements-section history-section" style="display: none;">
-                <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">☁️ Letzte Cloud-Messwerte (API)</summary>
+                <summary class="section-title" style="cursor: pointer; outline: none; margin-bottom: 0;">\u2139\ufe0f Letzte Cloud-Messwerte (API)</summary>
                 <div id="api-history-list" class="history-table" style="margin-top: 8px;"></div>
               </details>
             </div>
@@ -1170,7 +1170,7 @@ class PoolChemistryCard extends HTMLElement {
                       <input type="number" id="input-set_bath_plan" min="0.5" max="24" step="0.5" placeholder="Stunden">
                     </div>
                     <button id="btn-bath-plan">Setzen</button>
-                    <button id="btn-bath-plan-clear" class="small-btn">Zuruecksetzen</button>
+                    <button id="btn-bath-plan-clear" class="small-btn">Zur\u00fccksetzen</button>
                   </div>
                   <div id="bath-plan-info" class="bath-plan-info"></div>
                 </div>
@@ -1807,18 +1807,18 @@ class PoolChemistryCard extends HTMLElement {
     const chlorAwaitingRetest = attr.awaiting_retest_chlor === true;
     const phAwaitingRetest = attr.awaiting_retest_ph === true;
 
-    // Status Box Logik (Synchronisiert mit der Empfehlungs-Entität vom Coordinator)
-    let statusText = rec.state || '✅ Alle Werte im Zielbereich';
+    // Status Box Logik (Synchronisiert mit der Empfehlungs-Entit\u00e4t vom Coordinator)
+    let statusText = rec.state || "\u2705 Alle Werte im Zielbereich";
     let statusClass = 'ok';
 
     // Sicherheit: Falls der State "unavailable" oder "unknown" ist
     if (statusText === 'unavailable' || statusText === 'unknown') {
-        statusText = '⚠️ Warte auf Daten...';
+        statusText = "\u26a0\ufe0f Warte auf Daten...";
     }
 
-    if (statusText.includes('⏳')) {
+    if (statusText.includes("\u23f3")) {
         statusClass = 'waiting';
-    } else if (statusText.includes('⚠️') || statusText.includes('hoch') || statusText.includes('niedrig')) {
+    } else if (statusText.includes("\u26a0\ufe0f") || statusText.includes("hoch") || statusText.includes("niedrig")) {
         // Wenn "hoch" oder "Schock" vorkommt, nutzen wir Rot (critical), sonst Gelb (warning)
         statusClass = (statusText.includes('hoch') || statusText.includes('Schock')) ? 'critical' : 'warning';
     }
@@ -1875,8 +1875,8 @@ class PoolChemistryCard extends HTMLElement {
       const chlorPreText = this._formatDoseAmount(attr.chlor_pre, "g");
       const chlorSpoons = this._getMeasuringSpoonText(attr.chlor_dose, "g");
       const chlorPreSpoons = this._getMeasuringSpoonText(attr.chlor_pre, "g");
-      const chlorSpoonHint = chlorSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorSpoons})</span>` : "";
-      const chlorPreSpoonHint = chlorPreSpoons ? ` <span class="table-sub">(Messlöffel: ${chlorPreSpoons})</span>` : "";
+      const chlorSpoonHint = chlorSpoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${chlorSpoons})</span>` : "";
+      const chlorPreSpoonHint = chlorPreSpoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${chlorPreSpoons})</span>` : "";
       const isInorganicChlor = attr.chlor_product_type === "inorganic";
       const bathPlanHours = Number(attr.bath_plan_hours);
       const bathPlanActive = attr.bath_plan_active === true && Number.isFinite(bathPlanHours) && bathPlanHours > 0;
@@ -1899,7 +1899,7 @@ class PoolChemistryCard extends HTMLElement {
         }
       } else {
         this.querySelector('#chlor-rec').innerHTML = attr.chlor_dose > 0
-          ? `Bitte <b>${chlorDoseText}</b> Chlor für den Zielbereich hinzufügen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
+          ? `Bitte <b>${chlorDoseText}</b> Chlor f\u00fcr den Zielbereich hinzuf\u00fcgen${chlorSpoonHint} (Vor Baden: ca. ${chlorPreText}).`
           : (chlorHighDiff > 0.2
               ? `<span class="status-critical">Chlorwert ist zu hoch! (+${chlorHighDiff.toFixed(2)} mg/l)</span>`
               : (chlorLowDiff > 0.2 ? `Chlorwert zu niedrig.` : `Chlorwert ist im Zielbereich.`));
@@ -1942,13 +1942,13 @@ class PoolChemistryCard extends HTMLElement {
         if (attr.ph_senker_total > 0) {
           const amountText = this._formatDoseAmount(attr.ph_senker_total, "ml");
           const spoons = this._getMeasuringSpoonText(attr.ph_senker_total, "ml");
-          const spoonHint = spoons ? ` <span class="table-sub">(Messlöffel: ${spoons})</span>` : "";
-          phText = `📉 PH-Minus: ca. <b>${amountText}</b> hinzufügen.${spoonHint}`;
+          const spoonHint = spoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${spoons})</span>` : "";
+          phText = `\u{1F4C9} PH-Minus: ca. <b>${amountText}</b> hinzuf\u00fcgen.${spoonHint}`;
         } else if (attr.ph_erhoeher_total > 0) {
           const amountText = this._formatDoseAmount(attr.ph_erhoeher_total, "g");
           const spoons = this._getMeasuringSpoonText(attr.ph_erhoeher_total, "g");
-          const spoonHint = spoons ? ` <span class="table-sub">(Messlöffel: ${spoons})</span>` : "";
-          phText = `📈 PH-Plus: ca. <b>${amountText}</b> hinzufügen.${spoonHint}`;
+          const spoonHint = spoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${spoons})</span>` : "";
+          phText = `\u{1F4C8} PH-Plus: ca. <b>${amountText}</b> hinzuf\u00fcgen.${spoonHint}`;
         }
       }
     }
@@ -1991,7 +1991,7 @@ class PoolChemistryCard extends HTMLElement {
     const cyaHistNode = this.querySelector('#cya-hist');
     const modeledCya = Number(attr.cya_estimated_current);
     if (cyaForecastNode) {
-      cyaForecastNode.innerHTML = attr.cya_forecast_message || 'Keine CYA-Prognose verfuegbar.';
+      cyaForecastNode.innerHTML = attr.cya_forecast_message || 'Keine CYA-Prognose verf\u00fcgbar.';
     }
     if (cyaModelNode) {
       cyaModelNode.style.display = 'none';
@@ -2013,9 +2013,9 @@ class PoolChemistryCard extends HTMLElement {
       const type = entry?.type;
       const amount = entry?.amount;
       if (entry?.text) return entry.text;
-      if (type === 'chlor') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}g Chlor hinzugefügt` : 'Chlor hinzugefügt';
-      if (type === 'ph_plus') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}g PH-Plus hinzugefügt` : 'PH-Plus hinzugefügt';
-      if (type === 'ph_minus') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}ml PH-Minus hinzugefügt` : 'PH-Minus hinzugefügt';
+      if (type === 'chlor') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}g Chlor hinzugef\u00fcgt` : 'Chlor hinzugef\u00fcgt';
+      if (type === 'ph_plus') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}g PH-Plus hinzugef\u00fcgt` : 'PH-Plus hinzugef\u00fcgt';
+      if (type === 'ph_minus') return amount !== undefined && amount !== null ? `${Number(amount).toFixed(0)}ml PH-Minus hinzugef\u00fcgt` : 'PH-Minus hinzugef\u00fcgt';
       if (type === 'water_exchange') return `${Number(entry?.liters || amount || 0).toFixed(0)}l Wasser gewechselt (${Number(entry?.percent || 0).toFixed(1)}%)`;
       if (type === 'filter_clean') return 'Filter gereinigt';
       if (type === 'filter_replace') return 'Filter getauscht';
@@ -2043,11 +2043,11 @@ class PoolChemistryCard extends HTMLElement {
           ${lastActivities.map(entry => {
             const text = formatActivityText(entry);
             const time = entry?.time || '--';
-            const label = entry?.type === 'set_covered' ? 'Abdeckung' : entry?.type === 'set_usage' ? 'Modus' : 'Aktivität';
+            const label = entry?.type === 'set_covered' ? 'Abdeckung' : entry?.type === 'set_usage' ? 'Modus' : 'Aktivit\u00e4t';
             return `
               <div class="table-row">
                 <div class="table-label">${label}</div>
-                <div class="table-value">✅ ${text}</div>
+                <div class="table-value">\u2705 ${text}</div>
                 <div class="table-meta">${time}</div>
               </div>
             `;
@@ -2092,7 +2092,7 @@ class PoolChemistryCard extends HTMLElement {
       : '<span class="bt-badge disconnected"><span class="bt-dot"></span>Bluetooth: Nein</span>';
     const measurementsSummary = this.querySelector('#measurements-summary');
     if (measurementsSummary) {
-      measurementsSummary.textContent = `Chlor ${c_ist} mg/l, pH ${ph_ist}, ${t_ist} °C, CYA ${cya_ist} ppm`;
+      measurementsSummary.textContent = `Chlor ${c_ist} mg/l, pH ${ph_ist}, ${t_ist} \u00b0C, CYA ${cya_ist} ppm`;
     }
 
     // Helper to get colored text for filter status
@@ -2125,7 +2125,7 @@ class PoolChemistryCard extends HTMLElement {
       </div>
       <div class="table-row">
         <div class="table-label">Temperatur</div>
-        <div class="table-value" data-label="Ist">${t_ist}°C</div>
+        <div class="table-value" data-label="Ist">${t_ist}\u00b0C</div>
         <div class="table-target" data-label="Ziel">--</div>
         <div class="table-meta" data-label="Quelle">${sourceWithTime(tempSource, tempMeasurement)}</div>
       </div>
@@ -2270,7 +2270,7 @@ class PoolChemistryCard extends HTMLElement {
         <div class="breakdown-item breakdown-final">Empfohlene Menge: <span>${finalDose.toFixed(2)}g</span></div>
       `;
       if (Number.isFinite(volumeM3) && volumeM3 > 0) {
-        const volumeText = `${volumeM3.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 3 })} m³`;
+        const volumeText = `${volumeM3.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 3 })} m\u00b3`;
         const litersText = Number.isFinite(volumeLiters) && volumeLiters > 0
           ? ` (${volumeLiters.toLocaleString("de-DE", { maximumFractionDigits: 0 })} l)`
           : "";
@@ -2311,16 +2311,16 @@ class PoolChemistryCard extends HTMLElement {
     }
     if (bathPlanInfo) {
       bathPlanInfo.textContent = hasBathPlan
-        ? `Badeplan aktiv: in ${bathPlanHoursSummary.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h, geplant fuer ${this._formatBathPlanTime(attr.bath_plan_until)} Uhr.`
-        : "Kein Badezeitpunkt geplant. Ohne Zeitangabe bleibt die Hauptdosierung fuer nach der Nutzung.";
+        ? `Badeplan aktiv: in ${bathPlanHoursSummary.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h, geplant f\u00fcr ${this._formatBathPlanTime(attr.bath_plan_until)} Uhr.`
+        : "Kein Badezeitpunkt geplant. Ohne Zeitangabe bleibt die Hauptdosierung f\u00fcr nach der Nutzung.";
     }
 
-    // Fallback auf den letzten Update-Zeitpunkt der Entität selbst, falls das Attribut fehlt
+    // Fallback auf den letzten Update-Zeitpunkt der Entit\u00e4t selbst, falls das Attribut fehlt
     const lastCalcRaw = attr.last_calculation_raw || rec.last_updated;
     const footer = this.querySelector('#footer-info');
     footer.innerHTML = `
       <div>Berechnet: ${attr.last_calculation || '--'} | Messung: ${attr.last_measurement || '--'}${attr.last_measurement_source ? ` (${attr.last_measurement_source})` : ''}</div>
-      <div style="margin-top: 4px; opacity: 0.8;">Daten-Aktualität: <ha-relative-time id="rel-time-footer"></ha-relative-time></div>
+      <div style="margin-top: 4px; opacity: 0.8;">Daten-Aktualit\u00e4t: <ha-relative-time id="rel-time-footer"></ha-relative-time></div>
     `;
     const relTime = this.querySelector('#rel-time-footer');
     if (relTime) {
@@ -2384,15 +2384,15 @@ class PoolChemistryCard extends HTMLElement {
     const duration = this._formatLayzSpaDuration(delta / effectiveRate);
     const heaterOn = heaterState === "on";
     const source = hasLearnedRate
-      ? `${rate.toFixed(1).replace(".", ",")} °C/h aus ${cache.historyHours}h Verlauf`
-      : `${etaCfg.fallbackRate.toFixed(1).replace(".", ",")} °C/h Fallback`;
+      ? `${rate.toFixed(1).replace(".", ",")} \u00b0C/h aus ${cache.historyHours}h Verlauf`
+      : `${etaCfg.fallbackRate.toFixed(1).replace(".", ",")} \u00b0C/h Fallback`;
 
     this._ensureLayzSpaHeatEtaHistory(cfg, etaCfg, cacheKey);
 
     return {
       label: "Auf Wunschtemperatur",
       value: `ca. ${duration}`,
-      detail: heaterOn ? source : `Heizung aus · ${source}`,
+      detail: heaterOn ? source : `Heizung aus \u00b7 ${source}`,
       cssClass: heaterOn ? (hasLearnedRate ? "status-ok" : "status-warning") : "lz-eta-muted",
     };
   }
@@ -2506,7 +2506,7 @@ class PoolChemistryCard extends HTMLElement {
       return;
     }
 
-    const formatTemp = (value) => Number.isFinite(value) ? `${value.toFixed(1)}°C` : '--';
+    const formatTemp = (value) => Number.isFinite(value) ? `${value.toFixed(1)}\u00b0C` : '--';
     const hass = this._hass;
     const get = (eid) => eid ? hass.states[eid] : null;
     const tempControl = this._getLayzSpaTempControlInfo(cfg);
@@ -2715,7 +2715,7 @@ class PoolChemistryCard extends HTMLElement {
         if (bathPlanInfo) {
           bathPlanInfo.textContent = val > 0
             ? 'Badeplan wird gespeichert und neu berechnet.'
-            : 'Badeplan wird zurueckgesetzt.';
+            : 'Badeplan wird zur\u00fcckgesetzt.';
         }
       }
 
@@ -2835,7 +2835,7 @@ class PoolChemistryCardEditor extends HTMLElement {
   render() {
     if (!this._hass || !this._config) return;
 
-    // Erstelle das Grundgerüst nur, wenn es noch nicht existiert
+    // Erstelle das Grundger\u00fcst nur, wenn es noch nicht existiert
     if (!this._initialized) {
       this.innerHTML = `
         <div class="card-config" style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
@@ -2850,7 +2850,7 @@ class PoolChemistryCardEditor extends HTMLElement {
               <ha-switch id="lz-heat-eta-enabled"></ha-switch>
             </div>
             <ha-textfield id="lz-heat-eta-history" label="Verlauf in Stunden" type="number" min="6" max="168"></ha-textfield>
-            <ha-textfield id="lz-heat-eta-fallback" label="Fallback-Heizrate °C/h" type="number" min="0.1" max="10" step="0.1"></ha-textfield>
+            <ha-textfield id="lz-heat-eta-fallback" label="Fallback-Heizrate \u00b0C/h" type="number" min="0.1" max="10" step="0.1"></ha-textfield>
           </div>
         </div>
       `;
@@ -2931,6 +2931,7 @@ if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
     console.info("%c SMART-POOL-ASSISTANT %c 3.0.25 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
+
 
 
 

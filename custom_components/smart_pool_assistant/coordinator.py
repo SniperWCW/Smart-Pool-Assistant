@@ -734,7 +734,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             pool_volume_liters = max(float(self.config.get(CONF_POOL_VOLUME, 0.0)) * 1000.0, 0.0)
             details = normalize_water_exchange(amount, percent, pool_volume_liters)
             if details is None:
-                raise HomeAssistantError("Wasserwechsel braucht Liter oder Prozent groesser 0.")
+                raise HomeAssistantError("Wasserwechsel braucht Liter oder Prozent gr\u00f6\u00dfer 0.")
             amount = details["liters"]
 
         self.pool_covered, self.usage_mode, msg = update_maintenance_history(
@@ -854,8 +854,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             self.hass,
             self.config,
             (
-                "Bitte fuer die Dosierqualitaet erneut messen. "
-                f"Gueltiges Zeitfenster: zwischen {self._format_local_time(start_dt)} Uhr "
+                "Bitte f\u00fcr die Dosierqualit\u00e4t erneut messen. "
+                f"G\u00fcltiges Zeitfenster: zwischen {self._format_local_time(start_dt)} Uhr "
                 f"und {self._format_local_time(end_dt)} Uhr."
             ),
             "chlor_sample_window",
@@ -915,21 +915,21 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             start_dt = dose_dt + timedelta(hours=MIN_DOSE_EFFECT_HOURS) if dose_dt else None
             end_dt = dose_dt + timedelta(hours=MAX_DOSE_EFFECT_HOURS) if dose_dt else None
             message = (
-                "Nachmessung war zu frueh und zaehlt noch nicht als Dosier-Sample. "
+                "Nachmessung war zu fr\u00fch und z\u00e4hlt noch nicht als Dosier-Sample. "
                 f"Bitte zwischen {self._format_local_time(start_dt)} Uhr und {self._format_local_time(end_dt)} Uhr erneut messen."
             )
         elif reason == "follow_up_too_late":
-            message = "Nachmessung war zu spaet und konnte nicht mehr als Dosier-Sample gewertet werden."
+            message = "Nachmessung war zu sp\u00e4t und konnte nicht mehr als Dosier-Sample gewertet werden."
         elif reason == "dose_factor_out_of_range":
             message = (
                 "Dosier-Sample konnte nicht gewertet werden. "
-                f"Der berechnete Faktor ({latest_entry.get('dose_factor')}) liegt ausserhalb des erlaubten Bereichs. "
+                f"Der berechnete Faktor ({latest_entry.get('dose_factor')}) liegt au\u00dferhalb des erlaubten Bereichs. "
                 f"{details}"
             )
         elif reason == "next_dose_before_follow_up":
-            message = "Dosier-Sample konnte nicht gewertet werden, weil vor der gueltigen Nachmessung bereits eine weitere Zugabe erfasst wurde."
+            message = "Dosier-Sample konnte nicht gewertet werden, weil vor der g\u00fcltigen Nachmessung bereits eine weitere Zugabe erfasst wurde."
         elif reason == "missing_following_measurement":
-            message = "Fuer die letzte Chlorzugabe fehlt noch eine passende Nachmessung im gueltigen Zeitfenster."
+            message = "F\u00fcr die letzte Chlorzugabe fehlt noch eine passende Nachmessung im g\u00fcltigen Zeitfenster."
 
         if message:
             await async_send_notification(self.hass, self.config, message, "chlor_sample_status")
@@ -1155,10 +1155,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
                     except (asyncio.TimeoutError, asyncio.CancelledError):
                         poollab_fetch_result = "error"
-                        poollab_fetch_error = "Bluetooth-Abfrage fuer PoolLab wurde abgebrochen oder hat das Timeout erreicht."
+                        poollab_fetch_error = "Bluetooth-Abfrage f\u00fcr PoolLab wurde abgebrochen oder hat das Timeout erreicht."
                         poollab_fetch_completed_at = dt_util.now().isoformat()
                         self._set_poollab_cooldown(_BLE_ERROR_COOLDOWN)
-                        _LOGGER.warning("Bluetooth-Abfrage fuer PoolLab zeitlich ueberschritten oder abgebrochen. Nutze Cache oder manuelle Daten.")
+                        _LOGGER.warning("Bluetooth-Abfrage f\u00fcr PoolLab zeitlich \u00fcberschritten oder abgebrochen. Nutze Cache oder manuelle Daten.")
                 else:
                     poollab_fetch_result = "error"
                     poollab_fetch_error = f"PoolLab Bluetooth-Geraet nicht gefunden: {ble_address}"

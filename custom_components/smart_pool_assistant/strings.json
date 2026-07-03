@@ -3,18 +3,18 @@
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
-        "description": "Konfiguriere die Sensoren und Zielbereiche für deinen Pool oder Whirlpool.",
+        "description": "Konfiguriere die Sensoren und Zielbereiche f\u00fcr deinen Pool oder Whirlpool.",
         "data": {
-          "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
+          "api_key": "PoolLab API-Key (Optional f\u00fcr Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
           "ph_sensor": "pH-Sensor",
-          "temp_sensor": "Temperatur-Sensor (°C)",
+          "temp_sensor": "Temperatur-Sensor (\u00b0C)",
           "pump_entity": "Pumpe (optional)",
           "pool_connection_sensor": "Pool-Verbindung (Binary Sensor)",
-          "weather_entity": "Wetter-Entitaet (optional)",
+          "weather_entity": "Wetter-Entit\u00e4t (optional)",
           "uv_sensor": "UV-Sensor (optional)",
-          "pool_volume": "Poolvolumen (m³)",
+          "pool_volume": "Poolvolumen (m\u00b3)",
           "chlor_min": "Chlor Minimum (mg/l)",
           "chlor_max": "Chlor Maximum (mg/l)",
           "chlor_shock_max": "Schockchlorung Maximum (mg/l)",
@@ -22,8 +22,8 @@
           "ph_max": "pH Maximum",
           "chlor_product_type": "Chlorprodukt-Typ",
           "chlor_content": "Wirkstoffanteil Chlor laut Produktangabe (z.B. 0.56 organisch, 0.65-0.70 Calciumhypochlorit, 0.12-0.15 Natriumhypochlorit)",
-          "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
-          "ph_up_dosage": "pH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m\u00b3 f\u00fcr -0.2 pH)",
+          "ph_up_dosage": "pH-Plus Dosierung (g pro 10m\u00b3 f\u00fcr +0.1 pH)",
           "notify_service": "Benachrichtigungs-Dienst",
           "notify_service_2": "Benachrichtigungs-Dienst 2 (optional)",
           "persistent_notification": "Benachrichtigung in HA anzeigen",
@@ -31,10 +31,10 @@
           "pool_connection_offline_delay": "Pool-Verbindung: Offline-Wartezeit (Minuten)",
           "filter_clean_interval": "Filter Reinigungsintervall (Stunden)",
           "filter_replace_interval": "Filter Wechselintervall (Tage)",
-          "filter_clean_yellow_threshold": "Reinigung: Warnung (Stunden vor Fälligkeit)",
-          "filter_clean_red_threshold": "Reinigung: Kritisch (Stunden überfällig)",
-          "filter_replace_yellow_threshold": "Wechsel: Warnung (Tage vor Fälligkeit)",
-          "filter_replace_red_threshold": "Wechsel: Kritisch (Tage überfällig)"
+          "filter_clean_yellow_threshold": "Reinigung: Warnung (Stunden vor F\u00e4lligkeit)",
+          "filter_clean_red_threshold": "Reinigung: Kritisch (Stunden \u00fcberf\u00e4llig)",
+          "filter_replace_yellow_threshold": "Wechsel: Warnung (Tage vor F\u00e4lligkeit)",
+          "filter_replace_red_threshold": "Wechsel: Kritisch (Tage \u00fcberf\u00e4llig)"
         }
       }
     }
@@ -43,16 +43,16 @@
     "step": {
       "init": {
         "data": {
-          "api_key": "PoolLab API-Key (Optional für Cloud-Abruf)",
+          "api_key": "PoolLab API-Key (Optional f\u00fcr Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
           "ph_sensor": "pH-Sensor",
-          "temp_sensor": "Temperatur-Sensor (°C)",
+          "temp_sensor": "Temperatur-Sensor (\u00b0C)",
           "pump_entity": "Pumpe (optional)",
           "pool_connection_sensor": "Pool-Verbindung (Binary Sensor)",
-          "weather_entity": "Wetter-Entitaet (optional)",
+          "weather_entity": "Wetter-Entit\u00e4t (optional)",
           "uv_sensor": "UV-Sensor (optional)",
-          "pool_volume": "Poolvolumen (m³)",
+          "pool_volume": "Poolvolumen (m\u00b3)",
           "chlor_min": "Chlor Minimum (mg/l)",
           "chlor_max": "Chlor Maximum (mg/l)",
           "chlor_shock_max": "Schockchlorung Maximum (mg/l)",
@@ -60,8 +60,8 @@
           "ph_max": "pH Maximum",
           "chlor_product_type": "Chlorprodukt-Typ",
           "chlor_content": "Wirkstoffanteil Chlor laut Produktangabe (z.B. 0.56 organisch, 0.65-0.70 Calciumhypochlorit, 0.12-0.15 Natriumhypochlorit)",
-          "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m³ für -0.2 pH)",
-          "ph_up_dosage": "pH-Plus Dosierung (g pro 10m³ für +0.1 pH)",
+          "ph_down_dosage": "pH-Minus Dosierung (ml pro 10m\u00b3 f\u00fcr -0.2 pH)",
+          "ph_up_dosage": "pH-Plus Dosierung (g pro 10m\u00b3 f\u00fcr +0.1 pH)",
           "notify_service": "Benachrichtigungs-Dienst",
           "notify_service_2": "Benachrichtigungs-Dienst 2 (optional)",
           "persistent_notification": "Benachrichtigung in HA anzeigen",
@@ -69,10 +69,10 @@
           "pool_connection_offline_delay": "Pool-Verbindung: Offline-Wartezeit (Minuten)",
           "filter_clean_interval": "Filter Reinigungsintervall (Stunden)",
           "filter_replace_interval": "Filter Wechselintervall (Tage)",
-          "filter_clean_yellow_threshold": "Reinigung: Warnung (Stunden vor Fälligkeit)",
-          "filter_clean_red_threshold": "Reinigung: Kritisch (Stunden überfällig)",
-          "filter_replace_yellow_threshold": "Wechsel: Warnung (Tage vor Fälligkeit)",
-          "filter_replace_red_threshold": "Wechsel: Kritisch (Tage überfällig)"
+          "filter_clean_yellow_threshold": "Reinigung: Warnung (Stunden vor F\u00e4lligkeit)",
+          "filter_clean_red_threshold": "Reinigung: Kritisch (Stunden \u00fcberf\u00e4llig)",
+          "filter_replace_yellow_threshold": "Wechsel: Warnung (Tage vor F\u00e4lligkeit)",
+          "filter_replace_red_threshold": "Wechsel: Kritisch (Tage \u00fcberf\u00e4llig)"
         }
       }
     }
@@ -99,11 +99,11 @@
   "services": {
     "log_maintenance": {
       "name": "Pool-Aktion protokollieren",
-      "description": "Erfasst Chemie-Zugaben, Filterwartung oder Statusänderungen in der Historie.",
+      "description": "Erfasst Chemie-Zugaben, Filterwartung oder Status\u00e4nderungen in der Historie.",
       "fields": {
         "entity_id": {
-          "name": "Entität",
-          "description": "Die Pool-Empfehlung Entität."
+          "name": "Entit\u00e4t",
+          "description": "Die Pool-Empfehlung Entit\u00e4t."
         },
         "type": {
           "name": "Typ",
@@ -117,7 +117,7 @@
             "filter_replace": "Filter gewechselt",
             "set_covered": "Abdeckung Status (0=Offen, 1=Abgedeckt)",
             "set_usage": "Nutzungsmodus (0=Kein, 1=Normal, 2=Party)",
-            "set_bath_plan": "Baden in Stunden (0=Zuruecksetzen)"
+            "set_bath_plan": "Baden in Stunden (0=Zur\u00fccksetzen)"
           }
         },
         "amount": {
@@ -126,23 +126,24 @@
         },
         "water_exchange_percent": {
           "name": "Wasserwechsel Prozent",
-          "description": "Optionaler Prozentwert fuer den Wasserwechsel."
+          "description": "Optionaler Prozentwert f\u00fcr den Wasserwechsel."
         }
       }
     },
     "repair_learning_history": {
       "name": "Lernhistorie reparieren",
-      "description": "Fuehrt den Lernhistorie-Abgleich erneut aus und schreibt die Sample-Diagnose ins bestehende Diagnose-Log.",
+      "description": "F\u00fchrt den Lernhistorie-Abgleich erneut aus und schreibt die Sample-Diagnose ins bestehende Diagnose-Log.",
       "fields": {
         "entity_id": {
-          "name": "Entitaet",
-          "description": "Die Pool-Empfehlung Entitaet."
+          "name": "Entit\u00e4t",
+          "description": "Die Pool-Empfehlung Entit\u00e4t."
         },
         "fetch_poollab": {
           "name": "PoolLab vorher abrufen",
-          "description": "Optional zuerst einen frischen PoolLab-Abruf ausloesen und danach die Lernhistorie reparieren."
+          "description": "Optional zuerst einen frischen PoolLab-Abruf ausl\u00f6sen und danach die Lernhistorie reparieren."
         }
       }
     }
   }
 }
+

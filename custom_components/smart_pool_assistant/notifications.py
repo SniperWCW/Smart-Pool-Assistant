@@ -1,4 +1,4 @@
-"""Notification helpers for Smart Pool Assistant."""
+﻿"""Notification helpers for Smart Pool Assistant."""
 from __future__ import annotations
 
 from homeassistant.core import HomeAssistant
@@ -70,7 +70,7 @@ async def async_send_pool_connection_lost(
         conf,
         (
             f"Achtung: Der Pool ist seit {offline_minutes} Minuten offline. "
-            "Automatisierungen (Reset/Heizung) sind eventuell eingeschraenkt."
+            "Automatisierungen (Reset/Heizung) sind eventuell eingeschr\u00e4nkt."
         ),
         "pool_connection_lost",
         title="Pool: Verbindung verloren",
@@ -172,3 +172,4 @@ def _notify_services(conf: dict) -> list[str]:
         if service and service not in services:
             services.append(service)
     return services
+

@@ -1,4 +1,4 @@
-"""CYA history and forecast helpers for Smart Pool Assistant."""
+﻿"""CYA history and forecast helpers for Smart Pool Assistant."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -278,7 +278,7 @@ def _simulate_forecast(
             "days_to_80": None,
             "days_to_100": None,
             "confidence": "learning",
-            "message": "Keine CYA-Prognose verfuegbar.",
+            "message": "Keine CYA-Prognose verf\u00fcgbar.",
         }
 
     modeled = float(current_cya)
@@ -291,7 +291,7 @@ def _simulate_forecast(
             "days_to_80": None,
             "days_to_100": None,
             "confidence": "learning",
-            "message": "CYA-Prognose lernt noch: erster Messwert vorhanden, mehr Verlauf noetig.",
+            "message": "CYA-Prognose lernt noch: erster Messwert vorhanden, mehr Verlauf n\u00f6tig.",
         }
 
     if daily_exchange_fraction <= 0 and daily_cya_input <= 0:
@@ -338,9 +338,9 @@ def _build_forecast_message(
         return f"Bei aktuellem Verlauf voraussichtlich unter 80 ppm ab {target_date}."
     if days_to_100 is not None:
         target_date = (now + timedelta(days=days_to_100)).strftime("%d.%m.")
-        return f"Bei aktuellem Verlauf voraussichtlich ueber 100 ppm ab {target_date}."
+        return f"Bei aktuellem Verlauf voraussichtlich \u00fcber 100 ppm ab {target_date}."
     if estimated_daily_change is None:
-        return "Keine CYA-Prognose verfuegbar."
+        return "Keine CYA-Prognose verf\u00fcgbar."
     if abs(estimated_daily_change) < 0.1:
         return (
             f"CYA bleibt bei aktuellem Verlauf voraussichtlich nahe {current_cya:.0f} ppm "
@@ -380,7 +380,7 @@ def _build_cya_status_message(
         return f"CYA zu hoch. Teilwasserwechsel einplanen. {measurement_text}"
 
     return (
-        f"CYA zu hoch: fuer etwa {CYA_IDEAL_MAX:.0f} ppm ca. {recommended_exchange_liters:.0f} l "
+        f"CYA zu hoch: f\u00fcr etwa {CYA_IDEAL_MAX:.0f} ppm ca. {recommended_exchange_liters:.0f} l "
         f"({recommended_exchange_percent:.1f} %) Wasser wechseln. {measurement_text}"
     )
 
@@ -496,3 +496,4 @@ def _non_negative_float(value: object) -> float | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed >= 0 else None
+

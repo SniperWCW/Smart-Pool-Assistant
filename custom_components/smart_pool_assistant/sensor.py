@@ -3,16 +3,17 @@ from __future__ import annotations
 
 from homeassistant.components.sensor import (
     SensorEntity,
+    SensorDeviceClass,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -29,17 +30,17 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "PH-Plus", "ph_erhoeher_total", "g", "mdi:arrow-up-bold"),
         PoolAssistantSensor(coordinator, "Chlor Istwert", "chlor_ist", "mg/l", "mdi:water-percent"),
         PoolAssistantSensor(coordinator, "pH Istwert", "ph_ist", "pH", "mdi:ph"),
-        PoolAssistantSensor(coordinator, "Temperatur Istwert", "temp_ist", "°C", "mdi:thermometer"),
+        PoolAssistantSensor(coordinator, "Temperatur Istwert", "temp_ist", "\u00b0C", "mdi:thermometer"),
         PoolAssistantSensor(coordinator, "Datenquelle", "data_source", None, "mdi:database-import"),
         PoolAssistantSensor(coordinator, "Abdeckung Status", "pool_covered", None, "mdi:pool"),
         PoolAssistantSensor(coordinator, "Nutzungsmodus", "usage_mode", None, "mdi:account-group"),
         PoolAssistantSensor(coordinator, "Chlorverbrauch 24h", "chlor_consumption_24h", "mg/l/d", "mdi:chart-line"),
         PoolAssistantSensor(coordinator, "Chlorverbrauch 7d", "chlor_consumption_7d", "mg/l/d", "mdi:chart-line"),
         PoolAssistantSensor(coordinator, "Chlorverbrauch 14d", "chlor_consumption_14d", "mg/l/d", "mdi:chart-line"),
-        PoolAssistantSensor(coordinator, "Persoenlicher Chlorfaktor", "personal_chlor_factor", None, "mdi:brain"),
-        PoolAssistantSensor(coordinator, "Persoenlicher Chlor Dosierfaktor", "personal_chlor_dose_factor", None, "mdi:scale-balance"),
-        PoolAssistantSensor(coordinator, "Chlor Vorhersagequalitaet", "chlor_prediction_quality", None, "mdi:star-check"),
-        PoolAssistantSensor(coordinator, "Chlor Dosierqualitaet", "chlor_dose_prediction_quality", None, "mdi:star-check"),
+        PoolAssistantSensor(coordinator, "Pers\u00f6nlicher Chlorfaktor", "personal_chlor_factor", None, "mdi:brain"),
+        PoolAssistantSensor(coordinator, "Pers\u00f6nlicher Chlor Dosierfaktor", "personal_chlor_dose_factor", None, "mdi:scale-balance"),
+        PoolAssistantSensor(coordinator, "Chlor Vorhersagequalit\u00e4t", "chlor_prediction_quality", None, "mdi:star-check"),
+        PoolAssistantSensor(coordinator, "Chlor Dosierqualit\u00e4t", "chlor_dose_prediction_quality", None, "mdi:star-check"),
         PoolAssistantSensor(coordinator, "Chlor Prognose Tagesverlust", "chlor_forecast_daily_loss", "mg/l/d", "mdi:chart-timeline-variant"),
         PoolAssistantSensor(coordinator, "Chlor Bis Minimum", "chlor_hours_to_min", "h", "mdi:timer-sand"),
         PoolAssistantSensor(coordinator, "Chlor Bis 0 6", "chlor_hours_to_critical_low", "h", "mdi:timer-alert-outline"),
@@ -48,18 +49,19 @@ async def async_setup_entry(
         PoolAssistantSensor(coordinator, "pH Drift 24h", "ph_drift_24h", "pH/d", "mdi:chart-line"),
         PoolAssistantSensor(coordinator, "pH Drift 7d", "ph_drift_7d", "pH/d", "mdi:chart-line"),
         PoolAssistantSensor(coordinator, "pH Drift 14d", "ph_drift_14d", "pH/d", "mdi:chart-line"),
-        PoolAssistantSensor(coordinator, "pH Vorhersagequalitaet", "ph_prediction_quality", None, "mdi:star-check"),
+        PoolAssistantSensor(coordinator, "pH Vorhersagequalit\u00e4t", "ph_prediction_quality", None, "mdi:star-check"),
         PoolAssistantSensor(coordinator, "pH Trend", "ph_trend", None, "mdi:trending-up"),
         PoolAssistantPhStabilitySensor(coordinator),
-        PoolAssistantSensor(coordinator, "Filter Reinigung Fällig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
-        PoolAssistantSensor(coordinator, "Filter Wechsel Fällig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
-        PoolAssistantSensor(coordinator, "Cyanursäure", "cyanuric_acid", "ppm", "mdi:shield-check"),
-        PoolAssistantSensor(coordinator, "CYA Nettoveraenderung", "cya_estimated_daily_change", "ppm/d", "mdi:chart-timeline-variant"),
+        PoolAssistantSensor(coordinator, "Filter Reinigung F\u00e4llig", "hours_since_filter_clean", "h", "mdi:filter-outline"),
+        PoolAssistantSensor(coordinator, "Filter Wechsel F\u00e4llig", "days_since_filter_replace", "Tage", "mdi:filter-cog-outline"),
+        PoolAssistantSensor(coordinator, "Cyanurs\u00e4ure", "cyanuric_acid", "ppm", "mdi:shield-check"),
+        PoolAssistantSensor(coordinator, "CYA Nettover\u00e4nderung", "cya_estimated_daily_change", "ppm/d", "mdi:chart-timeline-variant"),
         PoolAssistantSensor(coordinator, "CYA Prognose", "cya_forecast_message", None, "mdi:timeline-clock-outline"),
         PoolAssistantBatterySensor(coordinator),
         PoolAssistantStatusSensor(coordinator),
     ]
     async_add_entities(sensors)
+
 
 class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Pool Assistant sensor."""
@@ -80,6 +82,7 @@ class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         return self.coordinator.data.get(self._key)
+
 
 class PoolAssistantBatterySensor(CoordinatorEntity, SensorEntity):
     """Representation of the PoolLab battery level via BLE."""
@@ -131,6 +134,7 @@ class PoolAssistantPhStabilitySensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         return self.coordinator.data.get("ph_stability_attributes")
+
 
 class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
     """Status sensor for recommendation text."""

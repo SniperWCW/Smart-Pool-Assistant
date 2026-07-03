@@ -1,4 +1,4 @@
-"""Chemistry calculation helpers for Smart Pool Assistant."""
+﻿"""Chemistry calculation helpers for Smart Pool Assistant."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -184,7 +184,7 @@ def calculate_pool_chemistry(
         if (rain_amount is not None and rain_amount >= 10.0) or (
             rain_probability is not None and rain_probability >= 70.0
         ):
-            weather_note = "Regen erwartet: Danach moeglichst erneut messen."
+            weather_note = "Regen erwartet: Danach m\u00f6glichst erneut messen."
 
     ph_diff = 0.0
     if ph_ist is not None:
@@ -351,3 +351,4 @@ def build_recommendation(
     if not warnings:
         return "\u2705 Alle Werte im Zielbereich"
     return "\u26a0\ufe0f " + " & ".join(warnings)
+
