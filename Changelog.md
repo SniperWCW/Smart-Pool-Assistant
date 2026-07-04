@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.28] - 2026-07-04
+
+- **Vor-Baden-Text sprachlich geschaerft**: Die Karte trennt bei aktivem Badeplan jetzt klar zwischen Sofortaktion und Zielaussage, damit eindeutig ist, dass die berechnete `chlor_pre`-Menge jetzt zugegeben werden soll und der Mindestwert zum geplanten Badezeitpunkt noch passt.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.28` angehoben.
+
 ## [3.0.27] - 2026-07-04
 
 - **Vor-Baden-Text fachlich praezisiert**: Die Karte formuliert `chlor_pre` mit aktivem Badeplan jetzt als Sofortzugabe, damit klar ist, dass die berechnete Menge jetzt dosiert wird und den Mindestwert zum geplanten Badezeitpunkt absichert.

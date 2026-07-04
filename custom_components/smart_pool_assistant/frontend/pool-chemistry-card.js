@@ -1885,13 +1885,13 @@ class PoolChemistryCard extends HTMLElement {
         if (attr.chlor_pre > 0 && attr.chlor_dose > 0) {
           this.querySelector('#chlor-rec').innerHTML =
             `${bathPlanActive
-              ? `Jetzt <b>${chlorPreText}</b> zugeben, damit der Mindestwert in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}. `
+              ? `Jetzt <b>${chlorPreText}</b> zugeben${chlorPreSpoonHint}. So passt der Mindestwert voraussichtlich in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> um <b>${bathPlanTimeLabel} Uhr</b> noch. `
               : `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}. `}` +
             `Nach der Nutzung <b>${chlorDoseText}</b> anorganisches Chlor zur aktiven Desinfektion zugeben${chlorSpoonHint}.`;
         } else if (attr.chlor_pre > 0) {
           this.querySelector('#chlor-rec').innerHTML =
             bathPlanActive
-              ? `Jetzt <b>${chlorPreText}</b> zugeben, damit der Mindestwert in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}.`
+              ? `Jetzt <b>${chlorPreText}</b> zugeben${chlorPreSpoonHint}. So passt der Mindestwert voraussichtlich in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> um <b>${bathPlanTimeLabel} Uhr</b> noch.`
               : `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}.`;
         } else {
           this.querySelector('#chlor-rec').innerHTML =
@@ -2929,7 +2929,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.27 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.28 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
