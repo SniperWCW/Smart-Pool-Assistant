@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.27] - 2026-07-04
+
+- **Vor-Baden-Text fachlich praezisiert**: Die Karte formuliert `chlor_pre` mit aktivem Badeplan jetzt als Sofortzugabe, damit klar ist, dass die berechnete Menge jetzt dosiert wird und den Mindestwert zum geplanten Badezeitpunkt absichert.
+- **Nachmess-Sperren pro Chemiepfad getrennt**: Eine erfasste pH-Zugabe sperrt in der Karte nur noch die pH-Eingabe, eine erfasste Chlor-Zugabe nur noch die Chlor-Eingabe.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.27` angehoben.
+
 ## [3.0.26] - 2026-07-03
 
 - **Umlaute in Push- und UI-Texten korrigiert**: Benachrichtigungen, Sensornamen, Frontend-Texte sowie Config-/Service-Labels verwenden jetzt wieder saubere deutsche Umlaute statt ASCII-Umschreibungen oder fehlerhaften Encoding-Resten.

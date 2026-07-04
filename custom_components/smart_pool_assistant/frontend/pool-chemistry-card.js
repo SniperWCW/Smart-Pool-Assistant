@@ -1868,7 +1868,7 @@ class PoolChemistryCard extends HTMLElement {
       this.querySelector('#chlor-rec').innerHTML = isFromStorage
         ? "<i>Warte auf neue Messung (Werte aus Speicher)</i>"
         : "Warte auf Messwerte...";
-    } else if (chlorAwaitingRetest || awaitingRetest) {
+    } else if (chlorAwaitingRetest) {
       this.querySelector('#chlor-rec').innerHTML = "<i>Warten auf erneute Messung nach Chlor-Zugabe.</i>";
     } else {
       const chlorDoseText = this._formatDoseAmount(attr.chlor_dose, "g");
@@ -1885,13 +1885,13 @@ class PoolChemistryCard extends HTMLElement {
         if (attr.chlor_pre > 0 && attr.chlor_dose > 0) {
           this.querySelector('#chlor-rec').innerHTML =
             `${bathPlanActive
-              ? `Vor dem Baden in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> <b>${chlorPreText}</b> einplanen, damit der Mindestwert gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}. `
+              ? `Jetzt <b>${chlorPreText}</b> zugeben, damit der Mindestwert in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}. `
               : `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}. `}` +
             `Nach der Nutzung <b>${chlorDoseText}</b> anorganisches Chlor zur aktiven Desinfektion zugeben${chlorSpoonHint}.`;
         } else if (attr.chlor_pre > 0) {
           this.querySelector('#chlor-rec').innerHTML =
             bathPlanActive
-              ? `Vor dem Baden in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> <b>${chlorPreText}</b> einplanen, damit der Mindestwert gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}.`
+              ? `Jetzt <b>${chlorPreText}</b> zugeben, damit der Mindestwert in ca. <b>${bathPlanHours.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h</b> gegen <b>${bathPlanTimeLabel} Uhr</b> noch passt${chlorPreSpoonHint}.`
               : `Vor dem Baden bei Bedarf nur <b>${chlorPreText}</b> bis in den sicheren Bereich korrigieren${chlorPreSpoonHint}.`;
         } else {
           this.querySelector('#chlor-rec').innerHTML =
@@ -1935,7 +1935,7 @@ class PoolChemistryCard extends HTMLElement {
 
     let phText = isFromStorage ? "<i>Warte auf neue Messung...</i>" : "Warte auf Messwerte...";
     if (attr.ph_ist !== null && attr.ph_ist !== undefined && !isFromStorage) {
-      if (phAwaitingRetest || awaitingRetest) {
+      if (phAwaitingRetest) {
         phText = "<i>Warten auf erneute Messung nach pH-Zugabe.</i>";
       } else {
         phText = "pH-Wert ist im Zielbereich.";
@@ -1957,26 +1957,26 @@ class PoolChemistryCard extends HTMLElement {
     const chlorInput = this.querySelector('#input-chlor');
     const chlorButton = this.querySelector('#btn-chlor');
     if (chlorInput) {
-      chlorInput.disabled = chlorAwaitingRetest || awaitingRetest;
-      chlorInput.placeholder = (chlorAwaitingRetest || awaitingRetest) ? "Neue Messung abwarten" : "Menge g";
+      chlorInput.disabled = chlorAwaitingRetest;
+      chlorInput.placeholder = chlorAwaitingRetest ? "Neue Messung abwarten" : "Menge g";
     }
     if (chlorButton) {
-      chlorButton.disabled = chlorAwaitingRetest || awaitingRetest;
+      chlorButton.disabled = chlorAwaitingRetest;
     }
 
     const phPlusInput = this.querySelector('#input-ph_plus');
     const phMinusInput = this.querySelector('#input-ph_minus');
     const phButton = this.querySelector('#btn-ph');
     if (phPlusInput) {
-      phPlusInput.disabled = phAwaitingRetest || awaitingRetest;
-      phPlusInput.placeholder = (phAwaitingRetest || awaitingRetest) ? "Neue Messung abwarten" : "Plus g";
+      phPlusInput.disabled = phAwaitingRetest;
+      phPlusInput.placeholder = phAwaitingRetest ? "Neue Messung abwarten" : "Plus g";
     }
     if (phMinusInput) {
-      phMinusInput.disabled = phAwaitingRetest || awaitingRetest;
-      phMinusInput.placeholder = (phAwaitingRetest || awaitingRetest) ? "Neue Messung abwarten" : "Minus ml";
+      phMinusInput.disabled = phAwaitingRetest;
+      phMinusInput.placeholder = phAwaitingRetest ? "Neue Messung abwarten" : "Minus ml";
     }
     if (phButton) {
-      phButton.disabled = phAwaitingRetest || awaitingRetest;
+      phButton.disabled = phAwaitingRetest;
     }
 
     const waterLitersInput = this.querySelector('#input-water_exchange_liters');
@@ -2929,7 +2929,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.26 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.27 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
