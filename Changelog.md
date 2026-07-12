@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.29] - 2026-07-12
+
+- **Branding fuer HACS und Home Assistant vereinheitlicht**: Icon, Logo und Banner wurden als konsistentes Asset-Set fuer kleine HACS-Kacheln, breite Brand-Darstellung und README-Vorschau neu aufgebaut.
+- **HACS-Metadaten auf korrektes Brand-Asset umgestellt**: `hacs.json` und `custom_components/hacs.json` verweisen fuer `brand` jetzt auf das breite Banner statt auf das quadratische Logo.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.29` angehoben.
+
 ## [3.0.28] - 2026-07-04
 
 - **Vor-Baden-Text sprachlich geschaerft**: Die Karte trennt bei aktivem Badeplan jetzt klar zwischen Sofortaktion und Zielaussage, damit eindeutig ist, dass die berechnete `chlor_pre`-Menge jetzt zugegeben werden soll und der Mindestwert zum geplanten Badezeitpunkt noch passt.
