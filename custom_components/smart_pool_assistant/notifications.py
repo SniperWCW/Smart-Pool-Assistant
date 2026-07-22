@@ -37,25 +37,27 @@ async def async_send_notification(
 
     for service in _notify_services(conf):
         domain, service_name = service.split(".", 1)
+        service_data_payload = _build_notification_data(notification_id, data)
         service_data = {
             "title": title,
             "message": message,
         }
-        if data:
-            service_data["data"] = data
+        if service_data_payload:
+            service_data["data"] = service_data_payload
         await hass.services.async_call(domain, service_name, service_data)
 
 
 async def async_send_follow_up(
     hass: HomeAssistant,
     conf: dict,
+    notification_id: str = "follow_up",
 ) -> None:
     """Send the chemical follow-up notification."""
     await async_send_notification(
         hass,
         conf,
         "Die Einwirkzeit ist um. Bitte Pool-Werte erneut pr\u00fcfen!",
-        "follow_up",
+        notification_id,
     )
 
 
@@ -76,7 +78,7 @@ async def async_send_pool_connection_lost(
         title="Pool: Verbindung verloren",
         data={
             "tag": "pool-connection-status",
-            "group": "pool-maintenance",
+            "group": "smart-pool-assistant-connection",
             "color": "#F44336",
             "notification_icon": "mdi:wifi-off",
             "url": "/dashboard-zuhause/pool",
@@ -172,4 +174,45 @@ def _notify_services(conf: dict) -> list[str]:
         if service and service not in services:
             services.append(service)
     return services
+
+
+def _build_notification_data(notification_id: str, data: dict | None) -> dict:
+    """Build mobile notification metadata with stable grouping defaults."""
+    payload = dict(data or {})
+    payload.setdefault("tag", f"smart-pool-assistant-{notification_id}")
+    payload.setdefault("group", _notification_group(notification_id))
+    return payload
+
+
+def _notification_group(notification_id: str) -> str:
+    """Return a sensible default group for notification collapsing."""
+    if notification_id.startswith("filter_clean"):
+        return "smart-pool-assistant-filter-clean"
+    if notification_id.startswith("filter_replace"):
+        return "smart-pool-assistant-filter-replace"
+    if notification_id.startswith("maintenance_chlor"):
+        return "smart-pool-assistant-chlorine-dose"
+    if notification_id.startswith("maintenance_ph_plus"):
+        return "smart-pool-assistant-ph-plus-dose"
+    if notification_id.startswith("maintenance_ph_minus"):
+        return "smart-pool-assistant-ph-minus-dose"
+    if notification_id.startswith("maintenance_water_exchange"):
+        return "smart-pool-assistant-water-exchange"
+    if notification_id.startswith("maintenance"):
+        return "smart-pool-assistant-maintenance"
+    if notification_id.startswith("chlor_sample_window"):
+        return "smart-pool-assistant-chlorine-window"
+    if notification_id.startswith("chlor_sample_status"):
+        return "smart-pool-assistant-chlorine-sample"
+    if notification_id.startswith("follow_up_chlor"):
+        return "smart-pool-assistant-chlorine-follow-up"
+    if notification_id.startswith("follow_up_ph_plus"):
+        return "smart-pool-assistant-ph-plus-follow-up"
+    if notification_id.startswith("follow_up_ph_minus"):
+        return "smart-pool-assistant-ph-minus-follow-up"
+    if notification_id == "follow_up":
+        return "smart-pool-assistant-follow-up"
+    if notification_id.startswith("pool_connection"):
+        return "smart-pool-assistant-connection"
+    return "smart-pool-assistant"
 

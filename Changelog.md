@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.30] - 2026-07-22
+
+- **Redundanten Chlor-Nachmesshinweis entfernt**: Direkt nach einer erfassten Chlorzugabe wird nicht mehr zusaetzlich gemeldet, dass noch eine passende Nachmessung fehlt, wenn das gueltige Zeitfenster bereits separat mitgeteilt wurde.
+- **Benachrichtigungs-Gruppierung feiner aufgeteilt**: Push-Benachrichtigungen erhalten jetzt automatisch stabile `tag`-/`group`-Werte passend zu Chlorzugabe, pH-Plus, pH-Minus, Wasserwechsel, Filterreinigung, Filterwechsel, Chlor-Zeitfenster, Chlor-Sample-Status und Verbindungswarnungen.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.30` angehoben.
+
 ## [3.0.29] - 2026-07-12
 
 - **Branding fuer HACS und Home Assistant vereinheitlicht**: Icon, Logo und Banner wurden als konsistentes Asset-Set fuer kleine HACS-Kacheln, breite Brand-Darstellung und README-Vorschau neu aufgebaut.

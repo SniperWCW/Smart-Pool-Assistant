@@ -771,7 +771,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         conf = self.config
         # Send Notification (Persistent & Service)
         if msg:
-            await async_send_notification(self.hass, conf, msg, "maintenance")
+            await async_send_notification(self.hass, conf, msg, f"maintenance_{m_type}")
         if m_type == "chlor":
             await self._async_notify_chlor_sample_window(now)
 
@@ -929,7 +929,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         elif reason == "next_dose_before_follow_up":
             message = "Dosier-Sample konnte nicht gewertet werden, weil vor der g\u00fcltigen Nachmessung bereits eine weitere Zugabe erfasst wurde."
         elif reason == "missing_following_measurement":
-            message = "F\u00fcr die letzte Chlorzugabe fehlt noch eine passende Nachmessung im g\u00fcltigen Zeitfenster."
+            return
 
         if message:
             await async_send_notification(self.hass, self.config, message, "chlor_sample_status")
@@ -947,7 +947,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         return get_action_dt(self.maintenance_history, action_key, self._parse_ts_aware)
 
     def _get_latest_chemical_action(self):
-        """Return raw timestamp and datetime for the latest chemical action."""
+        """Return action type, raw timestamp and datetime for the latest chemical action."""
         candidates = []
         for action_key in ("chlor", "ph_plus", "ph_minus"):
             action = self.maintenance_history.get(action_key)
@@ -956,13 +956,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             raw_ts = action.get("raw_ts")
             action_dt = self._parse_ts_aware(raw_ts)
             if raw_ts and action_dt:
-                candidates.append((action_dt, raw_ts))
+                candidates.append((action_dt, action_key, raw_ts))
 
         if not candidates:
             return None
 
-        action_dt, raw_ts = max(candidates, key=lambda item: item[0])
-        return raw_ts, action_dt
+        action_dt, action_key, raw_ts = max(candidates, key=lambda item: item[0])
+        return action_key, raw_ts, action_dt
 
     async def _async_check_follow_up_notification(self) -> None:
         """Send a missed chemical follow-up reminder based on persisted history."""
@@ -978,7 +978,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if latest_action is None:
             return
 
-        action_raw, action_dt = latest_action
+        action_type, action_raw, action_dt = latest_action
         last_measurement_dt = self._parse_ts_aware(self.maintenance_history.get("last_measurement_raw"))
         if last_measurement_dt and last_measurement_dt > action_dt:
             return
@@ -989,7 +989,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if dt_util.now() < action_dt + timedelta(minutes=delay_minutes):
             return
 
-        await async_send_follow_up(self.hass, self.config)
+        await async_send_follow_up(self.hass, self.config, f"follow_up_{action_type}")
         self.maintenance_history["last_follow_up_action_raw"] = action_raw
         self.maintenance_history["last_follow_up_sent_raw"] = dt_util.now().isoformat()
         await self._store.async_save(self.maintenance_history)
