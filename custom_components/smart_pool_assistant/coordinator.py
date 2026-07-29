@@ -846,10 +846,18 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             return "--:--"
         return dt_util.as_local(dt_value).strftime("%H:%M")
 
+    def _get_chlor_sample_window(self, dose_dt: datetime | None) -> tuple[datetime | None, datetime | None]:
+        """Return the valid chlorine follow-up window for a logged dose."""
+        if dose_dt is None:
+            return None, None
+        return (
+            dose_dt + timedelta(hours=MIN_DOSE_EFFECT_HOURS),
+            dose_dt + timedelta(hours=MAX_DOSE_EFFECT_HOURS),
+        )
+
     async def _async_notify_chlor_sample_window(self, dose_dt: datetime) -> None:
         """Notify the user about the valid chlorine follow-up window."""
-        start_dt = dose_dt + timedelta(hours=MIN_DOSE_EFFECT_HOURS)
-        end_dt = dose_dt + timedelta(hours=MAX_DOSE_EFFECT_HOURS)
+        start_dt, end_dt = self._get_chlor_sample_window(dose_dt)
         await async_send_notification(
             self.hass,
             self.config,
@@ -1610,6 +1618,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 "awaiting_retest_chlor": False,
                 "awaiting_retest_ph": False,
                 "awaiting_retest_since": None,
+                "chlor_retest_window_start": None,
+                "chlor_retest_window_end": None,
                 "weather_entity": conf.get(CONF_WEATHER_ENTITY),
                 "weather_uv_sensor": conf.get(CONF_UV_SENSOR),
                 "weather_available": weather_data.get("available") if isinstance(weather_data, dict) else False,
@@ -1680,6 +1690,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         awaiting_retest_chlor = retest_status["awaiting_retest_chlor"]
         awaiting_retest_ph = retest_status["awaiting_retest_ph"]
         awaiting_retest_since = retest_status["awaiting_retest_since"]
+        chlor_retest_window_start, chlor_retest_window_end = self._get_chlor_sample_window(
+            dt_last_chlor_action if awaiting_retest_chlor else None
+        )
 
         # Filter Wartung
         hours_since_filter_clean = self._get_time_since_last_action("filter_clean", in_hours=True)
@@ -1798,6 +1811,8 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "awaiting_retest_chlor": awaiting_retest_chlor,
             "awaiting_retest_ph": awaiting_retest_ph,
             "awaiting_retest_since": awaiting_retest_since,
+            "chlor_retest_window_start": chlor_retest_window_start.isoformat() if chlor_retest_window_start else None,
+            "chlor_retest_window_end": chlor_retest_window_end.isoformat() if chlor_retest_window_end else None,
             "weather_entity": conf.get(CONF_WEATHER_ENTITY),
             "weather_uv_sensor": conf.get(CONF_UV_SENSOR),
             "weather_available": weather_data.get("available") if isinstance(weather_data, dict) else False,

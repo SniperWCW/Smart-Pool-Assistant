@@ -357,6 +357,24 @@ class PoolChemistryCard extends HTMLElement {
     return planDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   }
 
+  _getRetestWindowLabel(attr) {
+    if (!attr || attr.awaiting_retest !== true) return "";
+
+    const labels = [];
+    if (attr.awaiting_retest_chlor === true) {
+      const start = this._formatBathPlanTime(attr.chlor_retest_window_start);
+      const end = this._formatBathPlanTime(attr.chlor_retest_window_end);
+      if (start !== "--" && end !== "--") labels.push(`Chlor: ${start} - ${end} Uhr`);
+    }
+    if (attr.awaiting_retest_ph === true) {
+      const retestSince = attr.awaiting_retest_since ? new Date(attr.awaiting_retest_since) : null;
+      if (!retestSince || Number.isNaN(retestSince.getTime())) return labels.join(" | ");
+      const from = this._formatBathPlanTime(retestSince);
+      if (from !== "--") labels.push(`pH: ab ${from} Uhr`);
+    }
+    return labels.join(" | ");
+  }
+
   _getMeasuringSpoonText(value, unit) {
     let remaining = Math.round(Number(value) * 2);
     if (!Number.isFinite(remaining) || remaining <= 0) return "";
@@ -1219,6 +1237,13 @@ class PoolChemistryCard extends HTMLElement {
               font-weight: 700;
               line-height: 1.2;
             }
+            .status-subtitle {
+              margin-top: 4px;
+              font-size: 0.78em;
+              font-weight: 600;
+              line-height: 1.3;
+              color: var(--secondary-text-color);
+            }
             .poollab-box {
               align-items: stretch;
               text-align: left;
@@ -1829,14 +1854,19 @@ class PoolChemistryCard extends HTMLElement {
     const fetchUi = this._getPoolLabFetchUi(attr);
     const fetchBadgeClass = this._getPoolLabFetchBadgeClass(fetchUi.meta);
     const combinedStatusClass = this._getCombinedStatusClass(statusClass, bathingAdvice.className);
+    const retestWindowLabel = this._getRetestWindowLabel(attr);
 
     topStatusCard.className = `top-status-card ${combinedStatusClass}`;
     statusBox.className = `status-segment ${statusClass}`;
     statusBox.innerHTML = `
       <div class="status-label">Status</div>
       <div class="status-title"></div>
+      ${retestWindowLabel ? '<div class="status-subtitle"></div>' : ''}
     `;
     statusBox.querySelector('.status-title').textContent = statusText;
+    if (retestWindowLabel) {
+      statusBox.querySelector('.status-subtitle').textContent = `Nachmessfenster: ${retestWindowLabel}`;
+    }
 
     bathingBox.className = `status-segment bathing-box ${bathingAdvice.className}`;
     bathingBox.innerHTML = `
@@ -2929,7 +2959,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.30 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.31 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

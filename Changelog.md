@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.31] - 2026-07-29
+
+- **Nachmessfenster jetzt direkt in der Statusbox**: Unter `Warten auf erneute Messung` zeigt die Lovelace-Karte jetzt das gueltige Nachmessfenster direkt im Kartenkopf an.
+- **Karte und Push teilen dieselbe Chlor-Fensterlogik**: Das Chlor-Nachmessfenster wird zentral im Backend berechnet und als Attribut an die Karte geliefert, damit Anzeige und Push-Mitteilung dieselben Zeiten verwenden.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.31` angehoben.
+
 ## [3.0.30] - 2026-07-22
 
 - **Redundanten Chlor-Nachmesshinweis entfernt**: Direkt nach einer erfassten Chlorzugabe wird nicht mehr zusaetzlich gemeldet, dass noch eine passende Nachmessung fehlt, wenn das gueltige Zeitfenster bereits separat mitgeteilt wurde.

@@ -263,6 +263,8 @@ class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
             "awaiting_retest_chlor": data.get("awaiting_retest_chlor"),
             "awaiting_retest_ph": data.get("awaiting_retest_ph"),
             "awaiting_retest_since": data.get("awaiting_retest_since"),
+            "chlor_retest_window_start": data.get("chlor_retest_window_start"),
+            "chlor_retest_window_end": data.get("chlor_retest_window_end"),
             "weather_entity": data.get("weather_entity"),
             "weather_uv_sensor": data.get("weather_uv_sensor"),
             "weather_available": data.get("weather_available"),
