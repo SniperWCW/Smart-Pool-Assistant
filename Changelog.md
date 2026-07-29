@@ -1,5 +1,11 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.32] - 2026-07-29
+
+- **Nachmess-Hinweis bleibt nach Neustart sichtbar**: Die Lovelace-Karte priorisiert den aktiven Nachmess-Zustand jetzt auch dann korrekt, wenn nach einem Home-Assistant-Neustart zunaechst gespeicherte Werte geladen werden.
+- **Chlor- und pH-Block verhalten sich konsistent**: Die Hinweise `Warten auf erneute Messung nach ...-Zugabe` werden im Empfehlungsbereich nicht mehr von der allgemeinen Speicher-Meldung ueberschrieben.
+- **Release-Artefakte aktualisiert**: `manifest.json`, `README.md`, `Changelog.md`, `TECHNISCHE_DOKUMENTATION.md`, Frontend-Versionshinweis und neue Release Notes wurden auf `3.0.32` angehoben.
+
 ## [3.0.31] - 2026-07-29
 
 - **Nachmessfenster jetzt direkt in der Statusbox**: Unter `Warten auf erneute Messung` zeigt die Lovelace-Karte jetzt das gueltige Nachmessfenster direkt im Kartenkopf an.

@@ -1894,12 +1894,12 @@ class PoolChemistryCard extends HTMLElement {
     const chlorHighDiff = hasChlor && chlorRange ? attr.chlor_ist - chlorRange.high : 0;
     const chlorLowDiff = hasChlor && chlorRange ? chlorRange.low - attr.chlor_ist : 0;
 
-    if (!hasChlor) {
+    if (chlorAwaitingRetest) {
+      this.querySelector('#chlor-rec').innerHTML = "<i>Warten auf erneute Messung nach Chlor-Zugabe.</i>";
+    } else if (!hasChlor) {
       this.querySelector('#chlor-rec').innerHTML = isFromStorage
         ? "<i>Warte auf neue Messung (Werte aus Speicher)</i>"
         : "Warte auf Messwerte...";
-    } else if (chlorAwaitingRetest) {
-      this.querySelector('#chlor-rec').innerHTML = "<i>Warten auf erneute Messung nach Chlor-Zugabe.</i>";
     } else {
       const chlorDoseText = this._formatDoseAmount(attr.chlor_dose, "g");
       const chlorPreText = this._formatDoseAmount(attr.chlor_pre, "g");
@@ -1964,22 +1964,20 @@ class PoolChemistryCard extends HTMLElement {
     }
 
     let phText = isFromStorage ? "<i>Warte auf neue Messung...</i>" : "Warte auf Messwerte...";
-    if (attr.ph_ist !== null && attr.ph_ist !== undefined && !isFromStorage) {
-      if (phAwaitingRetest) {
-        phText = "<i>Warten auf erneute Messung nach pH-Zugabe.</i>";
-      } else {
-        phText = "pH-Wert ist im Zielbereich.";
-        if (attr.ph_senker_total > 0) {
-          const amountText = this._formatDoseAmount(attr.ph_senker_total, "ml");
-          const spoons = this._getMeasuringSpoonText(attr.ph_senker_total, "ml");
-          const spoonHint = spoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${spoons})</span>` : "";
-          phText = `\u{1F4C9} PH-Minus: ca. <b>${amountText}</b> hinzuf\u00fcgen.${spoonHint}`;
-        } else if (attr.ph_erhoeher_total > 0) {
-          const amountText = this._formatDoseAmount(attr.ph_erhoeher_total, "g");
-          const spoons = this._getMeasuringSpoonText(attr.ph_erhoeher_total, "g");
-          const spoonHint = spoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${spoons})</span>` : "";
-          phText = `\u{1F4C8} PH-Plus: ca. <b>${amountText}</b> hinzuf\u00fcgen.${spoonHint}`;
-        }
+    if (phAwaitingRetest) {
+      phText = "<i>Warten auf erneute Messung nach pH-Zugabe.</i>";
+    } else if (attr.ph_ist !== null && attr.ph_ist !== undefined && !isFromStorage) {
+      phText = "pH-Wert ist im Zielbereich.";
+      if (attr.ph_senker_total > 0) {
+        const amountText = this._formatDoseAmount(attr.ph_senker_total, "ml");
+        const spoons = this._getMeasuringSpoonText(attr.ph_senker_total, "ml");
+        const spoonHint = spoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${spoons})</span>` : "";
+        phText = `\u{1F4C9} PH-Minus: ca. <b>${amountText}</b> hinzuf\u00fcgen.${spoonHint}`;
+      } else if (attr.ph_erhoeher_total > 0) {
+        const amountText = this._formatDoseAmount(attr.ph_erhoeher_total, "g");
+        const spoons = this._getMeasuringSpoonText(attr.ph_erhoeher_total, "g");
+        const spoonHint = spoons ? ` <span class="table-sub">(Messl\u00f6ffel: ${spoons})</span>` : "";
+        phText = `\u{1F4C8} PH-Plus: ca. <b>${amountText}</b> hinzuf\u00fcgen.${spoonHint}`;
       }
     }
     this.querySelector('#ph-rec').innerHTML = phText;
@@ -2959,7 +2957,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.31 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.32 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
