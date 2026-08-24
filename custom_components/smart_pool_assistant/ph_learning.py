@@ -13,6 +13,9 @@ CORRECTIONS_KEY = "ph_learning_corrections"
 MAX_STORED_ITEMS = 80
 MIN_INTERVAL_HOURS = 3.0
 MAX_INTERVAL_DAYS = 7.0
+HISTORY_RETENTION_DAYS = 60
+PRIMARY_STATS_DAYS = 14
+EXTENDED_STATS_DAYS = 35
 STABLE_DRIFT_THRESHOLD = 0.03
 
 
@@ -86,11 +89,12 @@ def calculate_ph_learning(
 
     last_24h = _period_stats(intervals, now, timedelta(hours=24))
     last_7d = _period_stats(intervals, now, timedelta(days=7))
-    last_14d = _period_stats(intervals, now, timedelta(days=14))
+    last_14d = _period_stats(intervals, now, timedelta(days=PRIMARY_STATS_DAYS))
+    evaluation_stats = _select_evaluation_stats(intervals, now)
 
-    avg_drift = last_14d["average_daily_drift"]
+    avg_drift = evaluation_stats["average_daily_drift"]
     prediction_quality = _prediction_quality(intervals)
-    sample_count = last_14d["samples"]
+    sample_count = evaluation_stats["samples"]
     trend = _trend(avg_drift, sample_count)
 
     if sample_count < 3:
@@ -110,15 +114,17 @@ def calculate_ph_learning(
         "ph_stability": stability,
         "ph_trend": trend,
         "ph_stability_attributes": {
-            "period": "14d",
+            "period": evaluation_stats["label"],
             "average_daily_drift": avg_drift,
-            "min_daily_drift": last_14d["min_daily_drift"],
-            "max_daily_drift": last_14d["max_daily_drift"],
+            "min_daily_drift": evaluation_stats["min_daily_drift"],
+            "max_daily_drift": evaluation_stats["max_daily_drift"],
             "samples": sample_count,
             "prediction_quality": prediction_quality,
             "prediction_quality_stars": _quality_stars(prediction_quality),
             "trend": trend,
             "learning_phase": sample_count < 3,
+            "recent_samples_14d": last_14d["samples"],
+            "evaluation_window_days": evaluation_stats["days"],
         },
     }
 
@@ -136,7 +142,7 @@ def _load_measurements(
     parse_ts: Callable[[str | None], datetime | None],
     now: datetime,
 ) -> list[dict]:
-    cutoff = now - timedelta(days=21)
+    cutoff = now - timedelta(days=HISTORY_RETENTION_DAYS)
     result = []
     for item in history.get(MEASUREMENTS_KEY, []):
         if not isinstance(item, dict):
@@ -157,7 +163,7 @@ def _load_corrections(
     parse_ts: Callable[[str | None], datetime | None],
     now: datetime,
 ) -> list[dict]:
-    cutoff = now - timedelta(days=21)
+    cutoff = now - timedelta(days=HISTORY_RETENTION_DAYS)
     result = []
     for item in history.get(CORRECTIONS_KEY, []):
         if not isinstance(item, dict):
@@ -234,6 +240,24 @@ def _period_stats(intervals: list[dict], now: datetime, period: timedelta) -> di
         "min_daily_drift": round(min(values), 3),
         "max_daily_drift": round(max(values), 3),
         "samples": len(values),
+    }
+
+
+def _select_evaluation_stats(intervals: list[dict], now: datetime) -> dict:
+    for days in (PRIMARY_STATS_DAYS, EXTENDED_STATS_DAYS):
+        stats = _period_stats(intervals, now, timedelta(days=days))
+        if stats["samples"] >= 3:
+            return {
+                **stats,
+                "days": days,
+                "label": f"{days}d",
+            }
+
+    fallback = _period_stats(intervals, now, timedelta(days=EXTENDED_STATS_DAYS))
+    return {
+        **fallback,
+        "days": EXTENDED_STATS_DAYS,
+        "label": f"{EXTENDED_STATS_DAYS}d",
     }
 
 

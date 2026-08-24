@@ -1532,14 +1532,33 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             current_now,
             current_cya=cya_ist,
         )
+        chlor_learning_attr = chlorine_learning.get("chlor_stability_attributes") or {}
+        _LOGGER.debug(
+            "Chlor learning summary: stability=%s samples=%s eval_period=%s avg=%s raw_14d=%s loss_24h=%s "
+            "loss_7d=%s min=%s max=%s quality=%s context_quality=%s dose_samples=%s",
+            chlorine_learning.get("chlor_stability"),
+            chlor_learning_attr.get("samples"),
+            chlor_learning_attr.get("period"),
+            chlor_learning_attr.get("average_daily_loss"),
+            chlorine_learning.get("chlor_consumption_14d"),
+            chlorine_learning.get("chlor_consumption_24h"),
+            chlorine_learning.get("chlor_consumption_7d"),
+            chlor_learning_attr.get("min_daily_loss"),
+            chlor_learning_attr.get("max_daily_loss"),
+            chlor_learning_attr.get("prediction_quality"),
+            chlor_learning_attr.get("context_prediction_quality"),
+            chlor_learning_attr.get("dose_factor_samples"),
+        )
         ph_learning_attr = ph_learning.get("ph_stability_attributes") or {}
         _LOGGER.debug(
-            "pH learning summary: stability=%s trend=%s samples=%s avg_14d=%s drift_24h=%s drift_7d=%s "
-            "min=%s max=%s quality=%s stars=%s",
+            "pH learning summary: stability=%s trend=%s samples=%s eval_period=%s avg=%s raw_14d=%s drift_24h=%s "
+            "drift_7d=%s min=%s max=%s quality=%s stars=%s",
             ph_learning.get("ph_stability"),
             ph_learning.get("ph_trend"),
             ph_learning_attr.get("samples"),
+            ph_learning_attr.get("period"),
             ph_learning_attr.get("average_daily_drift"),
+            ph_learning.get("ph_drift_14d"),
             ph_learning.get("ph_drift_24h"),
             ph_learning.get("ph_drift_7d"),
             ph_learning_attr.get("min_daily_drift"),

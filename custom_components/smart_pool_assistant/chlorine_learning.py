@@ -15,6 +15,9 @@ DOSES_KEY = "chlor_learning_doses"
 MAX_STORED_ITEMS = 120
 MIN_INTERVAL_HOURS = 3.0
 MAX_INTERVAL_DAYS = 7.0
+HISTORY_RETENTION_DAYS = 60
+PRIMARY_STATS_DAYS = 14
+EXTENDED_STATS_DAYS = 35
 MIN_DOSE_EFFECT_HOURS = 0.5
 # Dose-factor learning needs tight measurement windows. Late follow-up
 # measurements mostly reflect natural loss again and distort the factor.
@@ -150,16 +153,27 @@ def calculate_chlorine_learning(
 
     last_24h = _period_stats(intervals, now, timedelta(hours=24))
     last_7d = _period_stats(intervals, now, timedelta(days=7))
-    last_14d = _period_stats(intervals, now, timedelta(days=14))
-    last_14d_context = _period_stats(intervals, now, timedelta(days=14), value_key="context_adjusted_daily_loss")
+    last_14d = _period_stats(intervals, now, timedelta(days=PRIMARY_STATS_DAYS))
+    last_14d_context = _period_stats(
+        intervals,
+        now,
+        timedelta(days=PRIMARY_STATS_DAYS),
+        value_key="context_adjusted_daily_loss",
+    )
+    evaluation_stats = _select_evaluation_stats(intervals, now)
+    evaluation_context_stats = _select_evaluation_stats(
+        intervals,
+        now,
+        value_key="context_adjusted_daily_loss",
+    )
 
-    avg_loss = last_14d["average_daily_loss"]
+    avg_loss = evaluation_stats["average_daily_loss"]
     factor = round(avg_loss / DEFAULT_DAILY_LOSS, 2) if avg_loss is not None else None
     prediction_quality = _prediction_quality(intervals)
     context_prediction_quality = _prediction_quality(intervals, value_key="context_adjusted_daily_loss")
     quality_stars = _quality_stars(prediction_quality)
     context_quality_stars = _quality_stars(context_prediction_quality)
-    sample_count = last_14d["samples"]
+    sample_count = evaluation_stats["samples"]
 
     if sample_count < 3:
         stability = "learning"
@@ -195,23 +209,25 @@ def calculate_chlorine_learning(
         "chlor_prediction_quality": prediction_quality,
         "chlor_stability": stability,
         "chlor_stability_attributes": {
-            "period": "14d",
+            "period": evaluation_stats["label"],
             "average_daily_loss": avg_loss,
-            "min_daily_loss": last_14d["min_daily_loss"],
-            "max_daily_loss": last_14d["max_daily_loss"],
+            "min_daily_loss": evaluation_stats["min_daily_loss"],
+            "max_daily_loss": evaluation_stats["max_daily_loss"],
             "samples": sample_count,
             "prediction_quality": prediction_quality,
             "prediction_quality_stars": quality_stars,
             "context_prediction_quality": context_prediction_quality,
             "context_prediction_quality_stars": context_quality_stars,
-            "context_average_daily_loss": last_14d_context["average_daily_loss"],
-            "context_min_daily_loss": last_14d_context["min_daily_loss"],
-            "context_max_daily_loss": last_14d_context["max_daily_loss"],
+            "context_average_daily_loss": evaluation_context_stats["average_daily_loss"],
+            "context_min_daily_loss": evaluation_context_stats["min_daily_loss"],
+            "context_max_daily_loss": evaluation_context_stats["max_daily_loss"],
             "personal_chlor_factor": factor,
             "learning_phase": sample_count < 3,
             "baseline_daily_loss": DEFAULT_DAILY_LOSS,
             "personal_dose_factor": dose_factor_stats["personal_chlor_dose_factor"],
             "dose_factor_samples": dose_factor_stats["samples"],
+            "recent_samples_14d": last_14d["samples"],
+            "evaluation_window_days": evaluation_stats["days"],
             "average_open_ratio": _average_interval_value(intervals, "open_ratio"),
             "average_covered_ratio": _average_interval_value(intervals, "covered_ratio"),
             "average_usage_none_ratio": _average_interval_value(intervals, "usage_none_ratio"),
@@ -457,7 +473,7 @@ def _load_measurements(
     parse_ts: Callable[[str | None], datetime | None],
     now: datetime,
 ) -> list[dict]:
-    cutoff = now - timedelta(days=21)
+    cutoff = now - timedelta(days=HISTORY_RETENTION_DAYS)
     result = []
     for item in history.get(MEASUREMENTS_KEY, []):
         if not isinstance(item, dict):
@@ -490,7 +506,7 @@ def _load_doses(
     parse_ts: Callable[[str | None], datetime | None],
     now: datetime,
 ) -> list[dict]:
-    cutoff = now - timedelta(days=21)
+    cutoff = now - timedelta(days=HISTORY_RETENTION_DAYS)
     result = []
     for item in history.get(DOSES_KEY, []):
         if not isinstance(item, dict):
@@ -520,7 +536,7 @@ def _load_context_events(
     parse_ts: Callable[[str | None], datetime | None],
     now: datetime,
 ) -> list[dict]:
-    cutoff = now - timedelta(days=21)
+    cutoff = now - timedelta(days=HISTORY_RETENTION_DAYS)
     result = []
     for item in history.get(CONTEXT_HISTORY_KEY, []):
         if not isinstance(item, dict):
@@ -681,6 +697,29 @@ def _period_stats(
         "min_daily_loss": round(min(values), 2),
         "max_daily_loss": round(max(values), 2),
         "samples": len(values),
+    }
+
+
+def _select_evaluation_stats(
+    intervals: list[dict],
+    now: datetime,
+    *,
+    value_key: str = "daily_loss",
+) -> dict:
+    for days in (PRIMARY_STATS_DAYS, EXTENDED_STATS_DAYS):
+        stats = _period_stats(intervals, now, timedelta(days=days), value_key=value_key)
+        if stats["samples"] >= 3:
+            return {
+                **stats,
+                "days": days,
+                "label": f"{days}d",
+            }
+
+    fallback = _period_stats(intervals, now, timedelta(days=EXTENDED_STATS_DAYS), value_key=value_key)
+    return {
+        **fallback,
+        "days": EXTENDED_STATS_DAYS,
+        "label": f"{EXTENDED_STATS_DAYS}d",
     }
 
 
