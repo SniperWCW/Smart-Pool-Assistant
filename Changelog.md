@@ -1,5 +1,9 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.35] - 2026-09-07
+
+- **LayzSpa-Fehler sofort sichtbar**: Die Fehlerwarnung erscheint bei einem relevanten Fehlercode direkt oben in der Karte statt erst im einklappbaren LayzSpa-Bereich.
+
 ## [3.0.34] - 2026-09-07
 
 - **LayzSpa-Fehlerüberwachung in der Karte**: Für einen konfigurierbaren Fehlercode-Sensor zeigt die Karte bei E02 sowie E04/E08 Bedeutung und konkrete Lösungsschritte an. Bei Fehlercode `0` bleibt die Anzeige verborgen.

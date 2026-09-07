@@ -1062,6 +1062,7 @@ class PoolChemistryCard extends HTMLElement {
       this.innerHTML = `
         <ha-card header="\u{1F4A7} Smart Pool Assistant">
           <div class="card-content">
+            <div id="layzspa-error-banner" class="lz-error layzspa-error-banner" style="display: none;"></div>
             <div id="top-status-card" class="top-status-card">
               <div id="status-box" class="status-segment"></div>
               <div id="bathing-box" class="status-segment"></div>
@@ -1739,6 +1740,7 @@ class PoolChemistryCard extends HTMLElement {
             .lz-temp-val { font-size: 1.2em; font-weight: bold; }
             .lz-temp-target { color: var(--primary-color); }
             .lz-error { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid rgba(244, 67, 54, 0.5); border-radius: 8px; background: rgba(244, 67, 54, 0.1); color: var(--primary-text-color); }
+            .layzspa-error-banner { margin-bottom: 12px; }
             .lz-error ha-icon { color: var(--error-color, #F44336); --mdc-icon-size: 22px; flex: 0 0 auto; }
             .lz-error-title { color: var(--error-color, #F44336); font-weight: bold; margin-bottom: 3px; }
             .lz-error-text { font-size: 0.9em; line-height: 1.4; }
@@ -1855,6 +1857,10 @@ class PoolChemistryCard extends HTMLElement {
 
     const bathingBox = this.querySelector('#bathing-box');
     const poollabBox = this.querySelector('#poollab-box');
+    const layzSpaErrorBanner = this.querySelector('#layzspa-error-banner');
+    const layzSpaError = this._getLayzSpaError(
+      hass.states[this.config?.layzspa?.error]?.state,
+    );
     const bathingAdvice = this._getBathingAdvice(attr);
     const fetchUi = this._getPoolLabFetchUi(attr);
     const fetchBadgeClass = this._getPoolLabFetchBadgeClass(fetchUi.meta);
@@ -1889,6 +1895,20 @@ class PoolChemistryCard extends HTMLElement {
         <button id="btn-poollab-fetch-top" class="poollab-inline-btn" ${fetchUi.disabled ? "disabled" : ""}>${fetchUi.label}</button>
       </div>
     `;
+
+    if (layzSpaError) {
+      layzSpaErrorBanner.style.display = 'flex';
+      layzSpaErrorBanner.innerHTML = `
+        <ha-icon icon="mdi:alert-circle"></ha-icon>
+        <div>
+          <div class="lz-error-title">${layzSpaError.title}</div>
+          <div class="lz-error-text"><b>Bedeutung:</b> ${layzSpaError.meaning}<br><b>Lösung:</b> ${layzSpaError.solution}</div>
+        </div>
+      `;
+    } else {
+      layzSpaErrorBanner.style.display = 'none';
+      layzSpaErrorBanner.innerHTML = '';
+    }
 
     // LayzSpa Panel Rendering
     this._updateLayzSpaPanel();
@@ -2553,7 +2573,6 @@ class PoolChemistryCard extends HTMLElement {
     const tempCurrentValue = parseFloat(get(cfg.temp_current)?.state);
     const tempTargetValue = tempControl?.currentValue ?? parseFloat(get(cfg.temp_target)?.state);
     const heatEta = this._getLayzSpaHeatEta(cfg, tempCurrentValue, tempTargetValue, heater?.state);
-    const error = this._getLayzSpaError(get(cfg.error)?.state);
 
     container.innerHTML = `
       <div class="layzspa-panel ${this._layzspa_expanded ? 'expanded' : ''}">
@@ -2592,15 +2611,6 @@ class PoolChemistryCard extends HTMLElement {
               <div class="lz-temp-val lz-temp-target">${formatTemp(tempTargetValue)}</div>
             </div>
           </div>
-          ${error ? `
-            <div class="lz-error">
-              <ha-icon icon="mdi:alert-circle"></ha-icon>
-              <div>
-                <div class="lz-error-title">${error.title}</div>
-                <div class="lz-error-text"><b>Bedeutung:</b> ${error.meaning}<br><b>Lösung:</b> ${error.solution}</div>
-              </div>
-            </div>
-          ` : ''}
           ${heatEta ? `
             <div class="lz-heat-eta">
               <span class="lz-label">${heatEta.label}</span>
@@ -3000,7 +3010,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.34 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.35 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 

@@ -57,7 +57,7 @@ layzspa:
 
 `temp_target_control` ist optional und kann auf eine `number.*`- oder `climate.*`-Entitaet zeigen.
 
-`error` ist optional und erwartet einen numerischen LayzSpa-Fehlercode. Bei `0` bleibt die Fehleranzeige verborgen. Die Karte zeigt für `2` (E02, Wasserdurchfluss gestört) sowie `4` und `8` (E04/E08, Temperatur zu hoch) jeweils Bedeutung und konkrete Lösungsschritte an.
+`error` ist optional und erwartet einen numerischen LayzSpa-Fehlercode. Bei `0` bleibt die Fehleranzeige verborgen. Bei einem Fehler erscheint die Warnung direkt oben in der Karte. Die Karte zeigt für `2` (E02, Wasserdurchfluss gestört) sowie `4` und `8` (E04/E08, Temperatur zu hoch) jeweils Bedeutung und konkrete Lösungsschritte an.
 
 `heat_eta` ist optional. Die Karte laedt dafuer im Frontend die Home-Assistant-Historie von Ist-Temperatur und Heizung, berechnet daraus die reale Heizrate waehrend Heizphasen und zeigt die geschaetzte Restdauer bis zur Zieltemperatur.
 
