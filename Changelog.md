@@ -1,5 +1,10 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.34] - 2026-09-07
+
+- **LayzSpa-Fehlerüberwachung in der Karte**: Für einen konfigurierbaren Fehlercode-Sensor zeigt die Karte bei E02 sowie E04/E08 Bedeutung und konkrete Lösungsschritte an. Bei Fehlercode `0` bleibt die Anzeige verborgen.
+- **Unbekannte Fehlercodes bleiben sichtbar**: Nicht zugeordnete Nicht-Null-Codes werden als allgemeiner LayzSpa-Fehler ausgewiesen, damit sie nicht übersehen werden.
+
 ## [3.0.32] - 2026-07-29
 
 - **Nachmess-Hinweis bleibt nach Neustart sichtbar**: Die Lovelace-Karte priorisiert den aktiven Nachmess-Zustand jetzt auch dann korrekt, wenn nach einem Home-Assistant-Neustart zunaechst gespeicherte Werte geladen werden.

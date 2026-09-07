@@ -98,6 +98,7 @@ class PoolChemistryCard extends HTMLElement {
       cfg.temp_current,
       cfg.temp_target,
       cfg.temp_target_control,
+      cfg.error,
     ].filter(Boolean);
   }
 
@@ -1737,6 +1738,10 @@ class PoolChemistryCard extends HTMLElement {
             .lz-temp-block { text-align: center; }
             .lz-temp-val { font-size: 1.2em; font-weight: bold; }
             .lz-temp-target { color: var(--primary-color); }
+            .lz-error { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid rgba(244, 67, 54, 0.5); border-radius: 8px; background: rgba(244, 67, 54, 0.1); color: var(--primary-text-color); }
+            .lz-error ha-icon { color: var(--error-color, #F44336); --mdc-icon-size: 22px; flex: 0 0 auto; }
+            .lz-error-title { color: var(--error-color, #F44336); font-weight: bold; margin-bottom: 3px; }
+            .lz-error-text { font-size: 0.9em; line-height: 1.4; }
             .lz-temp-adjust { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: -2px; }
             .lz-temp-adjust-label { font-size: 0.8em; opacity: 0.75; min-width: 120px; text-align: center; }
             .lz-temp-btn { height: 34px; min-width: 34px; border-radius: 999px; border: 1px solid rgba(3, 169, 244, 0.35); background: rgba(3, 169, 244, 0.14); color: var(--primary-color); font-size: 1.1em; font-weight: 700; cursor: pointer; }
@@ -2548,6 +2553,7 @@ class PoolChemistryCard extends HTMLElement {
     const tempCurrentValue = parseFloat(get(cfg.temp_current)?.state);
     const tempTargetValue = tempControl?.currentValue ?? parseFloat(get(cfg.temp_target)?.state);
     const heatEta = this._getLayzSpaHeatEta(cfg, tempCurrentValue, tempTargetValue, heater?.state);
+    const error = this._getLayzSpaError(get(cfg.error)?.state);
 
     container.innerHTML = `
       <div class="layzspa-panel ${this._layzspa_expanded ? 'expanded' : ''}">
@@ -2586,6 +2592,15 @@ class PoolChemistryCard extends HTMLElement {
               <div class="lz-temp-val lz-temp-target">${formatTemp(tempTargetValue)}</div>
             </div>
           </div>
+          ${error ? `
+            <div class="lz-error">
+              <ha-icon icon="mdi:alert-circle"></ha-icon>
+              <div>
+                <div class="lz-error-title">${error.title}</div>
+                <div class="lz-error-text"><b>Bedeutung:</b> ${error.meaning}<br><b>Lösung:</b> ${error.solution}</div>
+              </div>
+            </div>
+          ` : ''}
           ${heatEta ? `
             <div class="lz-heat-eta">
               <span class="lz-label">${heatEta.label}</span>
@@ -2618,6 +2633,33 @@ class PoolChemistryCard extends HTMLElement {
     const tempUp = this.querySelector('#lz-temp-up');
     if (tempDown) tempDown.onclick = () => this._adjustLayzSpaTemperature(-1);
     if (tempUp) tempUp.onclick = () => this._adjustLayzSpaTemperature(1);
+  }
+
+  _getLayzSpaError(value) {
+    const code = Number(value);
+    if (!Number.isInteger(code) || code === 0) return null;
+
+    if (code === 2) {
+      return {
+        title: "Fehlercode E02 – Wasserdurchfluss gestört",
+        meaning: "Die Pumpe erkennt zu wenig Wasserdurchfluss.",
+        solution: "Filter reinigen oder tauschen. Ein- und Auslässe im Whirlpool auf Verstopfungen durch Schmutz oder Blätter prüfen und diese entfernen.",
+      };
+    }
+
+    if (code === 4 || code === 8) {
+      return {
+        title: `Fehlercode ${code === 4 ? "E04" : "E08"} – Temperatur zu hoch`,
+        meaning: "Das Wasser ist über 50 °C heiß oder die Pumpe stand zu lange in der prallen Sonne (Außentemperatur über 40 °C).",
+        solution: "Wasser abkühlen lassen, Pumpe in den Schatten stellen und das System über die Reset-Taste neu starten.",
+      };
+    }
+
+    return {
+      title: `Unbekannter LayzSpa-Fehlercode (${code})`,
+      meaning: "Für diesen Fehlercode ist keine Anleitung hinterlegt.",
+      solution: "Fehlercode in der LayzSpa-Anleitung nachschlagen.",
+    };
   }
 
   _toggleLayzSpaEntity(entityId) {
@@ -2912,6 +2954,7 @@ class PoolChemistryCardEditor extends HTMLElement {
         { key: "temp_current", label: "Ist-Temperatur", domain: "sensor" },
         { key: "temp_target", label: "Ziel-Temperatur", domain: "sensor" },
         { key: "temp_target_control", label: "Ziel-Temperatur Steuerung", domains: ["number", "climate"] },
+        { key: "error", label: "Fehlercode (Sensor)", domain: "sensor" },
       ];
 
     const lzPickersContainer = this.querySelector('#lz-pickers');
@@ -2957,7 +3000,7 @@ class PoolChemistryCardEditor extends HTMLElement {
 if (!customElements.get('pool-chemistry-card')) {
     customElements.define('pool-chemistry-card', PoolChemistryCard);
     customElements.define('pool-chemistry-card-editor', PoolChemistryCardEditor);
-    console.info("%c SMART-POOL-ASSISTANT %c 3.0.32 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
+    console.info("%c SMART-POOL-ASSISTANT %c 3.0.34 ", "color: white; background: #03a9f4; font-weight: 700;", "color: #03a9f4; background: white; font-weight: 700;");
 }
 
 
