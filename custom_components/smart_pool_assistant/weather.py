@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
@@ -9,6 +10,11 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_UV_SENSOR, CONF_WEATHER_ENTITY
 
 _LOGGER = logging.getLogger(__name__)
+
+# Der Service weather.get_forecasts ist ein (ggf. Cloud-)Aufruf; die Vorhersage
+# aendert sich nur selten, daher wird sie kurz zwischengespeichert.
+_FORECAST_CACHE_TTL_SECONDS = 1800
+_forecast_cache: dict[tuple[int, str], tuple[float, list[dict]]] = {}
 
 
 async def async_get_weather_data(hass: HomeAssistant, conf: dict, limit: int = 2) -> dict | None:
@@ -59,7 +65,12 @@ async def async_get_weather_data(hass: HomeAssistant, conf: dict, limit: int = 2
 
 
 async def _async_fetch_daily_forecast(hass: HomeAssistant, entity_id: str) -> list[dict]:
-    """Fetch daily weather forecast through the HA weather service."""
+    """Fetch daily weather forecast through the HA weather service (cached)."""
+    cache_key = (id(hass), entity_id)
+    cached = _forecast_cache.get(cache_key)
+    if cached and time.monotonic() - cached[0] < _FORECAST_CACHE_TTL_SECONDS:
+        return cached[1]
+
     try:
         response = await hass.services.async_call(
             "weather",
@@ -75,10 +86,14 @@ async def _async_fetch_daily_forecast(hass: HomeAssistant, entity_id: str) -> li
 
     if isinstance(response, dict):
         entity_response = response.get(entity_id)
+        forecast = None
         if isinstance(entity_response, dict) and isinstance(entity_response.get("forecast"), list):
-            return entity_response["forecast"]
-        if isinstance(response.get("forecast"), list):
-            return response["forecast"]
+            forecast = entity_response["forecast"]
+        elif isinstance(response.get("forecast"), list):
+            forecast = response["forecast"]
+        if forecast:
+            _forecast_cache[cache_key] = (time.monotonic(), forecast)
+            return forecast
 
     return []
 

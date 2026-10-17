@@ -3,18 +3,57 @@ from __future__ import annotations
 
 import json
 import logging
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.const import Platform
+
+import voluptuous as vol
+
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
 from .diagnostics_log import setup_file_logging
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 _LOGGER = logging.getLogger(__name__)
+
+SERVICE_LOG_MAINTENANCE = "log_maintenance"
+SERVICE_REPAIR_LEARNING_HISTORY = "repair_learning_history"
+
+_MAINTENANCE_TYPES = [
+    "chlor",
+    "ph_plus",
+    "ph_minus",
+    "water_exchange",
+    "filter_clean",
+    "filter_replace",
+    "set_covered",
+    "set_usage",
+    "set_bath_plan",
+]
+# Diese Typen werten den Betrag als Statuswert aus und brauchen ihn zwingend.
+_AMOUNT_REQUIRED_TYPES = {"set_covered", "set_usage", "set_bath_plan"}
+
+LOG_MAINTENANCE_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("type"): vol.In(_MAINTENANCE_TYPES),
+        vol.Optional("amount"): vol.Any(None, vol.Coerce(float)),
+        vol.Optional("water_exchange_percent"): vol.Any(None, vol.Coerce(float)),
+    }
+)
+REPAIR_LEARNING_HISTORY_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("fetch_poollab", default=False): cv.boolean,
+    }
+)
 
 
 def _read_manifest_version(manifest_path: str) -> str:
@@ -31,8 +70,52 @@ async def _async_manifest_version(hass: HomeAssistant) -> str:
     return await hass.async_add_executor_job(_read_manifest_version, manifest_path)
 
 
+def _coordinator_for_entity(hass: HomeAssistant, entity_id: str) -> SmartPoolCoordinator:
+    """Return the coordinator that owns the given Smart Pool Assistant entity."""
+    entity_entry = er.async_get(hass).async_get(entity_id)
+    coordinator = (
+        hass.data.get(DOMAIN, {}).get(entity_entry.config_entry_id) if entity_entry else None
+    )
+    if not isinstance(coordinator, SmartPoolCoordinator):
+        raise ServiceValidationError(
+            f"{entity_id} gehoert nicht zu einer geladenen Smart-Pool-Assistant-Instanz."
+        )
+    return coordinator
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the Smart Pool Assistant component."""
+    """Set up the Smart Pool Assistant component and register its services."""
+
+    async def log_maintenance_service(call: ServiceCall) -> None:
+        coordinator = _coordinator_for_entity(hass, call.data["entity_id"])
+        m_type = call.data["type"]
+        amount = call.data.get("amount")
+        if amount is None and m_type in _AMOUNT_REQUIRED_TYPES:
+            raise ServiceValidationError(f"Fuer '{m_type}' ist ein Wert (amount) erforderlich.")
+        await coordinator.async_log_maintenance(
+            m_type,
+            amount,
+            call.data.get("water_exchange_percent"),
+        )
+
+    async def repair_learning_history_service(call: ServiceCall) -> None:
+        coordinator = _coordinator_for_entity(hass, call.data["entity_id"])
+        await coordinator.async_repair_learning_history(
+            fetch_poollab=call.data["fetch_poollab"],
+        )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_LOG_MAINTENANCE,
+        log_maintenance_service,
+        schema=LOG_MAINTENANCE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REPAIR_LEARNING_HISTORY,
+        repair_learning_history_service,
+        schema=REPAIR_LEARNING_HISTORY_SCHEMA,
+    )
     return True
 
 
@@ -52,40 +135,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    # Dienste registrieren (bevor der erste Refresh evtl. fehlschlägt)
-    async def log_maintenance_service(call):
-        entity_id = call.data.get("entity_id")
-        reg = er.async_get(hass)
-        entity_entry = reg.async_get(entity_id)
-        if entity_entry:
-            coord = hass.data[DOMAIN].get(entity_entry.config_entry_id)
-            if coord:
-                await coord.async_log_maintenance(
-                    call.data.get("type"),
-                    call.data.get("amount"),
-                    call.data.get("water_exchange_percent"),
-                )
-
-    async def repair_learning_history_service(call):
-        entity_id = call.data.get("entity_id")
-        reg = er.async_get(hass)
-        entity_entry = reg.async_get(entity_id)
-        if entity_entry:
-            coord = hass.data[DOMAIN].get(entity_entry.config_entry_id)
-            if coord:
-                await coord.async_repair_learning_history(
-                    fetch_poollab=bool(call.data.get("fetch_poollab")),
-                )
-
-    if not hass.services.has_service(DOMAIN, "log_maintenance"):
-        hass.services.async_register(DOMAIN, "log_maintenance", log_maintenance_service)
-    if not hass.services.has_service(DOMAIN, "repair_learning_history"):
-        hass.services.async_register(DOMAIN, "repair_learning_history", repair_learning_history_service)
-
     # Initialen Datenabruf starten
     await coordinator.async_load_history()
     await coordinator.async_config_entry_first_refresh()
-    
+
     # Listener für automatische Updates bei Sensoränderungen registrieren
     entry.async_on_unload(coordinator.async_setup_event_listeners())
 
@@ -93,7 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if "static_path_registered" not in hass.data[DOMAIN]:
         url_path = "/smart_pool_assistant/pool-chemistry-card.js"
         file_path = hass.config.path("custom_components/smart_pool_assistant/frontend/pool-chemistry-card.js")
-        
+
         try:
             await hass.http.async_register_static_paths([
                 StaticPathConfig(url_path, file_path, False)
@@ -102,7 +155,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if "frontend" in hass.config.components:
                 from homeassistant.components.frontend import add_extra_js_url
                 add_extra_js_url(hass, f"{url_path}?v={await _async_manifest_version(hass)}")
-            
+
             hass.data[DOMAIN]["static_path_registered"] = True
         except RuntimeError:
             # Falls der Pfad bereits existiert (z.B. durch manuelles Neuladen)
@@ -120,5 +173,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         _LOGGER.debug("Unloading Smart Pool Assistant config entry: entry_id=%s", entry.entry_id)
-        hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator: SmartPoolCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        await coordinator.async_shutdown()
     return unload_ok

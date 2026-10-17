@@ -18,6 +18,30 @@ SIGNAL_UUID = "c2296c06-c7e0-4657-b42e-c8330826454c"  # Notify (Signal)
 PREAMBLE = 0xAB
 STATUS_OK = 0
 
+# Es werden nur die neuesten Speicherbloecke (je 8 Messungen) gelesen. Das haelt
+# den Abruf kurz, auch wenn im PoolLab viele alte Messungen liegen.
+MAX_MEASURE_CHUNKS = 6
+
+# Messtyp-IDs, die fuer die Empfehlung gebraucht werden (Chlor, pH, Temperatur,
+# Cyanursaeure). Sind alle vier gefunden, muss nicht weiter zurueckgelesen werden.
+CHLOR_TYPE_IDS: frozenset[int] = frozenset({1, 3, 8})
+PH_TYPE_IDS: frozenset[int] = frozenset({9, 27, 28, 29, 30, 31, 32, 33, 34, 36, 48})
+TEMPERATURE_TYPE_ID = 4
+CYA_TYPE_ID = 11
+_REQUIRED_TYPE_GROUPS: tuple[frozenset[int], ...] = (
+    CHLOR_TYPE_IDS,
+    PH_TYPE_IDS,
+    frozenset({TEMPERATURE_TYPE_ID}),
+    frozenset({CYA_TYPE_ID}),
+)
+CHEMISTRY_TYPE_IDS: frozenset[int] = frozenset().union(*_REQUIRED_TYPE_GROUPS)
+
+
+def _all_required_types_found(measurements: list["PoolLabMeasurement"]) -> bool:
+    """Return whether every required measurement group has a valid sample."""
+    found_types = {m.measure_type for m in measurements if m.status == STATUS_OK}
+    return all(group & found_types for group in _REQUIRED_TYPE_GROUPS)
+
 
 @dataclass
 class PoolLabMeasurement:
@@ -197,14 +221,19 @@ class PoolLabBLEClient:
 
             # Step 2: GET_MEASURES
             # Read the saved results in 8-result blocks as documented by the API.
+            # Only the newest blocks are needed, so start at the end of the storage
+            # and stop as soon as all relevant measurement types were found.
             all_measurements = []
             command_count = math.ceil(result_count / 8) if result_count else 0
+            first_chunk_idx = max(command_count - MAX_MEASURE_CHUNKS, 0)
             _LOGGER.debug(
-                "Preparing PoolLab GET_MEASURES reads: result_count=%s command_count=%s",
+                "Preparing PoolLab GET_MEASURES reads: result_count=%s command_count=%s reading_chunks=%s..%s",
                 result_count,
                 command_count,
+                command_count - 1,
+                first_chunk_idx,
             )
-            for chunk_idx in range(command_count):
+            for chunk_idx in range(command_count - 1, first_chunk_idx - 1, -1):
                 cell_id = chunk_idx // 2
                 cell_half = chunk_idx % 2  # 0 = lower half, 1 = upper half
                 payload = self._build_measurement_payload(cell_id, cell_half, little_endian_cell=False)
@@ -310,6 +339,13 @@ class PoolLabBLEClient:
                         "No response payload received for measurement chunk %s",
                         chunk_idx,
                     )
+
+                if _all_required_types_found(all_measurements):
+                    _LOGGER.debug(
+                        "All relevant PoolLab measurement types found after chunk %s, stopping read",
+                        chunk_idx,
+                    )
+                    break
         except Exception as err:
             _LOGGER.warning(
                 "BLE read failed during command flow for %s: %s: %s",

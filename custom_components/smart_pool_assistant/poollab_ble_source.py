@@ -5,14 +5,20 @@ import logging
 from dataclasses import dataclass
 from typing import Callable
 
-from .poollab_ble import PoolLabData, PoolLabMeasurement
+from .poollab_ble import (
+    CYA_TYPE_ID,
+    TEMPERATURE_TYPE_ID,
+    PoolLabData,
+    PoolLabMeasurement,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
+# Reihenfolge = Prioritaet, falls mehrere Typ-IDs vorhanden sind.
 _CHLORINE_TYPE_IDS = (1, 8, 3)
 _PH_TYPE_IDS = (9, 27, 28, 29, 30, 31, 32, 33, 34, 36, 48)
-_TEMPERATURE_TYPE_ID = 4
-_CYANURIC_ACID_TYPE_ID = 11
+_TEMPERATURE_TYPE_ID = TEMPERATURE_TYPE_ID
+_CYANURIC_ACID_TYPE_ID = CYA_TYPE_ID
 
 
 @dataclass(slots=True)

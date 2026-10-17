@@ -1,10 +1,17 @@
 {
   "config": {
+    "error": {
+      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor.",
+      "invalid_target_range": "Bitte prüfe die Zielbereiche: Minimum darf nicht größer als Maximum sein.",
+      "invalid_pool_volume": "Das Poolvolumen muss größer als 0 m³ sein.",
+      "invalid_chlor_content": "Der Wirkstoffanteil muss größer als 0 und höchstens 1 sein (z.B. 0.56 für 56 %)."
+    },
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
         "description": "Konfiguriere die Sensoren und Zielbereiche f\u00fcr deinen Pool oder Whirlpool.",
         "data": {
+          "ble_address": "PoolLab Bluetooth-Ger\u00e4t (optional)",
           "api_key": "PoolLab API-Key (Optional f\u00fcr Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
@@ -36,13 +43,27 @@
           "filter_replace_yellow_threshold": "Wechsel: Warnung (Tage vor F\u00e4lligkeit)",
           "filter_replace_red_threshold": "Wechsel: Kritisch (Tage \u00fcberf\u00e4llig)"
         }
+      },
+      "bluetooth_confirm": {
+        "title": "PoolLab einrichten",
+        "description": "Es wurde ein PoolLab ({address}) per Bluetooth gefunden. Möchtest du es einrichten?"
       }
+    },
+    "abort": {
+      "already_configured": "Dieses PoolLab ist bereits eingerichtet."
     }
   },
   "options": {
+    "error": {
+      "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor.",
+      "invalid_target_range": "Bitte prüfe die Zielbereiche: Minimum darf nicht größer als Maximum sein.",
+      "invalid_pool_volume": "Das Poolvolumen muss größer als 0 m³ sein.",
+      "invalid_chlor_content": "Der Wirkstoffanteil muss größer als 0 und höchstens 1 sein (z.B. 0.56 für 56 %)."
+    },
     "step": {
       "init": {
         "data": {
+          "ble_address": "PoolLab Bluetooth-Ger\u00e4t (optional)",
           "api_key": "PoolLab API-Key (Optional f\u00fcr Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",

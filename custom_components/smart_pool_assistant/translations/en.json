@@ -1,0 +1,196 @@
+{
+  "config": {
+    "error": {
+      "missing_data_source": "Please enter a PoolLab API key or configure both the chlorine and the pH sensor.",
+      "invalid_target_range": "Please check the target ranges: the minimum must not be greater than the maximum.",
+      "invalid_pool_volume": "The pool volume must be greater than 0 m³.",
+      "invalid_chlor_content": "The active chlorine fraction must be greater than 0 and at most 1 (e.g. 0.56 for 56 %)."
+    },
+    "step": {
+      "user": {
+        "title": "Smart Pool Assistant",
+        "description": "Configure the sensors and target ranges for your pool or hot tub.",
+        "data": {
+          "ble_address": "PoolLab Bluetooth device (optional)",
+          "api_key": "PoolLab API key (optional, for cloud sync)",
+          "update_interval": "Cloud update interval (minutes)",
+          "chlor_sensor": "Chlorine sensor (mg/l)",
+          "ph_sensor": "pH sensor",
+          "temp_sensor": "Temperature sensor (°C)",
+          "pump_entity": "Pump (optional)",
+          "pool_connection_sensor": "Pool connection (binary sensor)",
+          "weather_entity": "Weather entity (optional)",
+          "uv_sensor": "UV sensor (optional)",
+          "pool_volume": "Pool volume (m³)",
+          "chlor_min": "Chlorine minimum (mg/l)",
+          "chlor_max": "Chlorine maximum (mg/l)",
+          "chlor_shock_max": "Shock chlorination maximum (mg/l)",
+          "ph_min": "pH minimum",
+          "ph_max": "pH maximum",
+          "chlor_product_type": "Chlorine product type",
+          "chlor_content": "Active chlorine fraction of the product (e.g. 0.56 organic, 0.65-0.70 calcium hypochlorite, 0.12-0.15 sodium hypochlorite)",
+          "ph_down_dosage": "pH-minus dosage (ml per 10 m³ for -0.2 pH)",
+          "ph_up_dosage": "pH-plus dosage (g per 10 m³ for +0.1 pH)",
+          "notify_service": "Notification service",
+          "notify_service_2": "Notification service 2 (optional)",
+          "persistent_notification": "Show notification in HA",
+          "follow_up_time": "Reminder to re-measure (minutes)",
+          "pool_connection_offline_delay": "Pool connection: offline wait time (minutes)",
+          "filter_clean_interval": "Filter cleaning interval (hours)",
+          "filter_replace_interval": "Filter replacement interval (days)",
+          "filter_clean_yellow_threshold": "Cleaning: warning (hours before due)",
+          "filter_clean_red_threshold": "Cleaning: critical (hours overdue)",
+          "filter_replace_yellow_threshold": "Replacement: warning (days before due)",
+          "filter_replace_red_threshold": "Replacement: critical (days overdue)"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "Set up PoolLab",
+        "description": "A PoolLab ({address}) was found via Bluetooth. Do you want to set it up?"
+      }
+    },
+    "abort": {
+      "already_configured": "This PoolLab is already set up."
+    }
+  },
+  "options": {
+    "error": {
+      "missing_data_source": "Please enter a PoolLab API key or configure both the chlorine and the pH sensor.",
+      "invalid_target_range": "Please check the target ranges: the minimum must not be greater than the maximum.",
+      "invalid_pool_volume": "The pool volume must be greater than 0 m³.",
+      "invalid_chlor_content": "The active chlorine fraction must be greater than 0 and at most 1 (e.g. 0.56 for 56 %)."
+    },
+    "step": {
+      "init": {
+        "data": {
+          "ble_address": "PoolLab Bluetooth device (optional)",
+          "api_key": "PoolLab API key (optional, for cloud sync)",
+          "update_interval": "Cloud update interval (minutes)",
+          "chlor_sensor": "Chlorine sensor (mg/l)",
+          "ph_sensor": "pH sensor",
+          "temp_sensor": "Temperature sensor (°C)",
+          "pump_entity": "Pump (optional)",
+          "pool_connection_sensor": "Pool connection (binary sensor)",
+          "weather_entity": "Weather entity (optional)",
+          "uv_sensor": "UV sensor (optional)",
+          "pool_volume": "Pool volume (m³)",
+          "chlor_min": "Chlorine minimum (mg/l)",
+          "chlor_max": "Chlorine maximum (mg/l)",
+          "chlor_shock_max": "Shock chlorination maximum (mg/l)",
+          "ph_min": "pH minimum",
+          "ph_max": "pH maximum",
+          "chlor_product_type": "Chlorine product type",
+          "chlor_content": "Active chlorine fraction of the product (e.g. 0.56 organic, 0.65-0.70 calcium hypochlorite, 0.12-0.15 sodium hypochlorite)",
+          "ph_down_dosage": "pH-minus dosage (ml per 10 m³ for -0.2 pH)",
+          "ph_up_dosage": "pH-plus dosage (g per 10 m³ for +0.1 pH)",
+          "notify_service": "Notification service",
+          "notify_service_2": "Notification service 2 (optional)",
+          "persistent_notification": "Show notification in HA",
+          "follow_up_time": "Reminder to re-measure (minutes)",
+          "pool_connection_offline_delay": "Pool connection: offline wait time (minutes)",
+          "filter_clean_interval": "Filter cleaning interval (hours)",
+          "filter_replace_interval": "Filter replacement interval (days)",
+          "filter_clean_yellow_threshold": "Cleaning: warning (hours before due)",
+          "filter_clean_red_threshold": "Cleaning: critical (hours overdue)",
+          "filter_replace_yellow_threshold": "Replacement: warning (days before due)",
+          "filter_replace_red_threshold": "Replacement: critical (days overdue)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "chlor_dose": {
+        "name": "Chlorine main dose"
+      },
+      "chlor_pre": {
+        "name": "Chlorine pre-bath minimum"
+      },
+      "ph_senker_total": {
+        "name": "pH-minus amount"
+      },
+      "ph_erhoeher_total": {
+        "name": "pH-plus amount"
+      },
+      "chlor_ist": {
+        "name": "Chlorine actual value"
+      },
+      "ph_ist": {
+        "name": "pH actual value"
+      },
+      "temp_ist": {
+        "name": "Temperature actual value"
+      },
+      "ble_battery": {
+        "name": "PoolLab battery"
+      },
+      "data_source": {
+        "name": "Data source"
+      },
+      "pool_covered": {
+        "name": "Cover status"
+      },
+      "usage_mode": {
+        "name": "Usage mode"
+      },
+      "hours_since_filter_clean": {
+        "name": "Hours since filter cleaning"
+      },
+      "days_since_filter_replace": {
+        "name": "Days since filter replacement"
+      },
+      "recommendation": {
+        "name": "Recommendation"
+      }
+    }
+  },
+  "services": {
+    "log_maintenance": {
+      "name": "Log pool action",
+      "description": "Records chemical additions, filter maintenance or status changes in the history.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "The pool recommendation entity."
+        },
+        "type": {
+          "name": "Type",
+          "description": "Kind of action or chemical.",
+          "state": {
+            "chlor": "Chlorine added",
+            "ph_plus": "pH-plus added",
+            "ph_minus": "pH-minus added",
+            "water_exchange": "Water exchange",
+            "filter_clean": "Filter cleaned",
+            "filter_replace": "Filter replaced",
+            "set_covered": "Cover status (0=open, 1=covered)",
+            "set_usage": "Usage mode (0=none, 1=normal, 2=party)",
+            "set_bath_plan": "Bathing in hours (0=reset)"
+          }
+        },
+        "amount": {
+          "name": "Value / amount",
+          "description": "Amount (g/ml/l) or status value (0/1/2)."
+        },
+        "water_exchange_percent": {
+          "name": "Water exchange percent",
+          "description": "Optional percentage for the water exchange."
+        }
+      }
+    },
+    "repair_learning_history": {
+      "name": "Repair learning history",
+      "description": "Re-runs the learning history reconciliation and writes the sample diagnosis to the existing diagnostic log.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "The pool recommendation entity."
+        },
+        "fetch_poollab": {
+          "name": "Fetch PoolLab first",
+          "description": "Optionally trigger a fresh PoolLab fetch first and then repair the learning history."
+        }
+      }
+    }
+  }
+}

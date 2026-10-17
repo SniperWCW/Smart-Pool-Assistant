@@ -2,13 +2,16 @@
   "config": {
     "error": {
       "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor.",
-      "invalid_target_range": "Bitte pr\u00fcfe die Zielbereiche: Minimum darf nicht gr\u00f6\u00dfer als Maximum sein."
+      "invalid_target_range": "Bitte pr\u00fcfe die Zielbereiche: Minimum darf nicht gr\u00f6\u00dfer als Maximum sein.",
+      "invalid_pool_volume": "Das Poolvolumen muss gr\u00f6\u00dfer als 0 m\u00b3 sein.",
+      "invalid_chlor_content": "Der Wirkstoffanteil muss gr\u00f6\u00dfer als 0 und h\u00f6chstens 1 sein (z.B. 0.56 f\u00fcr 56 %)."
     },
     "step": {
       "user": {
         "title": "Smart Pool Assistant",
         "description": "Konfiguriere die Sensoren und Zielbereiche f\u00fcr deinen Pool oder Whirlpool.",
         "data": {
+          "ble_address": "PoolLab Bluetooth-Ger\u00e4t (optional)",
           "api_key": "PoolLab API-Key (Optional f\u00fcr Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",
@@ -40,17 +43,27 @@
           "filter_replace_yellow_threshold": "Filter Wechsel: Gelb-Schwelle (Tage vor F\u00e4lligkeit)",
           "filter_replace_red_threshold": "Filter Wechsel: Rot-Schwelle (Tage vor F\u00e4lligkeit)"
         }
+      },
+      "bluetooth_confirm": {
+        "title": "PoolLab einrichten",
+        "description": "Es wurde ein PoolLab ({address}) per Bluetooth gefunden. Möchtest du es einrichten?"
       }
+    },
+    "abort": {
+      "already_configured": "Dieses PoolLab ist bereits eingerichtet."
     }
   },
   "options": {
     "error": {
       "missing_data_source": "Bitte gib entweder einen PoolLab API-Key an oder konfiguriere sowohl den Chlor- als auch den pH-Sensor.",
-      "invalid_target_range": "Bitte pr\u00fcfe die Zielbereiche: Minimum darf nicht gr\u00f6\u00dfer als Maximum sein."
+      "invalid_target_range": "Bitte pr\u00fcfe die Zielbereiche: Minimum darf nicht gr\u00f6\u00dfer als Maximum sein.",
+      "invalid_pool_volume": "Das Poolvolumen muss gr\u00f6\u00dfer als 0 m\u00b3 sein.",
+      "invalid_chlor_content": "Der Wirkstoffanteil muss gr\u00f6\u00dfer als 0 und h\u00f6chstens 1 sein (z.B. 0.56 f\u00fcr 56 %)."
     },
     "step": {
       "init": {
         "data": {
+          "ble_address": "PoolLab Bluetooth-Ger\u00e4t (optional)",
           "api_key": "PoolLab API-Key (Optional f\u00fcr Cloud-Abruf)",
           "update_interval": "Cloud-Update-Intervall (Minuten)",
           "chlor_sensor": "Chlor-Sensor (mg/l)",

@@ -9,10 +9,10 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SmartPoolCoordinator
+from .entity import SmartPoolEntity
 
 
 async def async_setup_entry(
@@ -63,7 +63,7 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
+class PoolAssistantSensor(SmartPoolEntity, SensorEntity):
     """Representation of a Pool Assistant sensor."""
 
     def __init__(self, coordinator: SmartPoolCoordinator, name: str, key: str, unit: str, icon: str) -> None:
@@ -84,7 +84,7 @@ class PoolAssistantSensor(CoordinatorEntity, SensorEntity):
         return self.coordinator.data.get(self._key)
 
 
-class PoolAssistantBatterySensor(CoordinatorEntity, SensorEntity):
+class PoolAssistantBatterySensor(SmartPoolEntity, SensorEntity):
     """Representation of the PoolLab battery level via BLE."""
 
     _attr_device_class = SensorDeviceClass.BATTERY
@@ -100,7 +100,7 @@ class PoolAssistantBatterySensor(CoordinatorEntity, SensorEntity):
         return self.coordinator.data.get("ble_battery")
 
 
-class PoolAssistantChlorStabilitySensor(CoordinatorEntity, SensorEntity):
+class PoolAssistantChlorStabilitySensor(SmartPoolEntity, SensorEntity):
     """Representation of learned chlorine stability."""
 
     def __init__(self, coordinator: SmartPoolCoordinator) -> None:
@@ -118,7 +118,7 @@ class PoolAssistantChlorStabilitySensor(CoordinatorEntity, SensorEntity):
         return self.coordinator.data.get("chlor_stability_attributes")
 
 
-class PoolAssistantPhStabilitySensor(CoordinatorEntity, SensorEntity):
+class PoolAssistantPhStabilitySensor(SmartPoolEntity, SensorEntity):
     """Representation of learned pH stability."""
 
     def __init__(self, coordinator: SmartPoolCoordinator) -> None:
@@ -136,8 +136,25 @@ class PoolAssistantPhStabilitySensor(CoordinatorEntity, SensorEntity):
         return self.coordinator.data.get("ph_stability_attributes")
 
 
-class PoolAssistantStatusSensor(CoordinatorEntity, SensorEntity):
+class PoolAssistantStatusSensor(SmartPoolEntity, SensorEntity):
     """Status sensor for recommendation text."""
+
+    # Grosse Listen/Detail-Dicts nur live fuer die Karte bereitstellen, nicht in die
+    # Datenbank schreiben: der Recorder verwirft Zustaende mit Attributen > 16 KB und
+    # jede Aktualisierung wuerde sonst die Datenbank aufblaehen.
+    _unrecorded_attributes = frozenset(
+        {
+            "last_api_measurements",
+            "last_measurements_display",
+            "last_activities",
+            "weather_forecast_days",
+            "chlor_stability_attributes",
+            "chlor_dose_factor_attributes",
+            "chlor_forecast_attributes",
+            "ph_stability_attributes",
+            "cya_forecast_attributes",
+        }
+    )
 
     def __init__(self, coordinator: SmartPoolCoordinator) -> None:
         super().__init__(coordinator)

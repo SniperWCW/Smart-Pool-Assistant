@@ -97,6 +97,38 @@ def validate_target_ranges(user_input: dict[str, Any]) -> bool:
         return False
 
 
+def validate_pool_volume(user_input: dict[str, Any]) -> bool:
+    """Check that the pool volume is a positive number."""
+    try:
+        return float(user_input.get(CONF_POOL_VOLUME)) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def validate_chlor_content(user_input: dict[str, Any]) -> bool:
+    """Check that the active chlorine content is a fraction between 0 and 1."""
+    value = user_input.get(CONF_CHLOR_CONTENT)
+    if value in (None, ""):
+        return True  # falls back to the product type default
+    try:
+        return 0 < float(value) <= 1
+    except (TypeError, ValueError):
+        return False
+
+
+def _validation_error(user_input: dict[str, Any]) -> str | None:
+    """Return the first validation error key for a full form submission."""
+    if not validate_data_source(user_input):
+        return "missing_data_source"
+    if not validate_target_ranges(user_input):
+        return "invalid_target_range"
+    if not validate_pool_volume(user_input):
+        return "invalid_pool_volume"
+    if not validate_chlor_content(user_input):
+        return "invalid_chlor_content"
+    return None
+
+
 def _chlor_product_type(defaults: dict[str, Any]) -> str:
     return normalize_chlor_product_type(defaults.get(CONF_CHLOR_PRODUCT_TYPE, "organic"))
 
@@ -126,10 +158,8 @@ class SmartPoolAssistantConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
             # Prüfen, ob dies eine vollständige Übermittlung ist (erforderliches Feld vorhanden)
             if CONF_POOL_VOLUME in user_input:
-                if not validate_data_source(user_input):
-                    errors["base"] = "missing_data_source"
-                elif not validate_target_ranges(user_input):
-                    errors["base"] = "invalid_target_range"
+                if error := _validation_error(user_input):
+                    errors["base"] = error
                 else:
                     return self.async_create_entry(title="Smart Pool Assistant", data=user_input)
 
@@ -215,7 +245,7 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
         vol.Optional(CONF_WEATHER_ENTITY, default=_selector_default(defaults, CONF_WEATHER_ENTITY)): selector.EntitySelector({"domain": "weather"}),
         vol.Optional(CONF_UV_SENSOR, default=_selector_default(defaults, CONF_UV_SENSOR)): selector.EntitySelector({"domain": "sensor"}),
         vol.Required(CONF_POOL_VOLUME, default=defaults.get(CONF_POOL_VOLUME, 0.916)): selector.NumberSelector(
-            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="m³", step="any")
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="m³", step="any", min=0.01)
         ),
         vol.Required(CONF_CHLOR_MIN, default=range_defaults[CONF_CHLOR_MIN]): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="mg/l", step=0.1)
@@ -227,10 +257,10 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="mg/l", step=0.1, min=1.0, max=10.0)
         ),
         vol.Required(CONF_PH_MIN, default=range_defaults[CONF_PH_MIN]): selector.NumberSelector(
-            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1)
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1, min=0, max=14)
         ),
         vol.Required(CONF_PH_MAX, default=range_defaults[CONF_PH_MAX]): selector.NumberSelector(
-            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1)
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.1, min=0, max=14)
         ),
         vol.Required(CONF_CHLOR_PRODUCT_TYPE, default=chlor_product_type): selector.SelectSelector(
             selector.SelectSelectorConfig(
@@ -242,7 +272,7 @@ def get_schema(hass: HomeAssistant, defaults=None, notify_services=None):
             )
         ),
         vol.Required(CONF_CHLOR_CONTENT, default=_chlor_content_default(defaults)): selector.NumberSelector(
-            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.01)
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step=0.01, min=0.01, max=1)
         ),
         vol.Required(CONF_PH_DOWN_DOSAGE, default=defaults.get(CONF_PH_DOWN_DOSAGE, 200.0)): selector.NumberSelector(
             selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, unit_of_measurement="ml", step=1.0)
@@ -289,10 +319,8 @@ class SmartPoolAssistantOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             user_input = _normalize_optional_fields(user_input)
             effective_config = {**self.config_entry.data, **self.config_entry.options, **user_input}
-            if not validate_data_source(effective_config):
-                errors["base"] = "missing_data_source"
-            elif not validate_target_ranges(effective_config):
-                errors["base"] = "invalid_target_range"
+            if error := _validation_error(effective_config):
+                errors["base"] = error
             else:
                 return self.async_create_entry(title="", data=user_input)
 

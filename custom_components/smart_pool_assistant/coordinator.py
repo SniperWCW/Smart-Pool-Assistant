@@ -67,9 +67,20 @@ from .notifications import (
     async_send_follow_up,
     async_send_notification,
 )
-from .poollab_ble import PoolLabBLEClient
+from .poollab_ble import (
+    CHEMISTRY_TYPE_IDS,
+    CHLOR_TYPE_IDS,
+    CYA_TYPE_ID,
+    PH_TYPE_IDS,
+    PoolLabBLEClient,
+)
 from .poollab_ble_source import select_poollab_ble_measurements
-from .poollab_cloud import async_fetch_poollab_cloud_measurements
+from .poollab_cloud import (
+    CHLOR_PARAMETERS as CLOUD_CHLOR_PARAMETERS,
+    CYA_PARAMETERS as CLOUD_CYA_PARAMETERS,
+    PH_PARAMETERS as CLOUD_PH_PARAMETERS,
+    async_fetch_poollab_cloud_measurements,
+)
 from .weather import async_get_weather_data
 
 _LOGGER = logging.getLogger(__name__)
@@ -79,6 +90,11 @@ _STORAGE_KEY = f"{DOMAIN}_maintenance"
 _DEFAULT_UPDATE_INTERVAL_MINUTES = 5
 _BLE_SUCCESS_COOLDOWN = timedelta(seconds=20)
 _BLE_ERROR_COOLDOWN = timedelta(seconds=30)
+_SAVE_DELAY_SECONDS = 15
+_BLE_CLOCK_OFFSET_KEY = "ble_clock_offset_seconds"
+_BLE_LATEST_RAW_KEY = "ble_latest_raw_ts"
+_BLE_CLOCK_FUTURE_TOLERANCE_SECONDS = 300
+_BLE_CLOCK_BACKWARD_TOLERANCE_SECONDS = 60
 _RECENT_MEASUREMENTS_HISTORY_LIMIT = 40
 
 class SmartPoolCoordinator(DataUpdateCoordinator):
@@ -106,6 +122,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self._poollab_fetch_requested = False
         self._next_poollab_fetch_allowed_at = None
         self._pool_connection_offline_cancel = None
+        self._ble_clock_offset: float | None = None
+        self._last_cloud_error: str | None = None
+        self._history_loaded = False
+        self._follow_up_cancels: list = []
         # Standardwerte für neue Logik initialisieren
         self.pool_covered = True
         self.usage_mode = "none" # none, normal, party
@@ -133,26 +153,73 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         *,
         latest_raw_ts: int | None = None,
     ) -> str:
-        """Map BLE timestamps onto the fetch timeline while preserving spacing."""
+        """Map a PoolLab device timestamp onto real time.
+
+        The device clock is often offset. The offset is determined once (see
+        ``_prepare_ble_clock_offset``) and then reused, so the same physical
+        measurement always gets the same timestamp - no matter when it is fetched.
+        """
+        if self._ble_clock_offset is not None:
+            return dt_util.utc_from_timestamp(ts + self._ble_clock_offset).isoformat()
+
         fetched_at_dt = self._parse_ts_aware(fetched_at_iso) if fetched_at_iso else None
-        ble_dt = dt_util.utc_from_timestamp(ts)
-
         if fetched_at_dt:
-            if latest_raw_ts is None:
-                latest_raw_ts = ts
-            delta_seconds = ts - latest_raw_ts
-            normalized_dt = fetched_at_dt + timedelta(seconds=delta_seconds)
-            if ble_dt != normalized_dt:
-                _LOGGER.debug(
-                    "Normalizing PoolLab BLE timestamp relative to latest chemistry sample: ble=%s latest_raw=%s fetched_at=%s normalized=%s",
-                    ble_dt.isoformat(),
-                    dt_util.utc_from_timestamp(latest_raw_ts).isoformat(),
-                    fetched_at_dt.isoformat(),
-                    normalized_dt.isoformat(),
-                )
-            return normalized_dt.isoformat()
+            reference_ts = latest_raw_ts if latest_raw_ts is not None else ts
+            return (fetched_at_dt + timedelta(seconds=ts - reference_ts)).isoformat()
 
-        return ble_dt.isoformat()
+        return dt_util.utc_from_timestamp(ts).isoformat()
+
+    def _prepare_ble_clock_offset(self, ble_data, fetched_at_iso: str | None) -> None:
+        """Determine the PoolLab clock offset for the current fetch.
+
+        On the first fetch the newest chemistry sample is anchored to the fetch
+        time. Later fetches reuse that offset, so re-reading the same samples
+        yields identical timestamps and the learning history is not duplicated.
+        A new anchor is only set if the stored one is implausible (samples in the
+        future, or the device clock jumped back after a reset).
+        """
+        stored_offset = self.maintenance_history.get(_BLE_CLOCK_OFFSET_KEY)
+        if isinstance(stored_offset, bool) or not isinstance(stored_offset, (int, float)):
+            stored_offset = None
+        stored_latest = self.maintenance_history.get(_BLE_LATEST_RAW_KEY)
+        if isinstance(stored_latest, bool) or not isinstance(stored_latest, (int, float)):
+            stored_latest = None
+
+        measurements = getattr(ble_data, "measurements", None)
+        raw_timestamps = [
+            int(item.timestamp)
+            for item in (measurements.values() if isinstance(measurements, dict) else [])
+            if getattr(item, "measure_type", None) in CHEMISTRY_TYPE_IDS
+        ]
+        fetched_at_dt = self._parse_ts_aware(fetched_at_iso) if fetched_at_iso else None
+        if not raw_timestamps or fetched_at_dt is None:
+            self._ble_clock_offset = stored_offset
+            return
+
+        latest_raw_ts = max(raw_timestamps)
+        fetched_epoch = fetched_at_dt.timestamp()
+        reuse = (
+            stored_offset is not None
+            and latest_raw_ts + stored_offset <= fetched_epoch + _BLE_CLOCK_FUTURE_TOLERANCE_SECONDS
+            and (stored_latest is None or latest_raw_ts >= stored_latest - _BLE_CLOCK_BACKWARD_TOLERANCE_SECONDS)
+        )
+        if reuse:
+            offset = float(stored_offset)
+            latest_to_store = max(latest_raw_ts, int(stored_latest or 0))
+        else:
+            offset = round(fetched_epoch - latest_raw_ts, 3)
+            latest_to_store = latest_raw_ts
+            _LOGGER.debug(
+                "Anchoring PoolLab clock: latest_raw=%s fetched_at=%s offset=%s previous_offset=%s",
+                latest_raw_ts,
+                fetched_at_dt.isoformat(),
+                offset,
+                stored_offset,
+            )
+
+        self.maintenance_history[_BLE_CLOCK_OFFSET_KEY] = offset
+        self.maintenance_history[_BLE_LATEST_RAW_KEY] = latest_to_store
+        self._ble_clock_offset = offset
 
     def _canonical_measurement_parameter(self, parameter: str | None) -> str | None:
         """Normalize measurement labels across API, BLE and manual sources."""
@@ -295,11 +362,13 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
     ) -> str | None:
         """Map stored BLE history timestamps onto the current fetch timeline.
 
-        PoolLab timestamps are often offset, but their relative spacing is useful.
-        We anchor the newest chemistry timestamp to the fetch completion time and
-        preserve the deltas for older records so stored BLE history can repair
-        learning samples retroactively.
+        PoolLab timestamps are often offset. The stored clock offset (see
+        ``_prepare_ble_clock_offset``) maps them onto real time so stored BLE
+        history can repair learning samples retroactively without duplicates.
         """
+        if self._ble_clock_offset is not None:
+            return dt_util.utc_from_timestamp(raw_ts + self._ble_clock_offset).isoformat()
+
         fetched_at_dt = self._parse_ts_aware(fetched_at_iso) if fetched_at_iso else None
         if fetched_at_dt is None:
             return None
@@ -315,9 +384,9 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if not isinstance(measurements, dict) or not measurements:
             return
 
-        chlor_type_ids = {1, 3, 8}
-        ph_type_ids = {9, 27, 28, 29, 30, 31, 32, 33, 34, 36, 48}
-        cya_type_id = 11
+        chlor_type_ids = CHLOR_TYPE_IDS
+        ph_type_ids = PH_TYPE_IDS
+        cya_type_id = CYA_TYPE_ID
 
         chemistry_measurements = [
             item for item in measurements.values()
@@ -373,6 +442,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
 
         imported_chlor = 0
         imported_ph = 0
+        imported_cya = 0
         for item in last_measurements:
             if not isinstance(item, dict):
                 continue
@@ -381,25 +451,41 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             value = item.get("value")
             if not isinstance(raw_ts, str) or not raw_ts:
                 continue
-            if parameter == "PL Chlorine Free":
+            if parameter in CLOUD_CHLOR_PARAMETERS:
                 before = len(self.maintenance_history.get("chlor_learning_measurements", []) or [])
                 record_chlor_measurement(self.maintenance_history, raw_ts, value)
                 after = len(self.maintenance_history.get("chlor_learning_measurements", []) or [])
                 if after > before:
                     imported_chlor += 1
-            elif parameter == "PL pH":
+            elif parameter in CLOUD_PH_PARAMETERS:
                 before = len(self.maintenance_history.get("ph_learning_measurements", []) or [])
                 record_ph_measurement(self.maintenance_history, raw_ts, value)
                 after = len(self.maintenance_history.get("ph_learning_measurements", []) or [])
                 if after > before:
                     imported_ph += 1
+            elif parameter in CLOUD_CYA_PARAMETERS:
+                before = len(self.maintenance_history.get("cya_learning_measurements", []) or [])
+                record_cya_measurement(self.maintenance_history, raw_ts, value)
+                after = len(self.maintenance_history.get("cya_learning_measurements", []) or [])
+                if after > before:
+                    imported_cya += 1
 
-        if imported_chlor or imported_ph:
+        if imported_chlor or imported_ph or imported_cya:
             _LOGGER.debug(
-                "Backfilled cloud learning history: chlor=%s ph=%s",
+                "Backfilled cloud learning history: chlor=%s ph=%s cya=%s",
                 imported_chlor,
                 imported_ph,
+                imported_cya,
             )
+
+    def _log_cloud_error(self, err: Exception) -> None:
+        """Log cloud errors once per distinct message instead of on every refresh."""
+        message = str(err) or type(err).__name__
+        if message != self._last_cloud_error:
+            self._last_cloud_error = message
+            _LOGGER.warning("Error fetching PoolLab data: %s", message)
+        else:
+            _LOGGER.debug("PoolLab Cloud error persists: %s", message)
 
     @property
     def config(self):
@@ -536,8 +622,36 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             next_allowed = stored.get("next_poollab_fetch_allowed_at")
             if isinstance(next_allowed, str):
                 self._next_poollab_fetch_allowed_at = self._parse_ts_aware(next_allowed)
+            stored_offset = stored.get(_BLE_CLOCK_OFFSET_KEY)
+            if isinstance(stored_offset, (int, float)) and not isinstance(stored_offset, bool):
+                self._ble_clock_offset = float(stored_offset)
             if normalized != stored:
                 await self._store.async_save(self.maintenance_history)
+        self._history_loaded = True
+
+    def _data_to_save(self) -> dict:
+        """Return the data that is persisted by delayed saves."""
+        return self.maintenance_history
+
+    def _async_schedule_save(self) -> None:
+        """Persist the history shortly after frequent changes (writes are coalesced)."""
+        if not self._history_loaded:
+            return
+        self._store.async_delay_save(self._data_to_save, _SAVE_DELAY_SECONDS)
+
+    async def async_shutdown(self) -> None:
+        """Cancel pending timers and flush unsaved data when the entry is unloaded."""
+        await super().async_shutdown()
+        for cancel in self._follow_up_cancels:
+            cancel()
+        self._follow_up_cancels.clear()
+        if self._pool_connection_offline_cancel:
+            self._pool_connection_offline_cancel()
+            self._pool_connection_offline_cancel = None
+        # Never write before the stored history was loaded, otherwise a failed
+        # setup could overwrite existing data with an empty dict.
+        if self._history_loaded:
+            await self._store.async_save(self.maintenance_history)
 
     def async_setup_event_listeners(self):
         """Set up listeners for entity state changes."""
@@ -589,12 +703,12 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         self._schedule_pool_connection_check(entity_id)
         state = self.hass.states.get(entity_id) if entity_id else None
         if state is not None and state.state == "on":
-            await self._store.async_save(self.maintenance_history)
+            self._async_schedule_save()
 
     async def _handle_pump_change(self, _event):
         """Persist pump runtime deltas on every state change."""
         self._sync_pump_runtime_tracking()
-        await self._store.async_save(self.maintenance_history)
+        self._async_schedule_save()
 
     def _schedule_pool_connection_check(self, entity_id: str | None) -> None:
         """Schedule an offline check for the configured pool connection entity."""
@@ -704,7 +818,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             else:
                 self.maintenance_history["last_measurement_raw"] = ts_iso
 
-            await self._store.async_save(self.maintenance_history)
+            self._async_schedule_save()
             await self.async_request_refresh()
 
     async def async_log_maintenance(self, m_type: str, amount: float, percent: float | None = None):
@@ -779,7 +893,10 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         if m_type in ("chlor", "ph_plus", "ph_minus"):
             delay = conf.get(CONF_FOLLOW_UP_TIME, 0)
             if delay > 0:
-                async_call_later(self.hass, delay * 60, self._send_follow_up)
+                self._follow_up_cancels = [
+                    *self._follow_up_cancels[-19:],
+                    async_call_later(self.hass, delay * 60, self._send_follow_up),
+                ]
         await self.async_request_refresh()
 
     async def async_repair_learning_history(self, *, fetch_poollab: bool = False) -> None:
@@ -1104,6 +1221,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         poollab_fetch_error = None
                         poollab_fetch_completed_at = dt_util.now().isoformat()
                         self._set_poollab_cooldown(_BLE_SUCCESS_COOLDOWN)
+                        self._prepare_ble_clock_offset(ble_data, poollab_fetch_completed_at)
                         self._backfill_ble_learning_history(ble_data, poollab_fetch_completed_at)
                         ble_selection = select_poollab_ble_measurements(
                             ble_data,
@@ -1161,7 +1279,14 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                         if ble_selection.measurement_raw:
                             self.maintenance_history["last_ble_measurement_raw"] = ble_selection.measurement_raw
 
-                    except (asyncio.TimeoutError, asyncio.CancelledError):
+                    except (asyncio.TimeoutError, asyncio.CancelledError) as cancel_err:
+                        # Eine echte Abbruchanforderung (Entladen, Herunterfahren) darf nicht
+                        # verschluckt werden. Nur interne Abbrueche der BLE-Bibliothek werden
+                        # wie ein Timeout behandelt.
+                        if isinstance(cancel_err, asyncio.CancelledError):
+                            current_task = asyncio.current_task()
+                            if current_task is not None and current_task.cancelling():
+                                raise
                         poollab_fetch_result = "error"
                         poollab_fetch_error = "Bluetooth-Abfrage f\u00fcr PoolLab wurde abgebrochen oder hat das Timeout erreicht."
                         poollab_fetch_completed_at = dt_util.now().isoformat()
@@ -1195,6 +1320,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Fetching data from PoolLab Cloud")
                 session = async_get_clientsession(self.hass)
                 cloud_result = await async_fetch_poollab_cloud_measurements(session, api_key)
+                self._last_cloud_error = None
 
                 if cloud_result.measurement_raw:
                     self.maintenance_history["last_api_measurement_raw"] = cloud_result.measurement_raw
@@ -1209,7 +1335,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                 if cloud_result.last_measurements:
                     last_api_measurements = cloud_result.last_measurements
                     self.maintenance_history["last_api_measurements"] = last_api_measurements
-                    self._backfill_cloud_learning_history(last_api_measurements)
+                    self._backfill_cloud_learning_history(cloud_result.history or last_api_measurements)
 
                 add_value_candidate(
                     c_candidates, cloud_result.chlor, "Cloud", cloud_result.chlor_measurement_raw
@@ -1239,7 +1365,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
                     poollab_fetch_result = "error"
                     poollab_fetch_error = f"Cloud API Fehler: {err}"
                     poollab_fetch_completed_at = dt_util.now().isoformat()
-                _LOGGER.error("Error fetching PoolLab data: %s", err)
+                self._log_cloud_error(err)
 
         next_poollab_fetch_allowed_at = self._get_next_poollab_fetch_allowed_at()
         self.maintenance_history["last_poollab_fetch_result"] = poollab_fetch_result
@@ -1571,7 +1697,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         await self._async_check_follow_up_notification()
 
         if c_ist is None and ph_ist is None:
-            await self._store.async_save(self.maintenance_history)
+            self._async_schedule_save()
             return {
                 "chlor_ist": c_ist,
                 "ph_ist": ph_ist,
@@ -1756,7 +1882,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
         new_calc_ts = dt_util.now().isoformat()
         self.maintenance_history["last_calc_raw"] = new_calc_ts
 
-        await self._store.async_save(self.maintenance_history)
+        self._async_schedule_save()
 
         return {
             "chlor_ist": c_ist,
@@ -1771,7 +1897,7 @@ class SmartPoolCoordinator(DataUpdateCoordinator):
             "ph_erhoeher_total": ph_erhoeher_g,
             "data_source": data_source,
             "ph_diff": ph_diff,
-            "is_shock": (c_ist is not None and 3.0 <= float(c_ist) <= 5.0),
+            "is_shock": chemistry["is_shock"],
             "is_error": False,
             "last_calculation": dt_util.as_local(self._parse_ts_aware(new_calc_ts)).strftime("%d.%m.%Y %H:%M Uhr"),
             "last_calculation_raw": new_calc_ts,

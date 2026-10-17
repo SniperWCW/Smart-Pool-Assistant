@@ -21,6 +21,9 @@ from .const import (
 
 MEASURING_SPOON_SIZES = (1.0, 2.5, 5.0, 7.5, 15.0)
 DEFAULT_PRE_BATH_DAILY_LOSS = 0.8
+# Entsprechen den Standardwerten im Config-Flow (fuer aeltere Eintraege ohne Wert).
+DEFAULT_PH_DOWN_DOSAGE = 200.0  # ml pro 10 m3 fuer 0.2 pH
+DEFAULT_PH_UP_DOSAGE = 100.0  # g pro 10 m3 fuer 0.1 pH
 
 
 def round_to_measuring_spoons(amount: float | int | None) -> float:
@@ -69,7 +72,6 @@ def calculate_pool_chemistry(
     forecast_hourly_loss: float | None = None,
 ) -> dict:
     """Calculate dosage recommendations and detailed chemistry breakdowns."""
-    volumen = conf.get(CONF_POOL_VOLUME, 1.0)
     c_min, c_max = _target_range(conf, CONF_CHLOR_MIN, CONF_CHLOR_MAX, CONF_CHLOR_TARGET, 1.5)
     ph_min, ph_max = _target_range(conf, CONF_PH_MIN, CONF_PH_MAX, CONF_PH_TARGET, 7.2)
     chlor_product_type = normalize_chlor_product_type(conf.get(CONF_CHLOR_PRODUCT_TYPE))
@@ -78,7 +80,10 @@ def calculate_pool_chemistry(
     if chlor_dose_factor and chlor_dose_factor > 0:
         wirkstoff *= chlor_dose_factor
 
-    volume_m3 = max(float(volumen), 0.0)
+    try:
+        volume_m3 = max(float(conf.get(CONF_POOL_VOLUME, 1.0)), 0.0)
+    except (TypeError, ValueError):
+        volume_m3 = 1.0
 
     c_diff = max(float(c_min) - float(c_ist), 0) if c_ist is not None else 0
 
@@ -198,11 +203,11 @@ def calculate_pool_chemistry(
     ph_erhoeher_g = 0.0
 
     if ph_diff < 0:
-        factor = conf[CONF_PH_DOWN_DOSAGE] / 10.0 / 0.2
-        ph_senker_ml = round_to_measuring_spoons(ph_diff_abs * factor * volumen)
+        factor = float(conf.get(CONF_PH_DOWN_DOSAGE, DEFAULT_PH_DOWN_DOSAGE)) / 10.0 / 0.2
+        ph_senker_ml = round_to_measuring_spoons(ph_diff_abs * factor * volume_m3)
     elif ph_diff > 0:
-        factor = conf[CONF_PH_UP_DOSAGE] / 10.0 / 0.1
-        ph_erhoeher_g = round_to_measuring_spoons(ph_diff_abs * factor * volumen)
+        factor = float(conf.get(CONF_PH_UP_DOSAGE, DEFAULT_PH_UP_DOSAGE)) / 10.0 / 0.1
+        ph_erhoeher_g = round_to_measuring_spoons(ph_diff_abs * factor * volume_m3)
 
     return {
         "chlor_dose": s_g,

@@ -1,6 +1,8 @@
 ﻿"""Notification helpers for Smart Pool Assistant."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
@@ -18,6 +20,8 @@ from .const import (
 )
 from .maintenance import get_time_since_last_action
 
+_LOGGER = logging.getLogger(__name__)
+
 
 async def async_send_notification(
     hass: HomeAssistant,
@@ -27,24 +31,34 @@ async def async_send_notification(
     title: str = "Smart Pool Assistant",
     data: dict | None = None,
 ) -> None:
-    """Send a persistent and/or service notification."""
+    """Send a persistent and/or service notification.
+
+    A failing notification (e.g. a removed notify service) must never break the
+    calculation cycle, so errors are only logged.
+    """
     if conf.get(CONF_PERSISTENT_NOTIFICATION):
-        await hass.services.async_call("persistent_notification", "create", {
-            "title": title,
-            "message": message,
-            "notification_id": f"{DOMAIN}_{notification_id}",
-        })
+        try:
+            await hass.services.async_call("persistent_notification", "create", {
+                "title": title,
+                "message": message,
+                "notification_id": f"{DOMAIN}_{notification_id}",
+            })
+        except Exception as err:  # noqa: BLE001 - notifications are best effort
+            _LOGGER.warning("Persistent notification '%s' failed: %s", notification_id, err)
 
     for service in _notify_services(conf):
-        domain, service_name = service.split(".", 1)
-        service_data_payload = _build_notification_data(notification_id, data)
-        service_data = {
-            "title": title,
-            "message": message,
-        }
-        if service_data_payload:
-            service_data["data"] = service_data_payload
-        await hass.services.async_call(domain, service_name, service_data)
+        try:
+            domain, service_name = service.split(".", 1)
+            service_data_payload = _build_notification_data(notification_id, data)
+            service_data = {
+                "title": title,
+                "message": message,
+            }
+            if service_data_payload:
+                service_data["data"] = service_data_payload
+            await hass.services.async_call(domain, service_name, service_data)
+        except Exception as err:  # noqa: BLE001 - notifications are best effort
+            _LOGGER.warning("Notification via '%s' failed: %s", service, err)
 
 
 async def async_send_follow_up(
@@ -81,8 +95,6 @@ async def async_send_pool_connection_lost(
             "group": "smart-pool-assistant-connection",
             "color": "#F44336",
             "notification_icon": "mdi:wifi-off",
-            "url": "/dashboard-zuhause/pool",
-            "clickAction": "/dashboard-zuhause/pool",
             "push": {
                 "interruption_level": "active",
             },
