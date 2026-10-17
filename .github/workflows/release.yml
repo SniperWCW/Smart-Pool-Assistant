@@ -1,0 +1,141 @@
+name: Release
+
+# Erstellt automatisch ein GitHub-Release, sobald auf main eine neue Version in
+# custom_components/smart_pool_assistant/manifest.json eingecheckt wird.
+#
+# - Der Tag (vX.Y.Z) wird automatisch auf dem Commit angelegt.
+# - Titel = Tag, Beschreibung = release_notes/RELEASE_NOTES_VX.Y.Z.md
+#   (Fallback: der passende Abschnitt aus Changelog.md, danach automatisch
+#   generierte Notes).
+# - Existiert das Release bereits, passiert nichts.
+# - Manuell nachholbar ueber "Run workflow" (nur auf main).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - custom_components/smart_pool_assistant/manifest.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  INTEGRATION_DIR: custom_components/smart_pool_assistant
+
+jobs:
+  release:
+    name: Release erstellen
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Version lesen und Release-Stand pruefen
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -er '.version' "$INTEGRATION_DIR/manifest.json")"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=$INTEGRATION_DIR/manifest.json::Version '$VERSION' ist ungueltig (erwartet: X.Y.Z)."
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG existiert bereits - nichts zu tun."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release-Artefakte pruefen
+        if: steps.version.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          errors=0
+          fail() { echo "::error::$1"; errors=$((errors + 1)); }
+          warn() { echo "::warning::$1"; }
+
+          for f in "$INTEGRATION_DIR/manifest.json" "$INTEGRATION_DIR/strings.json" "$INTEGRATION_DIR"/translations/*.json hacs.json; do
+            jq -e . "$f" > /dev/null || fail "Ungueltiges JSON: $f"
+          done
+
+          python3 -m compileall -q "$INTEGRATION_DIR" || fail "Python-Syntaxfehler in $INTEGRATION_DIR."
+
+          grep -qF "## [$VERSION]" Changelog.md \
+            || fail "Changelog.md enthaelt keinen Eintrag '## [$VERSION]'."
+          grep -F "SMART-POOL-ASSISTANT" "$INTEGRATION_DIR/frontend/pool-chemistry-card.js" | grep -qF " $VERSION " \
+            || fail "Die Versionsanzeige in frontend/pool-chemistry-card.js passt nicht zu $VERSION."
+
+          grep -qF "v$VERSION" README.md \
+            || warn "README.md nennt die Version v$VERSION nicht (Badge/Release-Stand)."
+          grep -qF "$VERSION" TECHNISCHE_DOKUMENTATION.md \
+            || warn "TECHNISCHE_DOKUMENTATION.md nennt die Version $VERSION nicht."
+          [ -s "release_notes/RELEASE_NOTES_V${VERSION}.md" ] \
+            || warn "release_notes/RELEASE_NOTES_V${VERSION}.md fehlt - Fallback auf Changelog.md."
+
+          [ "$errors" -eq 0 ]
+
+      - name: Release Notes zusammenstellen
+        id: notes
+        if: steps.version.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          NOTES="$RUNNER_TEMP/release_notes.md"
+          NOTES_FILE="release_notes/RELEASE_NOTES_V${VERSION}.md"
+          if [ -s "$NOTES_FILE" ]; then
+            cp "$NOTES_FILE" "$NOTES"
+          else
+            awk -v header="## [${VERSION}]" '
+              index($0, header) == 1 { found = 1; next }
+              /^## \[/ { found = 0 }
+              found
+            ' Changelog.md > "$NOTES"
+          fi
+          if [ -s "$NOTES" ]; then
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
+            echo "file=$NOTES" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Keine Release Notes gefunden - GitHub generiert sie automatisch."
+            echo "has_notes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ZIP fuer manuelle Installation bauen
+        if: steps.version.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          (cd "$INTEGRATION_DIR" && zip -qr "$GITHUB_WORKSPACE/smart_pool_assistant.zip" . -x "*__pycache__*" "*.pyc")
+          unzip -l smart_pool_assistant.zip | tail -n 1
+
+      - name: GitHub-Release erstellen
+        if: steps.version.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+          HAS_NOTES: ${{ steps.notes.outputs.has_notes }}
+          NOTES_FILE: ${{ steps.notes.outputs.file }}
+        run: |
+          set -euo pipefail
+          args=("$TAG" smart_pool_assistant.zip --title "$TAG" --target "$GITHUB_SHA" --latest)
+          if [ "$HAS_NOTES" = "true" ]; then
+            args+=(--notes-file "$NOTES_FILE")
+          else
+            args+=(--generate-notes)
+          fi
+          gh release create "${args[@]}"
+          echo "Release **$TAG** erstellt: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
