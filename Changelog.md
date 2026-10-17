@@ -1,5 +1,20 @@
 # Changelog - Smart Pool Assistant
 
+## [3.0.36] - 2026-10-17
+
+- **BLE-Abruf deutlich schneller**: Es werden nur noch die neuesten 6 Messblöcke gelesen und der Abruf stoppt, sobald Chlor, pH, Temperatur und CYA gefunden sind.
+- **Keine doppelten Lernwerte mehr per BLE**: Die Zeitstempel des PoolLab-Geräts werden über einen persistenten Uhr-Offset stabil auf die HA-Zeit abgebildet, sodass identische Messungen nicht mehrfach gelernt werden.
+- **Cloud-Anbindung überarbeitet**: Robustere Fehlerbehandlung, kein Log-Spam bei wiederholten Fehlern, CYA wird beim Nachladen der Lernhistorie berücksichtigt.
+- **Abbruch-Handling**: `CancelledError` wird beim BLE-Abruf nicht mehr verschluckt, Timer werden beim Entladen sauber beendet und Daten gespeichert.
+- **Speichern gebündelt**: Häufige Statusänderungen werden verzögert zusammengefasst gespeichert, Benutzeraktionen weiterhin sofort.
+- **Geräteübersicht**: Alle Entitäten sind einem gemeinsamen Gerät „Smart Pool Assistant“ zugeordnet.
+- **Services validiert**: `log_maintenance` und `repair_learning_history` prüfen Eingaben per Schema und liefern verständliche Fehlermeldungen.
+- **Config-Flow**: Eingaben werden validiert, Wertebereiche begrenzt; neue englische Übersetzung.
+- **Benachrichtigungen**: Fehler beim Senden stoppen die Auswertung nicht mehr; der Dashboard-Link ist nicht mehr fest einkodiert.
+- **Berechnung**: Sichere Volumenberechnung und Standard-Dosierungen bei fehlenden Werten.
+- **Recorder & Wetter**: Große Attribute werden nicht mehr in der Datenbank gespeichert; Wettervorhersage wird 30 Minuten zwischengespeichert.
+- **Manifest**: Abhängigkeiten `http` ergänzt, `frontend` als after_dependency.
+
 ## [3.0.35] - 2026-09-07
 
 - **LayzSpa-Fehler sofort sichtbar**: Die Fehlerwarnung erscheint bei einem relevanten Fehlercode direkt oben in der Karte statt erst im einklappbaren LayzSpa-Bereich.
